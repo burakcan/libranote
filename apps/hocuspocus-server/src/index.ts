@@ -1,10 +1,10 @@
 import { Server } from '@hocuspocus/server';
-// import { prisma } from '@repo/db';
+import { PrismaClient } from '@repo/db';
 import jwt from 'jsonwebtoken';
 
 const DEFAULT_PORT = 3001;
 
-console.log(prisma)
+const prisma = new PrismaClient();
 
 const server = Server.configure({
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
@@ -17,17 +17,17 @@ const server = Server.configure({
       throw new Error('Invalid token');
     }
 
-    // const user = await prisma.user.findUnique({
-    //   where: {
-    //     id: decoded.userId,
-    //   },
-    // });
+    const user = await prisma.user.findUnique({
+      where: {
+        id: decoded.userId,
+      },
+    });
 
-    // if (!user) {
-    //   throw new Error('User not found');
-    // }
+    if (!user) {
+      throw new Error('User not found');
+    }
 
-    // console.log('User authenticated:', user);
+    console.log('User authenticated:', user);
 
     return true;
   },

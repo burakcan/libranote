@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import { PrismaClient } from "../generated/client";
+export * from "@repo/db";
+import { PrismaClient } from "@repo/db";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
