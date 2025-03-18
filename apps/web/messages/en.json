@@ -1,0 +1,41 @@
+{
+  "auth": {
+    "signIn": {
+      "cardTitle": "Welcome back",
+      "cardDescription": "Login with your social accounts",
+      "signInWithApple": "Sign in with Apple",
+      "signInWithGoogle": "Sign in with Google",
+      "continueWith": "Or continue with",
+      "invalidEmailOrPassword": "Invalid email or password",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot your password?",
+      "signIn": "Sign in",
+      "dontHaveAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signUp": {
+      "cardTitle": "Welcome",
+      "cardDescription": "Sign up with your social accounts",
+      "signUpWithApple": "Sign up with Apple",
+      "signUpWithGoogle": "Sign up with Google",
+      "continueWith": "Or continue with",
+      "invalidEmailOrPassword": "Invalid email or password",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "signUp": "Sign up",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "forgotPassword": {
+      "cardTitle": "Forgot Password",
+      "cardDescription": "Enter your email to reset your password",
+      "invalidEmail": "Invalid email",
+      "email": "Email",
+      "resetPassword": "Reset Password",
+      "signIn": "Sign in"
+    }
+  }
+}
