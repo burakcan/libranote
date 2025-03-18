@@ -1,10 +1,13 @@
 import { Server } from '@hocuspocus/server';
+// import { prisma } from '@repo/db';
 import jwt from 'jsonwebtoken';
 
 const DEFAULT_PORT = 3001;
 
+console.log(prisma)
+
 const server = Server.configure({
-  port: DEFAULT_PORT,
+  port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
   onAuthenticate: async (socket) => {
     const decoded = jwt.verify(socket.token, process.env.HOCUSPOCUS_WEBSOCKET_SECRET!) as {
       userId: string;
