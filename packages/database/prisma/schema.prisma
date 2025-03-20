@@ -17,8 +17,6 @@ model User {
   createdAt         DateTime
   updatedAt         DateTime
   accounts          Account[]
-  invitations       Invitation[]
-  members           Member[]
   createdNotes      Note[]             @relation("CreatedNotes")
   ownedNotes        Note[]             @relation("OwnedNotes")
   noteCollaborators NoteCollaborator[]
@@ -28,16 +26,15 @@ model User {
 }
 
 model Session {
-  id                   String   @id
-  expiresAt            DateTime
-  token                String   @unique
-  createdAt            DateTime
-  updatedAt            DateTime
-  ipAddress            String?
-  userAgent            String?
-  userId               String
-  activeOrganizationId String?
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("session")
 }
@@ -72,60 +69,18 @@ model Verification {
   @@map("verification")
 }
 
-model Organization {
-  id          String       @id
-  name        String
-  slug        String?      @unique
-  logo        String?
-  createdAt   DateTime
-  metadata    String?
-  invitations Invitation[]
-  members     Member[]
-  notes       Note[]
-
-  @@map("organization")
-}
-
-model Member {
-  id             String       @id
-  organizationId String
-  userId         String
-  role           String
-  createdAt      DateTime
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("member")
-}
-
-model Invitation {
-  id             String       @id
-  organizationId String
-  email          String
-  role           String?
-  status         String
-  expiresAt      DateTime
-  inviterId      String
-  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@map("invitation")
-}
-
 model Note {
-  id             String             @id
-  title          String
-  path           String             @unique
-  creatorId      String
-  ownerId        String?
-  organizationId String?
-  isPublic       Boolean            @default(false)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  creator        User               @relation("CreatedNotes", fields: [creatorId], references: [id], onDelete: Cascade)
-  organization   Organization?      @relation(fields: [organizationId], references: [id])
-  owner          User?              @relation("OwnedNotes", fields: [ownerId], references: [id])
-  collaborators  NoteCollaborator[]
+  id            String             @id
+  title         String
+  path          String             @unique
+  creatorId     String
+  ownerId       String?
+  isPublic      Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  creator       User               @relation("CreatedNotes", fields: [creatorId], references: [id], onDelete: Cascade)
+  owner         User?              @relation("OwnedNotes", fields: [ownerId], references: [id])
+  collaborators NoteCollaborator[]
 
   @@map("note")
 }
@@ -141,4 +96,13 @@ model NoteCollaborator {
 
   @@unique([noteId, userId])
   @@map("note_collaborator")
+}
+
+model Jwks {
+  id         String   @id
+  publicKey  String
+  privateKey String
+  createdAt  DateTime
+
+  @@map("jwks")
 }

@@ -14,6 +14,12 @@ const eslintConfig = [
     extends: ["next/core-web-vitals", "next/typescript"],
     plugins: ["sort"],
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          caughtErrors: "none",
+        },
+      ],
       "sort/imports": [
         "error",
         {

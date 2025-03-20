@@ -32,8 +32,7 @@
   },
   "dependencies": {
     "@hocuspocus/server": "^2.15.2",
-    "@types/jsonwebtoken": "^9.0.9",
-    "jsonwebtoken": "^9.0.2",
-    "@repo/db": "workspace:*"
+    "@repo/db": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.9"
   }
 }

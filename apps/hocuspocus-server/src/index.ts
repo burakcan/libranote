@@ -1,33 +1,23 @@
 import { Server } from '@hocuspocus/server';
-import { PrismaClient } from '@repo/db';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 const DEFAULT_PORT = 3001;
 
-const prisma = new PrismaClient();
+// eslint-disable-next-line no-undef
+const JWKS = jose.createRemoteJWKSet(new URL(process.env.JWKS_URL as string));
 
 const server = Server.configure({
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
   onAuthenticate: async (socket) => {
-    const decoded = jwt.verify(socket.token, process.env.HOCUSPOCUS_WEBSOCKET_SECRET!) as {
-      userId: string;
-    };
+    const { payload } = await jose.jwtVerify(socket.token, JWKS);
 
-    if (!decoded || !decoded.userId) {
+    if (!payload || !payload.sub) {
       throw new Error('Invalid token');
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: decoded.userId,
-      },
-    });
+    // TODO: Check if user has access to the document
 
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    console.log('User authenticated:', user);
+    console.info(`Authenticated: ${socket.documentName} - ${payload.sub}`);
 
     return true;
   },

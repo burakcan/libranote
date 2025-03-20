@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export * from "@repo/db";
 import { PrismaClient } from "@repo/db";
 

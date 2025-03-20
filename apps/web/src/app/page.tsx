@@ -1,4 +1,4 @@
-import { prisma } from "@repo/db";
+import { prisma } from "@/lib/prisma";
 
 export default async function Home() {
   const users = await prisma.note.findMany();
