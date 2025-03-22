@@ -11,7 +11,7 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.config({
-    extends: ["next/core-web-vitals", "next/typescript"],
+    extends: ["next/core-web-vitals", "next/typescript", "prettier"],
     plugins: ["sort"],
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -38,7 +38,6 @@ const eslintConfig = [
       ]
     }
   })
-  // ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 
 export default eslintConfig;

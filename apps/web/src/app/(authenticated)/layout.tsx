@@ -1,12 +1,8 @@
-import {
-  HydrationBoundary,
-  QueryClient,
-  dehydrate,
-} from "@tanstack/react-query";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth/auth";
-import { QUERY_KEY as JWT_QUERY_KEY } from "@/query/useJWT";
+import { auth } from "@/features/auth/auth";
+import { StoreProvider } from "@/features/core/StoreProvider";
+import { SyncManager } from "@/features/core/SyncManager";
 
 export default async function AuthenticatedLayout({
   children,
@@ -15,29 +11,16 @@ export default async function AuthenticatedLayout({
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
-    asResponse: true,
   });
 
-  let jwt;
-  try {
-    await session.json();
-    jwt = session.headers.get("set-auth-jwt");
-  } catch (e) {
-    redirect("/");
+  if (!session) {
+    redirect("/signin");
   }
 
-  const queryClient = new QueryClient();
-
-  await queryClient.fetchQuery({
-    queryKey: JWT_QUERY_KEY,
-    queryFn: async () => jwt
-  });
-
-  const dehydratedState = dehydrate(queryClient);
-
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <StoreProvider user={session.user}>
+      <SyncManager />
       {children}
-    </HydrationBoundary>
+    </StoreProvider>
   );
 }

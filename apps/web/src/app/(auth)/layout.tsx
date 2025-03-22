@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AuthWrapper } from "@/components/auth/AuthWrapper";
-import { auth } from "@/lib/auth";
+import { auth } from "@/features/auth/auth";
+import { AuthWrapper } from "@/features/auth/AuthWrapper";
 
 export default async function AuthLayout({
   children,
@@ -13,7 +13,7 @@ export default async function AuthLayout({
   });
 
   if (session) {
-    redirect("/dashboard");
+    redirect("/notes");
   }
 
   return <AuthWrapper>{children}</AuthWrapper>;

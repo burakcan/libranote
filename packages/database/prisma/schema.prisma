@@ -1,3 +1,4 @@
+// Core configuration
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/client"
@@ -8,6 +9,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Models required by Better Auth.
+// These should align with the fields Better Auth expects.
+
 model User {
   id                String             @id
   name              String
@@ -17,10 +21,11 @@ model User {
   createdAt         DateTime
   updatedAt         DateTime
   accounts          Account[]
-  createdNotes      Note[]             @relation("CreatedNotes")
-  ownedNotes        Note[]             @relation("OwnedNotes")
-  noteCollaborators NoteCollaborator[]
   sessions          Session[]
+  noteCollaborators NoteCollaborator[]
+  collectionMembers CollectionMember[]
+  ownedCollections  Collection[]       @relation("OwnedCollections")
+  ownedNotes        Note[]             @relation("OwnedNotes")
 
   @@map("user")
 }
@@ -69,18 +74,55 @@ model Verification {
   @@map("verification")
 }
 
+model Jwks {
+  id         String   @id
+  publicKey  String
+  privateKey String
+  createdAt  DateTime
+
+  @@map("jwks")
+}
+
+// Application models for collections and notes.
+
+model Collection {
+  id        String             @id
+  title     String
+  ownerId   String
+  owner     User               @relation("OwnedCollections", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  notes     Note[]
+  members   CollectionMember[]
+
+  @@map("collection")
+}
+
+model CollectionMember {
+  id           String     @id
+  userId       String
+  collectionId String
+  canEdit      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId])
+  @@map("collection_member")
+}
+
 model Note {
-  id            String             @id
-  title         String
-  path          String             @unique
-  creatorId     String
-  ownerId       String?
-  isPublic      Boolean            @default(false)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  creator       User               @relation("CreatedNotes", fields: [creatorId], references: [id], onDelete: Cascade)
-  owner         User?              @relation("OwnedNotes", fields: [ownerId], references: [id])
-  collaborators NoteCollaborator[]
+  id                String             @id
+  title             String
+  description       String?
+  ownerId           String
+  owner             User               @relation("OwnedNotes", fields: [ownerId], references: [id], onDelete: Cascade)
+  collectionId      String
+  collection        Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  isPublic          Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  noteCollaborators NoteCollaborator[]
 
   @@map("note")
 }
@@ -98,11 +140,16 @@ model NoteCollaborator {
   @@map("note_collaborator")
 }
 
-model Jwks {
-  id         String   @id
-  publicKey  String
-  privateKey String
-  createdAt  DateTime
+enum YDocType {
+  COLLECTION
+  NOTE
+}
 
-  @@map("jwks")
+model YDocState {
+  id         String   @id // same as the collection or note ID
+  docType    YDocType // "collection" or "note"
+  encodedDoc Bytes // yjs doc as a binary blob
+  updatedAt  DateTime @updatedAt
+
+  @@map("y_doc_state")
 }
