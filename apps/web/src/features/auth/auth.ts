@@ -4,7 +4,7 @@ import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { jwt } from "better-auth/plugins";
 import { prisma } from "@/lib/prisma";
-import { createCollection } from "@/features/collections/db/createCollection.db";
+import { createCollection } from "@/features/collections/collections.db";
 import { createNote } from "@/features/notes/db/createNote.db";
 
 export const auth = betterAuth({

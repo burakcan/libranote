@@ -1,7 +1,7 @@
 import { produce } from "immer";
 import { Draft } from "immer";
 import { create } from "zustand";
-import * as localDb from "@/lib/local-persistence/localDb";
+import { LocalDataService } from "@/lib/local-persistence/localDataService";
 import { Collection, Note } from "@/lib/prisma";
 
 type SyncStatus = "idle" | "syncing" | "synced" | "error";
@@ -39,64 +39,14 @@ interface StoreActions {
   setNotesData: (notes: Note[]) => void;
   setNotesSyncStatus: (syncStatus: SyncStatus) => void;
   createNote: (collectionId: string, title: string, content?: string) => void;
-  deleteNote: (noteId: string, collectionId: string) => void;
+  deleteNote: (noteId: string) => void;
   updateNote: (note: Note) => void;
 
   removeActionFromQueue: (actionId: string) => void;
+  addActionToQueue: (action: ActionQueue.Item) => void;
 }
 
 export type Store = StoreState & StoreActions;
-
-// Queue utilities
-const queueCreate = (
-  queue: Draft<ActionQueue.Item[]>,
-  type: "CREATE_COLLECTION" | "CREATE_NOTE",
-  relatedEntityId: string
-) => {
-  const actionId = crypto.randomUUID();
-
-  queue.push({
-    type,
-    id: actionId,
-    status: "pending",
-    createdAt: new Date(),
-    relatedEntityId,
-  });
-
-  return actionId;
-};
-
-const queueDelete = (
-  queue: Draft<ActionQueue.Item[]>,
-  type: "DELETE_COLLECTION" | "DELETE_NOTE",
-  relatedEntityId: string
-): boolean => {
-  // Check for pending create
-  const pendingCreateType =
-    type === "DELETE_COLLECTION" ? "CREATE_COLLECTION" : "CREATE_NOTE";
-  const pendingCreateIndex = queue.findIndex(
-    (action) =>
-      action.type === pendingCreateType &&
-      action.status === "pending" &&
-      action.relatedEntityId === relatedEntityId
-  );
-
-  if (pendingCreateIndex !== -1) {
-    // If item was just created but not synced, remove the create action
-    queue.splice(pendingCreateIndex, 1);
-    return true;
-  }
-
-  // Add delete action to queue
-  queue.push({
-    type,
-    id: crypto.randomUUID(),
-    status: "pending",
-    createdAt: new Date(),
-    relatedEntityId,
-  });
-  return false;
-};
 
 // Type-safe produce utility
 const P = <T extends object>(
@@ -105,7 +55,7 @@ const P = <T extends object>(
 ) => set(produce<T>(fn));
 
 export const createStore = (initialData: { user: StoreState["user"] }) => {
-  return create<Store, []>((set) => ({
+  return create<Store, []>((set, get) => ({
     ...initialData,
     // State
     activeCollection: null,
@@ -133,11 +83,20 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         draft.collections.syncStatus = syncStatus;
       }),
 
-    createCollection: (title) =>
+    // Add action to queue (helper method)
+    addActionToQueue: (action) =>
       P(set, (draft) => {
-        const ownerId = draft.user.id;
-        const collectionId = crypto.randomUUID();
+        draft.actionQueue.push(action);
+      }),
 
+    createCollection: (title) => {
+      // Get current state synchronously
+      const state = get();
+      const ownerId = state.user.id;
+      const collectionId = crypto.randomUUID();
+
+      // Add to collections data immediately
+      P(set, (draft) => {
         draft.collections.data.push({
           id: collectionId,
           title,
@@ -145,25 +104,72 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           createdAt: new Date(),
           updatedAt: new Date(),
         });
+      });
 
-        const queueItemId = queueCreate(
-          draft.actionQueue,
-          "CREATE_COLLECTION",
+      // Create in local DB and get action ID (don't use draft in async operations)
+      LocalDataService.createCollection(collectionId, title, ownerId)
+        .then((actionId) => {
+          // Use the helper method to add to queue
+          get().addActionToQueue({
+            id: actionId,
+            type: "CREATE_COLLECTION",
+            status: "pending",
+            createdAt: new Date(),
+            relatedEntityId: collectionId,
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to create collection locally", error);
+        });
+    },
+
+    deleteCollection: (collectionId) => {
+      // Get current state synchronously
+      const state = get();
+
+      // Check for pending create action
+      const pendingCreateIndex = state.actionQueue.findIndex(
+        (action) =>
+          action.type === "CREATE_COLLECTION" &&
+          action.status === "pending" &&
+          action.relatedEntityId === collectionId
+      );
+
+      if (pendingCreateIndex !== -1) {
+        // If collection was just created but not synced, remove the create action
+        const actionId = state.actionQueue[pendingCreateIndex].id;
+
+        P(set, (draft) => {
+          draft.actionQueue.splice(pendingCreateIndex, 1);
+        });
+
+        LocalDataService.removeActionFromQueue(actionId);
+      } else {
+        // Add delete action to queue
+        LocalDataService.addActionToQueue(
+          "DELETE_COLLECTION",
           collectionId
-        );
+        ).then((actionId) => {
+          get().addActionToQueue({
+            id: actionId,
+            type: "DELETE_COLLECTION",
+            status: "pending",
+            createdAt: new Date(),
+            relatedEntityId: collectionId,
+          });
+        });
+      }
 
-        localDb.createCollection(collectionId, title, ownerId, queueItemId);
-      }),
-
-    deleteCollection: (collectionId) =>
+      // Remove from collections data
       P(set, (draft) => {
-        queueDelete(draft.actionQueue, "DELETE_COLLECTION", collectionId);
-
-        // Remove from collections data
         draft.collections.data = draft.collections.data.filter(
           (collection) => collection.id !== collectionId
         );
-      }),
+      });
+
+      // Remove from local DB
+      LocalDataService.deleteCollection(collectionId);
+    },
 
     updateCollection: (collection) =>
       P(set, (draft) => {
@@ -172,6 +178,9 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         );
         if (index !== -1) {
           draft.collections.data[index] = collection;
+
+          // Update in local DB
+          LocalDataService.updateCollection(collection);
         }
       }),
 
@@ -186,41 +195,102 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         draft.notes.syncStatus = syncStatus;
       }),
 
-    createNote: (collectionId, title, content = "") =>
+    createNote: (collectionId, title, content = "") => {
+      // Get current state synchronously
+      const state = get();
+      const noteId = crypto.randomUUID();
+
+      // Add to notes data immediately
       P(set, (draft) => {
-        const noteId = crypto.randomUUID();
         draft.notes.data.push({
           id: noteId,
           title,
           description: content,
-          ownerId: draft.user.id,
+          ownerId: state.user.id,
           collectionId,
           isPublic: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
+      });
 
-        queueCreate(draft.actionQueue, "CREATE_NOTE", noteId);
-      }),
+      // Create in local DB and get action ID
+      LocalDataService.createNote(
+        noteId,
+        title,
+        content,
+        state.user.id,
+        collectionId
+      ).then((actionId) => {
+        get().addActionToQueue({
+          id: actionId,
+          type: "CREATE_NOTE",
+          status: "pending",
+          createdAt: new Date(),
+          relatedEntityId: noteId,
+        });
+      });
+    },
 
-    deleteNote: (noteId) =>
+    deleteNote: (noteId) => {
+      // Get current state synchronously
+      const state = get();
+
+      // Check for pending create action
+      const pendingCreateIndex = state.actionQueue.findIndex(
+        (action) =>
+          action.type === "CREATE_NOTE" &&
+          action.status === "pending" &&
+          action.relatedEntityId === noteId
+      );
+
+      if (pendingCreateIndex !== -1) {
+        // If note was just created but not synced, remove the create action
+        const actionId = state.actionQueue[pendingCreateIndex].id;
+
+        P(set, (draft) => {
+          draft.actionQueue.splice(pendingCreateIndex, 1);
+        });
+
+        LocalDataService.removeActionFromQueue(actionId);
+      } else {
+        // Add delete action to queue
+        LocalDataService.addActionToQueue("DELETE_NOTE", noteId).then(
+          (actionId) => {
+            get().addActionToQueue({
+              id: actionId,
+              type: "DELETE_NOTE",
+              status: "pending",
+              createdAt: new Date(),
+              relatedEntityId: noteId,
+            });
+          }
+        );
+      }
+
+      // Remove from notes data
       P(set, (draft) => {
-        queueDelete(draft.actionQueue, "DELETE_NOTE", noteId);
-
-        // Remove from notes data
         draft.notes.data = draft.notes.data.filter(
           (note) => note.id !== noteId
         );
-      }),
+      });
+
+      // Remove from local DB
+      LocalDataService.deleteNote(noteId);
+    },
 
     updateNote: (note) =>
       P(set, (draft) => {
         const index = draft.notes.data.findIndex((n) => n.id === note.id);
         if (index !== -1) {
-          draft.notes.data[index] = {
+          const updatedNote = {
             ...note,
             updatedAt: new Date(),
           };
+          draft.notes.data[index] = updatedNote;
+
+          // Update in local DB
+          LocalDataService.updateNote(updatedNote);
         }
       }),
 
@@ -230,7 +300,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           (action) => action.id !== actionId
         );
 
-        localDb.removeActionFromQueue(actionId);
+        LocalDataService.removeActionFromQueue(actionId);
       }),
   }));
 };

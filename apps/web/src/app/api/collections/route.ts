@@ -1,34 +1,58 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/features/auth/auth";
-import { getCollections } from "@/features/collections/db/collections.db";
-import { createCollection } from "@/features/collections/db/createCollection.db";
+import {
+  getCollections,
+  createCollection,
+} from "@/features/collections/collections.db";
 
-export async function GET(req: Request) {
+// GET /api/collections - Get all collections for the current user
+export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({
     headers: req.headers,
   });
 
   if (!session) {
-    return new Response("Unauthorized", { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const collections = await getCollections(session.user.id);
-
-  return NextResponse.json(collections);
+  try {
+    const collections = await getCollections(session.user.id);
+    return NextResponse.json(collections);
+  } catch (error) {
+    console.error("Error fetching collections:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch collections" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(req: Request) {
+// POST /api/collections - Create a new collection
+export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({
     headers: req.headers,
   });
 
   if (!session) {
-    return new Response("Unauthorized", { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title } = await req.json();
+  try {
+    const body = await req.json();
+    const { title } = body;
 
-  const collection = await createCollection(session.user.id, title);
+    if (!title) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
 
-  return NextResponse.json(collection);
+    const collection = await createCollection(session.user.id, title);
+
+    return NextResponse.json(collection);
+  } catch (error) {
+    console.error("Error creating collection:", error);
+    return NextResponse.json(
+      { error: "Failed to create collection" },
+      { status: 500 }
+    );
+  }
 }

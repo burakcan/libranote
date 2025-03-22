@@ -1,6 +1,25 @@
 import * as Y from "yjs";
 import { prisma, YDocType } from "@/lib/prisma";
 
+export async function getCollections(userId: string) {
+  const collections = await prisma.collection.findMany({
+    where: {
+      OR: [
+        {
+          ownerId: userId,
+        },
+        {
+          members: {
+            some: { userId },
+          },
+        },
+      ],
+    },
+  });
+
+  return collections;
+}
+
 function createCollectionYDoc(title: string) {
   const doc = new Y.Doc();
   doc.getMap("collection").set("title", title);
@@ -29,5 +48,25 @@ export async function createCollection(userId: string, title: string) {
     });
 
     return collection;
+  });
+}
+
+export async function deleteCollection(collectionId: string) {
+  return await prisma.collection.delete({
+    where: {
+      id: collectionId,
+    },
+  });
+}
+
+export async function updateCollection(collectionId: string, title: string) {
+  return await prisma.collection.update({
+    where: {
+      id: collectionId,
+    },
+    data: {
+      title,
+      updatedAt: new Date(),
+    },
   });
 }
