@@ -1,5 +1,6 @@
 import { CollectionList } from "@/features/collections/CollectionList";
 import { CreateCollectionButton } from "@/features/collections/CreateCollectionButton";
+import { NoteList } from "@/features/notes/NoteList";
 
 export default async function NotesPage() {
   return (
@@ -12,7 +13,9 @@ export default async function NotesPage() {
             <CreateCollectionButton />
           </div>
         </aside>
-        <aside className="w-64 border-r border-sidebar-border overflow-y-auto bg-sidebar"></aside>
+        <aside className="w-64 border-r border-sidebar-border overflow-y-auto bg-sidebar">
+          <NoteList />
+        </aside>
       </div>
     </main>
   );

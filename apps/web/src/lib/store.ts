@@ -1,7 +1,12 @@
 import { produce } from "immer";
 import { Draft } from "immer";
 import { create } from "zustand";
-import { LocalDataService } from "@/lib/local-persistence/localDataService";
+import {
+  LocalDataService,
+  CollectionRepository,
+  NoteRepository,
+  ActionQueueRepository,
+} from "@/lib/local-persistence/localDb";
 import { Collection, Note } from "@/lib/prisma";
 
 type SyncStatus = "idle" | "syncing" | "synced" | "error";
@@ -32,17 +37,25 @@ interface StoreActions {
   setActiveCollection: (collectionId: Collection["id"]) => void;
   setCollectionsData: (collections: Collection[]) => void;
   setCollectionsSyncStatus: (syncStatus: SyncStatus) => void;
-  createCollection: (title: string) => void;
-  deleteCollection: (collectionId: Collection["id"]) => void;
-  updateCollection: (collection: Collection) => void;
+  createCollection: (title: string) => Promise<void>;
+  deleteCollection: (collectionId: Collection["id"]) => Promise<void>;
+  updateCollection: (collection: Collection) => Promise<void>;
+  swapCollection: (
+    localId: Collection["id"],
+    remoteCollection: Collection
+  ) => Promise<void>;
 
   setNotesData: (notes: Note[]) => void;
   setNotesSyncStatus: (syncStatus: SyncStatus) => void;
-  createNote: (collectionId: string, title: string, content?: string) => void;
-  deleteNote: (noteId: string) => void;
-  updateNote: (note: Note) => void;
+  createNote: (
+    collectionId: string,
+    title: string,
+    content?: string
+  ) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
+  updateNote: (note: Note) => Promise<void>;
 
-  removeActionFromQueue: (actionId: string) => void;
+  removeActionFromQueue: (actionId: string) => Promise<void>;
   addActionToQueue: (action: ActionQueue.Item) => void;
 }
 
@@ -89,7 +102,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         draft.actionQueue.push(action);
       }),
 
-    createCollection: (title) => {
+    createCollection: async (title) => {
       // Get current state synchronously
       const state = get();
       const ownerId = state.user.id;
@@ -107,7 +120,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       });
 
       // Create in local DB and get action ID (don't use draft in async operations)
-      LocalDataService.createCollection(collectionId, title, ownerId)
+      await LocalDataService.createCollection(collectionId, title, ownerId)
         .then((actionId) => {
           // Use the helper method to add to queue
           get().addActionToQueue({
@@ -123,7 +136,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         });
     },
 
-    deleteCollection: (collectionId) => {
+    deleteCollection: async (collectionId) => {
       // Get current state synchronously
       const state = get();
 
@@ -143,10 +156,10 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           draft.actionQueue.splice(pendingCreateIndex, 1);
         });
 
-        LocalDataService.removeActionFromQueue(actionId);
+        await ActionQueueRepository.remove(actionId);
       } else {
         // Add delete action to queue
-        LocalDataService.addActionToQueue(
+        await LocalDataService.addActionToQueue(
           "DELETE_COLLECTION",
           collectionId
         ).then((actionId) => {
@@ -160,29 +173,82 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         });
       }
 
+      // If this was the active collection, clear the selection
+      if (state.activeCollection === collectionId) {
+        set({ activeCollection: null });
+      }
+
+      // Find notes that belong to this collection
+      const notesToDelete = state.notes.data.filter(
+        (note) => note.collectionId === collectionId
+      );
+
       // Remove from collections data
       P(set, (draft) => {
+        // Remove the collection
         draft.collections.data = draft.collections.data.filter(
           (collection) => collection.id !== collectionId
+        );
+
+        // Also remove all notes that belonged to this collection
+        draft.notes.data = draft.notes.data.filter(
+          (note) => note.collectionId !== collectionId
         );
       });
 
       // Remove from local DB
-      LocalDataService.deleteCollection(collectionId);
+      await CollectionRepository.delete(collectionId);
+
+      // Delete all associated notes from local DB
+      notesToDelete.forEach(async (note) => {
+        await NoteRepository.delete(note.id);
+      });
     },
 
-    updateCollection: (collection) =>
-      P(set, (draft) => {
-        const index = draft.collections.data.findIndex(
-          (c) => c.id === collection.id
-        );
-        if (index !== -1) {
-          draft.collections.data[index] = collection;
+    updateCollection: async (collection) => {
+      // Get current state synchronously
+      const state = get();
 
-          // Update in local DB
-          LocalDataService.updateCollection(collection);
-        }
-      }),
+      const index = state.collections.data.findIndex(
+        (c) => c.id === collection.id
+      );
+
+      if (index !== -1) {
+        P(set, (draft) => {
+          draft.collections.data[index] = collection;
+        });
+      }
+
+      // Update in local DB
+      await CollectionRepository.update(collection);
+    },
+
+    swapCollection: async (localId, remoteCollection) => {
+      // Get current state synchronously
+      const state = get();
+
+      // Find the index of the local collection
+      const localIndex = state.collections.data.findIndex(
+        (c) => c.id === localId
+      );
+
+      if (localIndex !== -1) {
+        P(set, (draft) => {
+          draft.collections.data[localIndex] = remoteCollection;
+
+          // Update the notes that belong to this collection
+          draft.notes.data = draft.notes.data.map((note) => {
+            if (note.collectionId === localId) {
+              return { ...note, collectionId: remoteCollection.id };
+            }
+            return note;
+          });
+        });
+      }
+
+      // Update in local DB
+      await CollectionRepository.swap(localId, remoteCollection);
+    },
 
     // Note actions
     setNotesData: (notes) =>
@@ -195,7 +261,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         draft.notes.syncStatus = syncStatus;
       }),
 
-    createNote: (collectionId, title, content = "") => {
+    createNote: async (collectionId, title, content = "") => {
       // Get current state synchronously
       const state = get();
       const noteId = crypto.randomUUID();
@@ -215,7 +281,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       });
 
       // Create in local DB and get action ID
-      LocalDataService.createNote(
+      await LocalDataService.createNote(
         noteId,
         title,
         content,
@@ -232,7 +298,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       });
     },
 
-    deleteNote: (noteId) => {
+    deleteNote: async (noteId) => {
       // Get current state synchronously
       const state = get();
 
@@ -252,10 +318,10 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           draft.actionQueue.splice(pendingCreateIndex, 1);
         });
 
-        LocalDataService.removeActionFromQueue(actionId);
+        await ActionQueueRepository.remove(actionId);
       } else {
         // Add delete action to queue
-        LocalDataService.addActionToQueue("DELETE_NOTE", noteId).then(
+        await LocalDataService.addActionToQueue("DELETE_NOTE", noteId).then(
           (actionId) => {
             get().addActionToQueue({
               id: actionId,
@@ -276,31 +342,33 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       });
 
       // Remove from local DB
-      LocalDataService.deleteNote(noteId);
+      await NoteRepository.delete(noteId);
     },
 
-    updateNote: (note) =>
-      P(set, (draft) => {
-        const index = draft.notes.data.findIndex((n) => n.id === note.id);
-        if (index !== -1) {
-          const updatedNote = {
-            ...note,
-            updatedAt: new Date(),
-          };
-          draft.notes.data[index] = updatedNote;
+    updateNote: async (note) => {
+      // Get current state synchronously
+      const state = get();
 
-          // Update in local DB
-          LocalDataService.updateNote(updatedNote);
-        }
-      }),
+      const index = state.notes.data.findIndex((n) => n.id === note.id);
+      if (index !== -1) {
+        P(set, (draft) => {
+          draft.notes.data[index] = note;
+        });
+      }
 
-    removeActionFromQueue: (actionId) =>
+      // Update in local DB
+      await NoteRepository.update(note);
+    },
+
+    removeActionFromQueue: async (actionId) => {
       P(set, (draft) => {
         draft.actionQueue = draft.actionQueue.filter(
           (action) => action.id !== actionId
         );
+      });
 
-        LocalDataService.removeActionFromQueue(actionId);
-      }),
+      // Remove from local DB
+      await ActionQueueRepository.remove(actionId);
+    },
   }));
 };

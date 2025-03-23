@@ -1,188 +1,196 @@
-import Dexie, { Transaction } from "dexie";
+import Dexie from "dexie";
 import { Collection, Note } from "@/lib/prisma";
 
-export const localDb = new Dexie("libra-local-db");
+// Setup database
+export const db = new Dexie("libra-local-db");
 
-localDb.version(1).stores({
+db.version(1).stores({
   collections: "id, title, ownerId, createdAt, updatedAt",
   notes: "id, title, description, ownerId, collectionId, createdAt, updatedAt",
   actionQueue: "id, relatedEntityId, type, status, createdAt",
 });
 
-const collections = localDb.table<Collection>("collections");
-const notes = localDb.table<Note>("notes");
-const actionQueue = localDb.table<ActionQueue.Item>("actionQueue");
-
-// -------------------------------------
-// Collection operations
-// -------------------------------------
-export const getCollections = async () => {
-  return await collections.toArray();
-};
-
-export const getCollection = async (id: Collection["id"]) => {
-  return await collections.get(id);
-};
-
-export const upsertCollection = async (
-  collection: Collection,
-  tx?: Transaction
-) => {
-  if (tx) {
-    await tx.table<Collection>("collections").put(collection);
-  } else {
-    await localDb.table<Collection>("collections").put(collection);
+// Repository classes
+export class CollectionRepository {
+  static async getAll(): Promise<Collection[]> {
+    return await db.table<Collection>("collections").toArray();
   }
-};
 
-export const deleteCollection = async (
-  id: Collection["id"],
-  tx?: Transaction
-) => {
-  if (tx) {
-    await tx.table<Collection>("collections").delete(id);
-  } else {
-    await localDb.table<Collection>("collections").delete(id);
+  static async getById(id: string): Promise<Collection | undefined> {
+    return await db.table<Collection>("collections").get(id);
   }
-};
 
-export const createCollection = async (
-  collectionId: Collection["id"],
-  title: Collection["title"],
-  ownerId: Collection["ownerId"],
-  actionId: ActionQueue.Item["id"]
-) => {
-  await localDb.transaction(
-    "rw",
-    localDb.table("collections"),
-    localDb.table("actionQueue"),
-    async (tx) => {
-      await tx.table<Collection>("collections").add({
-        id: collectionId,
-        title,
-        ownerId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+  static async create(collection: Collection, actionId: string): Promise<void> {
+    await db.transaction(
+      "rw",
+      [db.table("collections"), db.table("actionQueue")],
+      async (tx) => {
+        await tx.table<Collection>("collections").add(collection);
+        await tx.table<ActionQueue.Item>("actionQueue").add({
+          id: actionId,
+          type: "CREATE_COLLECTION",
+          relatedEntityId: collection.id,
+          status: "pending",
+          createdAt: new Date(),
+        });
+      }
+    );
+  }
 
-      await tx.table<ActionQueue.Item>("actionQueue").add({
-        id: actionId,
-        type: "CREATE_COLLECTION",
-        relatedEntityId: collectionId,
-        status: "pending",
-        createdAt: new Date(),
-      });
+  static async update(collection: Collection): Promise<void> {
+    await db.table<Collection>("collections").put(collection);
+  }
+
+  static async delete(id: string): Promise<void> {
+    await db.table<Collection>("collections").delete(id);
+  }
+
+  static async swap(
+    localId: string,
+    remoteCollection: Collection
+  ): Promise<void> {
+    if (localId === remoteCollection.id) {
+      // If IDs are the same, just update the collection
+      await db.table<Collection>("collections").put(remoteCollection);
+      return;
     }
-  );
-};
 
-export const swapCollection = async (
-  localCollection: Collection,
-  remoteCollection: Collection
-) => {
-  await localDb.transaction("rw", localDb.table("collections"), async (tx) => {
-    await tx.table<Collection>("collections").put(remoteCollection);
-    await tx.table<Collection>("collections").delete(localCollection.id);
-  });
-};
+    // Otherwise, we need to update references in notes and replace the collection
+    await db.transaction(
+      "rw",
+      [db.table("collections"), db.table("notes")],
+      async (tx) => {
+        // 1. Update each note to reference the new collection ID
+        await tx.table<Note>("notes").where({ collectionId: localId }).modify({
+          collectionId: remoteCollection.id,
+        });
 
-// -------------------------------------
-// Note operations
-// -------------------------------------
-export const getNotes = async (collectionId?: Note["collectionId"]) => {
-  if (collectionId) {
-    return await notes.where({ collectionId }).toArray();
+        // 3. Add the remote collection
+        await tx.table<Collection>("collections").put(remoteCollection);
+
+        // 4. Delete the local collection
+        await tx.table<Collection>("collections").delete(localId);
+      }
+    );
   }
-  return await notes.toArray();
-};
+}
 
-export const getNote = async (id: Note["id"]) => {
-  return await notes.get(id);
-};
-
-export const upsertNote = async (note: Note, tx?: Transaction) => {
-  if (tx) {
-    await tx.table<Note>("notes").put(note);
-  } else {
-    await localDb.table<Note>("notes").put(note);
-  }
-};
-
-export const deleteNote = async (id: Note["id"], tx?: Transaction) => {
-  if (tx) {
-    await tx.table<Note>("notes").delete(id);
-  } else {
-    await localDb.table<Note>("notes").delete(id);
-  }
-};
-
-export const createNote = async (
-  noteId: Note["id"],
-  title: Note["title"],
-  description: Note["description"],
-  ownerId: Note["ownerId"],
-  collectionId: Note["collectionId"],
-  actionId: ActionQueue.Item["id"]
-) => {
-  await localDb.transaction(
-    "rw",
-    localDb.table("notes"),
-    localDb.table("actionQueue"),
-    async (tx) => {
-      await tx.table<Note>("notes").add({
-        id: noteId,
-        title,
-        description,
-        ownerId,
-        collectionId,
-        isPublic: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      await tx.table<ActionQueue.Item>("actionQueue").add({
-        id: actionId,
-        type: "CREATE_NOTE",
-        relatedEntityId: noteId,
-        status: "pending",
-        createdAt: new Date(),
-      });
+export class NoteRepository {
+  static async getAll(collectionId?: string): Promise<Note[]> {
+    if (collectionId) {
+      return await db.table<Note>("notes").where({ collectionId }).toArray();
     }
-  );
-};
-
-export const swapNote = async (localNote: Note, remoteNote: Note) => {
-  await localDb.transaction("rw", localDb.table("notes"), async (tx) => {
-    await tx.table<Note>("notes").put(remoteNote);
-    await tx.table<Note>("notes").delete(localNote.id);
-  });
-};
-
-// -------------------------------------
-// Action Queue operations
-// -------------------------------------
-export const getActionQueue = async () => {
-  return await actionQueue.toArray();
-};
-
-export const addActionToQueue = async (
-  action: ActionQueue.Item,
-  tx?: Transaction
-) => {
-  if (tx) {
-    await tx.table<ActionQueue.Item>("actionQueue").add(action);
-  } else {
-    await localDb.table<ActionQueue.Item>("actionQueue").add(action);
+    return await db.table<Note>("notes").toArray();
   }
-};
 
-export const removeActionFromQueue = async (
-  actionId: ActionQueue.Item["id"],
-  tx?: Transaction
-) => {
-  if (tx) {
-    await tx.table<ActionQueue.Item>("actionQueue").delete(actionId);
-  } else {
-    await localDb.table<ActionQueue.Item>("actionQueue").delete(actionId);
+  static async getById(id: string): Promise<Note | undefined> {
+    return await db.table<Note>("notes").get(id);
   }
-};
+
+  static async create(note: Note, actionId: string): Promise<void> {
+    await db.transaction(
+      "rw",
+      [db.table("notes"), db.table("actionQueue")],
+      async (tx) => {
+        await tx.table<Note>("notes").add(note);
+        await tx.table<ActionQueue.Item>("actionQueue").add({
+          id: actionId,
+          type: "CREATE_NOTE",
+          relatedEntityId: note.id,
+          status: "pending",
+          createdAt: new Date(),
+        });
+      }
+    );
+  }
+
+  static async update(note: Note): Promise<void> {
+    await db.table<Note>("notes").put(note);
+  }
+
+  static async delete(id: string): Promise<void> {
+    await db.table<Note>("notes").delete(id);
+  }
+
+  static async swap(localId: string, remoteNote: Note): Promise<void> {
+    await db.transaction("rw", db.table("notes"), async (tx) => {
+      await tx.table<Note>("notes").put(remoteNote);
+      await tx.table<Note>("notes").delete(localId);
+    });
+  }
+}
+
+export class ActionQueueRepository {
+  static async getAll(): Promise<ActionQueue.Item[]> {
+    return await db.table<ActionQueue.Item>("actionQueue").toArray();
+  }
+
+  static async add(action: ActionQueue.Item): Promise<void> {
+    await db.table<ActionQueue.Item>("actionQueue").add(action);
+  }
+
+  static async remove(id: string): Promise<void> {
+    await db.table<ActionQueue.Item>("actionQueue").delete(id);
+  }
+}
+
+// Service layer for coordinating between repositories when needed
+export class LocalDataService {
+  static async createCollection(
+    id: string,
+    title: string,
+    ownerId: string
+  ): Promise<string> {
+    const actionId = crypto.randomUUID();
+    const collection: Collection = {
+      id,
+      title,
+      ownerId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await CollectionRepository.create(collection, actionId);
+    return actionId;
+  }
+
+  static async createNote(
+    id: string,
+    title: string,
+    description: string,
+    ownerId: string,
+    collectionId: string
+  ): Promise<string> {
+    const actionId = crypto.randomUUID();
+    const note: Note = {
+      id,
+      title,
+      description,
+      ownerId,
+      collectionId,
+      isPublic: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await NoteRepository.create(note, actionId);
+    return actionId;
+  }
+
+  static async addActionToQueue(
+    actionType: ActionQueue.ItemType,
+    relatedEntityId: string
+  ): Promise<string> {
+    const actionId = crypto.randomUUID();
+
+    await ActionQueueRepository.add({
+      id: actionId,
+      type: actionType,
+      relatedEntityId,
+      status: "pending",
+      createdAt: new Date(),
+    });
+
+    return actionId;
+  }
+}

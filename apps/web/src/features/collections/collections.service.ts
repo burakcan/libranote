@@ -1,4 +1,7 @@
-import { LocalDataService } from "@/lib/local-persistence/localDataService";
+import {
+  CollectionRepository,
+  LocalDataService,
+} from "@/lib/local-persistence/localDb";
 import { Collection } from "@/lib/prisma";
 
 /**
@@ -33,27 +36,27 @@ export class CollectionsService {
    * Delete a collection locally
    */
   static async deleteCollection(collectionId: string): Promise<void> {
-    await LocalDataService.deleteCollection(collectionId);
+    await CollectionRepository.delete(collectionId);
   }
 
   /**
    * Update a collection locally
    */
   static async updateCollection(collection: Collection): Promise<void> {
-    await LocalDataService.updateCollection(collection);
+    await CollectionRepository.update(collection);
   }
 
   /**
    * Get all collections
    */
   static async getCollections(): Promise<Collection[]> {
-    return await LocalDataService.getCollections();
+    return await CollectionRepository.getAll();
   }
 
   /**
    * Get a collection by ID
    */
   static async getCollection(id: string): Promise<Collection | undefined> {
-    return await LocalDataService.getCollection(id);
+    return await CollectionRepository.getById(id);
   }
 }

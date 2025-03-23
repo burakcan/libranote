@@ -1,4 +1,7 @@
-import { LocalDataService } from "@/lib/local-persistence/localDataService";
+import {
+  NoteRepository,
+  LocalDataService,
+} from "@/lib/local-persistence/localDb";
 import { Note } from "@/lib/prisma";
 
 /**
@@ -44,27 +47,27 @@ export class NotesService {
    * Delete a note locally
    */
   static async deleteNote(noteId: string): Promise<void> {
-    await LocalDataService.deleteNote(noteId);
+    await NoteRepository.delete(noteId);
   }
 
   /**
    * Update a note locally
    */
   static async updateNote(note: Note): Promise<void> {
-    await LocalDataService.updateNote(note);
+    await NoteRepository.update(note);
   }
 
   /**
    * Get all notes, optionally filtered by collection
    */
   static async getNotes(collectionId?: string): Promise<Note[]> {
-    return await LocalDataService.getNotes(collectionId);
+    return await NoteRepository.getAll(collectionId);
   }
 
   /**
    * Get a note by ID
    */
   static async getNote(id: string): Promise<Note | undefined> {
-    return await LocalDataService.getNote(id);
+    return await NoteRepository.getById(id);
   }
 }
