@@ -4,34 +4,41 @@ import { useEffect } from "react";
 import {
   CollectionRepository,
   NoteRepository,
-  ActionQueueRepository,
 } from "@/lib/local-persistence/localDb";
-import {
-  processActionQueueItem,
-  syncRemoteCollectionsToLocal,
-  syncRemoteNotesToLocal,
-} from "@/lib/sync/syncService";
-import { useStore } from "@/features/core/StoreProvider";
+import { syncService } from "@/lib/sync/syncService";
+import { useStore, getStoreInstance } from "@/features/core/StoreProvider";
 
 export function SyncManager() {
+  // Get store state and actions
   const actionQueue = useStore((state) => state.actionQueue);
   const removeActionFromQueue = useStore(
     (state) => state.removeActionFromQueue
   );
+  const setCollectionsData = useStore((state) => state.setCollectionsData);
+  const setNotesData = useStore((state) => state.setNotesData);
 
   // Collections state
   const collectionsSyncStatus = useStore(
     (state) => state.collections.syncStatus
   );
-  const setCollectionsData = useStore((state) => state.setCollectionsData);
   const setCollectionsSyncStatus = useStore(
     (state) => state.setCollectionsSyncStatus
   );
 
   // Notes state
   const notesSyncStatus = useStore((state) => state.notes.syncStatus);
-  const setNotesData = useStore((state) => state.setNotesData);
   const setNotesSyncStatus = useStore((state) => state.setNotesSyncStatus);
+
+  // Initialize sync service with store on component mount
+  useEffect(() => {
+    // Get the store instance using the exported helper
+    const store = getStoreInstance();
+
+    if (store) {
+      // Provide the store instance to the sync service
+      syncService.setStoreInstance(store);
+    }
+  }, []);
 
   // Initial sync effect
   useEffect(() => {
@@ -50,7 +57,7 @@ export function SyncManager() {
         const [localCollections, localNotes, queueItems] = await Promise.all([
           CollectionRepository.getAll(),
           NoteRepository.getAll(),
-          ActionQueueRepository.getAll(),
+          syncService.getActionQueueItems(),
         ]);
 
         // Step 2: Set local data to store
@@ -58,12 +65,12 @@ export function SyncManager() {
         setNotesData(localNotes);
 
         // Step 3: Process all pending actions
-        // Priority will be handled within processActionQueueItem
         for (const item of queueItems) {
           try {
             // Process the item
-            await processActionQueueItem(item);
+            await syncService.processActionQueueItem(item);
             // Remove from queue after successful processing
+            await syncService.removeActionQueueItem(item.id);
             await removeActionFromQueue(item.id);
           } catch (error) {
             console.error(
@@ -73,12 +80,12 @@ export function SyncManager() {
           }
         }
 
-        await syncRemoteCollectionsToLocal();
-        setCollectionsSyncStatus("synced");
+        await syncService.syncRemoteCollectionsToLocal();
+        setCollectionsSyncStatus("idle");
         console.debug("SyncManager: Collections synced successfully");
 
-        await syncRemoteNotesToLocal();
-        setNotesSyncStatus("synced");
+        await syncService.syncRemoteNotesToLocal();
+        setNotesSyncStatus("idle");
         console.debug("SyncManager: Notes synced successfully");
 
         console.debug("SyncManager: Sync completed successfully");
@@ -103,6 +110,15 @@ export function SyncManager() {
   // Process new queue items as they are added
   useEffect(() => {
     const processNewQueueItems = async () => {
+      if (collectionsSyncStatus !== "idle" || notesSyncStatus !== "idle") {
+        return;
+      }
+
+      console.debug("SyncManager: Processing new queue items");
+
+      setCollectionsSyncStatus("syncing");
+      setNotesSyncStatus("syncing");
+
       // Process pending actions in queue
       const pendingActions = actionQueue.filter(
         (item) => item.status === "pending"
@@ -112,8 +128,8 @@ export function SyncManager() {
 
       for (const item of pendingActions) {
         try {
-          // processActionQueueItem now handles dependencies correctly
-          await processActionQueueItem(item);
+          await syncService.processActionQueueItem(item);
+          await syncService.removeActionQueueItem(item.id);
           await removeActionFromQueue(item.id);
           console.debug(
             "SyncManager: Processed queue item",
@@ -127,10 +143,20 @@ export function SyncManager() {
           );
         }
       }
+
+      setCollectionsSyncStatus("idle");
+      setNotesSyncStatus("idle");
     };
 
     processNewQueueItems();
-  }, [actionQueue, removeActionFromQueue]);
+  }, [
+    actionQueue,
+    removeActionFromQueue,
+    collectionsSyncStatus,
+    notesSyncStatus,
+    setCollectionsSyncStatus,
+    setNotesSyncStatus,
+  ]);
 
   return null;
 }

@@ -1,184 +1,346 @@
 import {
   CollectionRepository,
   NoteRepository,
+  ActionQueueRepository,
 } from "@/lib/local-persistence/localDb";
 import { Collection, Note } from "@/lib/prisma";
-import { getStoreInstance } from "@/features/core/StoreProvider";
+import { Store } from "@/lib/store";
+import { getStoreInstance, StoreInstance } from "@/features/core/StoreProvider";
 
-/**
- * Sync a locally created collection to the server
- */
-export async function syncCreateCollection(
-  collectionId: string
-): Promise<Collection | undefined> {
-  const localCollection = await CollectionRepository.getById(collectionId);
+// API Layer: Handles communication with server API
+export class ApiService {
+  static async createCollection(collection: Collection): Promise<Collection> {
+    const response = await fetch("/api/collections", {
+      method: "POST",
+      body: JSON.stringify(collection),
+    });
 
-  if (!localCollection) {
-    console.error(`SyncService: Collection ${collectionId} not found`);
-    return;
-  }
-
-  const remoteCollection = await fetch("/api/collections", {
-    method: "POST",
-    body: JSON.stringify(localCollection),
-  }).then((res) => res.json());
-
-  // Check if we need to update activeCollection in the store
-  const store = getStoreInstance();
-  const activeCollection = store?.getState().activeCollection;
-
-  // If the active collection is the one being swapped, update it
-  if (store && activeCollection === localCollection.id) {
-    // Update the active collection in the store
-    store.getState().setActiveCollection(remoteCollection.id);
-  }
-
-  await store?.getState().swapCollection(localCollection.id, remoteCollection);
-
-  return remoteCollection;
-}
-
-/**
- * Sync collection deletion to the server
- */
-export async function syncDeleteCollection(
-  collectionId: string
-): Promise<void> {
-  await fetch(`/api/collections/${collectionId}`, { method: "DELETE" });
-}
-
-/**
- * Sync a locally created note to the server
- */
-export async function syncCreateNote(
-  noteId: string
-): Promise<Note | undefined> {
-  try {
-    // Get the note from local DB
-    const localNote = await NoteRepository.getById(noteId);
-    if (!localNote) {
-      console.error(`SyncService: Note ${noteId} not found`);
-      return;
+    if (!response.ok) {
+      throw new Error(
+        `Failed to create collection on server: ${response.status} ${response.statusText}`
+      );
     }
 
-    // Find the collection in local DB to make sure we have the up-to-date ID
-    const collection = await CollectionRepository.getById(
-      localNote.collectionId
-    );
-    if (!collection) {
-      console.error(
-        `SyncService: Collection ${localNote.collectionId} not found for note ${noteId}`
+    return response.json();
+  }
+
+  static async deleteCollection(collectionId: string): Promise<void> {
+    const response = await fetch(`/api/collections/${collectionId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to delete collection on server: ${response.status} ${response.statusText}`
       );
+    }
+  }
 
-      // The note references a collection that doesn't exist anymore
-      // Delete the orphaned note to prevent further sync attempts
-      await NoteRepository.delete(noteId);
+  static async createNote(note: Note): Promise<Note> {
+    const response = await fetch("/api/notes", {
+      method: "POST",
+      body: JSON.stringify(note),
+    });
 
-      // If the note still exists in the store, remove it
-      const store = getStoreInstance();
+    if (!response.ok) {
+      throw new Error(
+        `Failed to create note on server: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  static async deleteNote(noteId: string): Promise<void> {
+    const response = await fetch(`/api/notes/${noteId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to delete note on server: ${response.status} ${response.statusText}`
+      );
+    }
+  }
+
+  static async fetchAllCollections(): Promise<Collection[]> {
+    const response = await fetch("/api/collections");
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch collections from server: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  static async fetchAllNotes(): Promise<Note[]> {
+    const response = await fetch("/api/notes");
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch notes from server: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+}
+
+// Sync Service: Coordinates between API, local DB, and store
+export class SyncService {
+  private storeInstance: StoreInstance | null = null;
+
+  constructor(storeInstance: StoreInstance | null = null) {
+    this.storeInstance = storeInstance;
+  }
+
+  setStoreInstance(storeInstance: StoreInstance) {
+    this.storeInstance = storeInstance;
+  }
+
+  // Helper to safely get the store state
+  private getStore(): Store | null {
+    // First try the injected store instance
+    if (this.storeInstance) {
+      try {
+        return this.storeInstance.getState();
+      } catch (error) {
+        console.warn("Error accessing injected store instance:", error);
+      }
+    }
+
+    // Fall back to global store as backup
+    const globalStore = getStoreInstance();
+    if (globalStore) {
+      try {
+        return globalStore.getState();
+      } catch (error) {
+        console.warn("Error accessing global store instance:", error);
+      }
+    }
+
+    return null;
+  }
+
+  // Collection sync operations
+  async syncCreateCollection(
+    collectionId: string
+  ): Promise<Collection | undefined> {
+    try {
+      // 1. Get the local collection from DB
+      const localCollection = await CollectionRepository.getById(collectionId);
+      if (!localCollection) {
+        console.error(`SyncService: Collection ${collectionId} not found`);
+        return;
+      }
+
+      // 2. Send to server via API
+      const remoteCollection =
+        await ApiService.createCollection(localCollection);
+
+      // 3. Update store if needed
+      const store = this.getStore();
       if (store) {
-        const notesInStore = store.getState().notes.data;
-        const noteExists = notesInStore.some((n) => n.id === noteId);
+        const activeCollection = store.activeCollection;
 
-        if (noteExists) {
-          const updatedNotes = notesInStore.filter((n) => n.id !== noteId);
-          store.getState().setNotesData(updatedNotes);
+        // If this was the active collection, update reference
+        if (activeCollection === localCollection.id) {
+          store.setActiveCollection(remoteCollection.id);
+        }
+
+        // Swap the collection in the store (updates both store and local DB)
+        await store.swapCollection(localCollection.id, remoteCollection);
+      } else {
+        // If no store instance, just update local DB directly
+        await CollectionRepository.swap(localCollection.id, remoteCollection);
+      }
+
+      return remoteCollection;
+    } catch (error) {
+      console.error(
+        `SyncService: Error syncing collection ${collectionId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  async syncDeleteCollection(collectionId: string): Promise<void> {
+    try {
+      await ApiService.deleteCollection(collectionId);
+    } catch (error) {
+      console.error(
+        `SyncService: Error deleting collection ${collectionId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  // Note sync operations
+  async syncCreateNote(noteId: string): Promise<Note | undefined> {
+    try {
+      // 1. Get the note from local DB
+      const localNote = await NoteRepository.getById(noteId);
+      if (!localNote) {
+        console.error(`SyncService: Note ${noteId} not found`);
+        return;
+      }
+
+      // 2. Verify collection exists
+      const collection = await CollectionRepository.getById(
+        localNote.collectionId
+      );
+      if (!collection) {
+        console.error(
+          `SyncService: Collection ${localNote.collectionId} not found for note ${noteId}`
+        );
+
+        // Clean up orphaned note
+        await NoteRepository.delete(noteId);
+
+        // Update store if available
+        const store = this.getStore();
+        if (store) {
+          const notesInStore = store.notes.data;
+          const noteIndex = notesInStore.findIndex((n) => n.id === noteId);
+
+          if (noteIndex !== -1) {
+            const updatedNotes = [...notesInStore];
+            updatedNotes.splice(noteIndex, 1);
+            store.setNotesData(updatedNotes);
+          }
+        }
+
+        return;
+      }
+
+      // 3. Send to server via API
+      const remoteNote = await ApiService.createNote(localNote);
+
+      // 4. Update local DB and store if needed
+      const store = this.getStore();
+      if (store) {
+        // Find the note in the store
+        const notesInStore = store.notes.data;
+        const noteIndex = notesInStore.findIndex((n) => n.id === noteId);
+
+        if (noteIndex !== -1) {
+          // Update the note in the store
+          const updatedNotes = [...notesInStore];
+          updatedNotes[noteIndex] = remoteNote;
+          store.setNotesData(updatedNotes);
         }
       }
 
-      return;
+      // 5. Update local DB
+      await NoteRepository.swap(localNote.id, remoteNote);
+
+      return remoteNote;
+    } catch (error) {
+      console.error(`SyncService: Error syncing note ${noteId}:`, error);
+      throw error;
     }
+  }
 
-    // Use the collection ID from the local DB, which should be the remote ID after collection sync
-    const remoteNote = await fetch("/api/notes", {
-      method: "POST",
-      body: JSON.stringify(localNote),
-    }).then((res) => {
-      if (!res.ok) {
-        throw new Error(
-          `Failed to create note on server: ${res.status} ${res.statusText}`
-        );
+  async syncDeleteNote(noteId: string): Promise<void> {
+    try {
+      await ApiService.deleteNote(noteId);
+    } catch (error) {
+      console.error(`SyncService: Error deleting note ${noteId}:`, error);
+      throw error;
+    }
+  }
+
+  // Sync from remote to local
+  async syncRemoteCollectionsToLocal(): Promise<Collection[]> {
+    try {
+      // 1. Fetch remote collections via API
+      const remoteCollections = await ApiService.fetchAllCollections();
+
+      // 2. Update local DB
+      await Promise.all(
+        remoteCollections.map((collection) =>
+          CollectionRepository.update(collection)
+        )
+      );
+
+      // 3. Update store if available
+      const store = this.getStore();
+      if (store) {
+        store.setCollectionsData(remoteCollections);
       }
-      return res.json();
-    });
 
-    await NoteRepository.swap(localNote.id, remoteNote);
-    return remoteNote;
-  } catch (error) {
-    console.error(`SyncService: Error syncing note ${noteId}:`, error);
-    throw error;
+      return remoteCollections;
+    } catch (error) {
+      console.error(
+        "SyncService: Error syncing remote collections to local:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  async syncRemoteNotesToLocal(): Promise<Note[]> {
+    try {
+      // 1. Fetch remote notes via API
+      const remoteNotes = await ApiService.fetchAllNotes();
+
+      // 2. Update local DB
+      await Promise.all(remoteNotes.map((note) => NoteRepository.update(note)));
+
+      // 3. Update store if available
+      const store = this.getStore();
+      if (store) {
+        store.setNotesData(remoteNotes);
+      }
+
+      return remoteNotes;
+    } catch (error) {
+      console.error("SyncService: Error syncing remote notes to local:", error);
+      throw error;
+    }
+  }
+
+  // Process action queue items
+  async processActionQueueItem(item: ActionQueue.Item): Promise<void> {
+    try {
+      switch (item.type) {
+        case "CREATE_COLLECTION":
+          await this.syncCreateCollection(item.relatedEntityId);
+          break;
+        case "DELETE_COLLECTION":
+          await this.syncDeleteCollection(item.relatedEntityId);
+          break;
+        case "CREATE_NOTE":
+          await this.syncCreateNote(item.relatedEntityId);
+          break;
+        case "DELETE_NOTE":
+          await this.syncDeleteNote(item.relatedEntityId);
+          break;
+        default:
+          console.error(`SyncService: Unknown queue item type: ${item.type}`);
+      }
+    } catch (error) {
+      console.error(
+        `SyncService: Error processing queue item ${item.id}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  // Action queue operations
+  async getActionQueueItems(): Promise<ActionQueue.Item[]> {
+    return ActionQueueRepository.getAll();
+  }
+
+  async removeActionQueueItem(actionId: string): Promise<void> {
+    return ActionQueueRepository.delete(actionId);
   }
 }
 
-/**
- * Sync note deletion to the server
- */
-export async function syncDeleteNote(noteId: string): Promise<void> {
-  await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
-}
-
-/**
- * Load remote data and sync it to local storage
- */
-export async function syncRemoteCollectionsToLocal(): Promise<Collection[]> {
-  // Step 1: Fetch remote collections
-  const remoteCollections: Collection[] = await fetch("/api/collections").then(
-    (res) => res.json()
-  );
-
-  // Step 2: Update local db with remote data
-  await Promise.all(
-    remoteCollections.map((collection) =>
-      CollectionRepository.update(collection)
-    )
-  );
-
-  // Step 3: Update store with remote data
-  const store = getStoreInstance();
-
-  if (store) {
-    store.getState().setCollectionsData(remoteCollections);
-  }
-
-  return remoteCollections;
-}
-
-/**
- * Load remote notes and sync them to local storage
- */
-export async function syncRemoteNotesToLocal(): Promise<Note[]> {
-  // Step 1: Fetch remote notes
-  const remoteNotes: Note[] = await fetch("/api/notes").then((res) =>
-    res.json()
-  );
-
-  // Step 2: Update local db with remote data
-  await Promise.all(remoteNotes.map((note) => NoteRepository.update(note)));
-
-  // Step 3: Update store with remote data
-  const store = getStoreInstance();
-  if (store) {
-    store.getState().setNotesData(remoteNotes);
-  }
-
-  return remoteNotes;
-}
-
-/**
- * Process a single queue item based on its type
- */
-export async function processActionQueueItem(item: ActionQueue.Item) {
-  // Process the action
-  switch (item.type) {
-    case "CREATE_COLLECTION":
-      return await syncCreateCollection(item.relatedEntityId);
-    case "DELETE_COLLECTION":
-      return await syncDeleteCollection(item.relatedEntityId);
-    case "CREATE_NOTE":
-      return await syncCreateNote(item.relatedEntityId);
-    case "DELETE_NOTE":
-      return await syncDeleteNote(item.relatedEntityId);
-    default:
-      console.error(`SyncService: Unknown queue item type: ${item.type}`);
-  }
-}
+// Create a singleton instance
+export const syncService = new SyncService();

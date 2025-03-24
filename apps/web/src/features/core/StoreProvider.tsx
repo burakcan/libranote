@@ -1,19 +1,19 @@
 "use client";
 
 import { type ReactNode, createContext, useRef, useContext } from "react";
-import { useStore as useZustandStore } from "zustand";
+import { UseBoundStore, useStore as useZustandStore, StoreApi } from "zustand";
 import { type Store, createStore } from "@/lib/store";
 
-export type StoreApi = ReturnType<typeof createStore>;
+export type StoreInstance = UseBoundStore<StoreApi<Store>>;
 
 // Global store instance that can be accessed outside of React components
-let storeInstance: StoreApi | null = null;
+let storeInstance: StoreInstance | null = null;
 
-export const getStoreInstance = (): StoreApi | null => {
+export const getStoreInstance = (): StoreInstance | null => {
   return storeInstance;
 };
 
-export const StoreContext = createContext<StoreApi | undefined>(undefined);
+export const StoreContext = createContext<StoreInstance | undefined>(undefined);
 
 export interface StoreProviderProps {
   children: ReactNode;
@@ -29,7 +29,7 @@ export interface StoreProviderProps {
 }
 
 export const StoreProvider = ({ children, user }: StoreProviderProps) => {
-  const storeRef = useRef<StoreApi | null>(null);
+  const storeRef = useRef<StoreInstance | null>(null);
   if (storeRef.current === null) {
     storeRef.current = createStore({ user });
     // Set the global store instance
