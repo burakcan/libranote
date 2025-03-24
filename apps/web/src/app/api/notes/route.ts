@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/features/auth/auth";
-import { createNote } from "@/features/notes/db/createNote.db";
+import { createNote, getNotes } from "@/features/notes/db/notes.db";
 
 // GET /api/notes - Get all notes for the current user
 export async function GET(req: NextRequest) {
@@ -19,19 +18,7 @@ export async function GET(req: NextRequest) {
     const collectionId = url.searchParams.get("collectionId");
 
     // Query for notes
-    const notes = await prisma.note.findMany({
-      where: {
-        ...(collectionId ? { collectionId } : {}),
-        OR: [
-          { ownerId: session.user.id },
-          {
-            noteCollaborators: {
-              some: { userId: session.user.id },
-            },
-          },
-        ],
-      },
-    });
+    const notes = await getNotes(session.user.id, collectionId ?? undefined);
 
     return NextResponse.json(notes);
   } catch (error) {
@@ -55,7 +42,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, content, collectionId } = body;
+    const { title, description, collectionId, createdAt, updatedAt, isPublic } =
+      body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -68,13 +56,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create the note
-    const note = await createNote(
-      session.user.id,
+    // Create the note with preserved fields
+    const note = await createNote({
+      userId: session.user.id,
       collectionId,
       title,
-      content || ""
-    );
+      description: description || "",
+      isPublic,
+      createdAt: createdAt ? new Date(createdAt) : undefined,
+      updatedAt: updatedAt ? new Date(updatedAt) : undefined,
+    });
 
     return NextResponse.json(note);
   } catch (error) {

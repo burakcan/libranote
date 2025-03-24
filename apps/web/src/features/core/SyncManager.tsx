@@ -81,11 +81,11 @@ export function SyncManager() {
         }
 
         await syncService.syncRemoteCollectionsToLocal();
-        setCollectionsSyncStatus("idle");
+        setCollectionsSyncStatus("synced");
         console.debug("SyncManager: Collections synced successfully");
 
         await syncService.syncRemoteNotesToLocal();
-        setNotesSyncStatus("idle");
+        setNotesSyncStatus("synced");
         console.debug("SyncManager: Notes synced successfully");
 
         console.debug("SyncManager: Sync completed successfully");
@@ -110,7 +110,11 @@ export function SyncManager() {
   // Process new queue items as they are added
   useEffect(() => {
     const processNewQueueItems = async () => {
-      if (collectionsSyncStatus !== "idle" || notesSyncStatus !== "idle") {
+      if (
+        collectionsSyncStatus !== "synced" ||
+        notesSyncStatus !== "synced" ||
+        actionQueue.length === 0
+      ) {
         return;
       }
 
@@ -123,8 +127,6 @@ export function SyncManager() {
       const pendingActions = actionQueue.filter(
         (item) => item.status === "pending"
       );
-
-      console.debug("SyncManager: Processing new queue items", pendingActions);
 
       for (const item of pendingActions) {
         try {
@@ -144,8 +146,8 @@ export function SyncManager() {
         }
       }
 
-      setCollectionsSyncStatus("idle");
-      setNotesSyncStatus("idle");
+      setCollectionsSyncStatus("synced");
+      setNotesSyncStatus("synced");
     };
 
     processNewQueueItems();

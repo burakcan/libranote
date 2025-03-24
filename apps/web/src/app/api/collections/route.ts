@@ -39,13 +39,19 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title } = body;
+    const { title, createdAt, updatedAt } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const collection = await createCollection(session.user.id, title);
+    // Create the collection with preserved timestamps if provided
+    const collection = await createCollection({
+      userId: session.user.id,
+      title,
+      ...(createdAt && { createdAt: new Date(createdAt) }),
+      ...(updatedAt && { updatedAt: new Date(updatedAt) }),
+    });
 
     return NextResponse.json(collection);
   } catch (error) {

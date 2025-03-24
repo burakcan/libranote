@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { TransactionalRepository } from "@/lib/db/transactionalRepository";
 import { prisma, YDocType } from "@/lib/prisma";
 
 export async function getCollections(userId: string) {
@@ -29,13 +30,24 @@ function createCollectionYDoc(title: string) {
   return Buffer.from(yDocState);
 }
 
-export async function createCollection(userId: string, title: string) {
-  return await prisma.$transaction(async (tx) => {
+export async function createCollection(options: {
+  userId: string;
+  title: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}) {
+  const { userId, title, createdAt, updatedAt } = options;
+  return await TransactionalRepository.executeTransaction(async (tx) => {
+    // Always generate a server-side ID
+    const id = TransactionalRepository.createId();
+
     const collection = await tx.collection.create({
       data: {
-        id: crypto.randomUUID(),
+        id,
         ownerId: userId,
         title,
+        ...(createdAt && { createdAt }),
+        ...(updatedAt && { updatedAt }),
       },
     });
 
@@ -48,25 +60,29 @@ export async function createCollection(userId: string, title: string) {
     });
 
     return collection;
-  });
+  }, `Failed to create collection "${title}"`);
 }
 
 export async function deleteCollection(collectionId: string) {
-  return await prisma.collection.delete({
-    where: {
-      id: collectionId,
-    },
-  });
+  return await TransactionalRepository.executeTransaction(async (tx) => {
+    return await tx.collection.delete({
+      where: {
+        id: collectionId,
+      },
+    });
+  }, `Failed to delete collection with ID ${collectionId}`);
 }
 
 export async function updateCollection(collectionId: string, title: string) {
-  return await prisma.collection.update({
-    where: {
-      id: collectionId,
-    },
-    data: {
-      title,
-      updatedAt: new Date(),
-    },
-  });
+  return await TransactionalRepository.executeTransaction(async (tx) => {
+    return await tx.collection.update({
+      where: {
+        id: collectionId,
+      },
+      data: {
+        title,
+        updatedAt: new Date(),
+      },
+    });
+  }, `Failed to update collection with ID ${collectionId}`);
 }
