@@ -16,17 +16,22 @@ export const auth = betterAuth({
   },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
+      const path = ctx.path;
       const newSession = ctx.context.newSession;
       const userId = newSession?.user.id;
 
-      if (userId) {
-        const collection = await createCollection(userId, "Personal");
-        await createNote(
+      if (userId && path.startsWith("/sign-up")) {
+        const collection = await createCollection({
           userId,
-          collection.id,
-          "New Note",
-          "This is a new note"
-        );
+          title: "Personal",
+        });
+
+        await createNote({
+          userId,
+          collectionId: collection.id,
+          title: "New Note",
+          description: "This is a new note",
+        });
       }
     }),
   },

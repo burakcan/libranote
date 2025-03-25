@@ -1,6 +1,7 @@
 import { produce } from "immer";
 import { Draft } from "immer";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import {
   LocalDataService,
   CollectionRepository,
@@ -69,416 +70,423 @@ const P = <T extends object>(
 ) => set(produce<T>(fn));
 
 export const createStore = (initialData: { user: StoreState["user"] }) => {
-  return create<Store, []>((set, get) => ({
-    ...initialData,
-    // State
-    activeCollection: null,
-    collections: {
-      data: [],
-      syncStatus: "idle" as SyncStatus,
-    },
-    notes: {
-      data: [],
-      syncStatus: "idle" as SyncStatus,
-    },
-    actionQueue: [],
+  return create<Store, [["zustand/devtools", never]]>(
+    devtools((set, get) => ({
+      ...initialData,
+      // State
+      activeCollection: null,
+      collections: {
+        data: [],
+        syncStatus: "idle" as SyncStatus,
+      },
+      notes: {
+        data: [],
+        syncStatus: "idle" as SyncStatus,
+      },
+      actionQueue: [],
 
-    // Actions
-    setActiveCollection: (collectionId) =>
-      set({ activeCollection: collectionId }),
+      // Actions
+      setActiveCollection: (collectionId) =>
+        set({ activeCollection: collectionId }),
 
-    setCollectionsData: (collections) =>
-      P(set, (draft) => {
-        draft.collections.data = collections;
-      }),
-
-    setCollectionsSyncStatus: (syncStatus) =>
-      P(set, (draft) => {
-        draft.collections.syncStatus = syncStatus;
-      }),
-
-    // Add action to queue (helper method)
-    addActionToQueue: (action) =>
-      P(set, (draft) => {
-        draft.actionQueue.push(action);
-      }),
-
-    createCollection: async (title) => {
-      // Get current state synchronously
-      const state = get();
-      const ownerId = state.user.id;
-      const collectionId = crypto.randomUUID();
-
-      // Create collection object
-      const collection: Collection = {
-        id: collectionId,
-        title,
-        ownerId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Add to collections data immediately (optimistic update)
-      P(set, (draft) => {
-        draft.collections.data.push(collection);
-      });
-
-      try {
-        // Create in local DB with action - single transaction
-        const actionId = await LocalDataService.createCollection(
-          collectionId,
-          title,
-          ownerId
-        );
-
-        // Add to action queue in the store state
-        get().addActionToQueue({
-          id: actionId,
-          type: "CREATE_COLLECTION",
-          status: "pending",
-          createdAt: new Date(),
-          relatedEntityId: collectionId,
-        });
-      } catch (error) {
-        console.error("Failed to create collection locally", error);
-
-        // Rollback optimistic update on error
+      setCollectionsData: (collections) =>
         P(set, (draft) => {
-          draft.collections.data = draft.collections.data.filter(
-            (c) => c.id !== collectionId
-          );
+          draft.collections.data = collections;
+        }),
+
+      setCollectionsSyncStatus: (syncStatus) =>
+        P(set, (draft) => {
+          draft.collections.syncStatus = syncStatus;
+        }),
+
+      // Add action to queue (helper method)
+      addActionToQueue: (action) =>
+        P(set, (draft) => {
+          draft.actionQueue.push(action);
+        }),
+
+      createCollection: async (title) => {
+        // Get current state synchronously
+        const state = get();
+        const ownerId = state.user.id;
+        const collectionId = crypto.randomUUID();
+
+        // Create collection object
+        const collection: Collection = {
+          id: collectionId,
+          title,
+          ownerId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Add to collections data immediately (optimistic update)
+        P(set, (draft) => {
+          draft.collections.data.push(collection);
         });
-      }
-    },
 
-    deleteCollection: async (collectionId) => {
-      // Get current state synchronously
-      const state = get();
-
-      // Check for pending create action
-      const pendingCreateIndex = state.actionQueue.findIndex(
-        (action) =>
-          action.type === "CREATE_COLLECTION" &&
-          action.status === "pending" &&
-          action.relatedEntityId === collectionId
-      );
-
-      // Find notes that belong to this collection (for optimistic UI update)
-      const notesToDelete = state.notes.data.filter(
-        (note) => note.collectionId === collectionId
-      );
-
-      // Remove from collections data (optimistic update)
-      P(set, (draft) => {
-        // Remove the collection
-        draft.collections.data = draft.collections.data.filter(
-          (collection) => collection.id !== collectionId
-        );
-
-        // Also remove all notes that belonged to this collection
-        draft.notes.data = draft.notes.data.filter(
-          (note) => note.collectionId !== collectionId
-        );
-      });
-
-      try {
-        if (pendingCreateIndex !== -1) {
-          // If collection was just created but not synced, remove the create action
-          const actionId = state.actionQueue[pendingCreateIndex].id;
-
-          // Remove from action queue in store state
-          P(set, (draft) => {
-            draft.actionQueue.splice(pendingCreateIndex, 1);
-          });
-
-          // Remove from local DB
-          await ActionQueueRepository.delete(actionId);
-          await CollectionRepository.delete(collectionId);
-        } else {
-          // Add delete action to queue and delete from local DB
-          const actionId = crypto.randomUUID();
-          await TransactionService.deleteEntityWithAction(
-            "collection",
+        try {
+          // Create in local DB with action - single transaction
+          const actionId = await LocalDataService.createCollection(
             collectionId,
-            actionId
+            title,
+            ownerId
           );
 
-          // Add to action queue in store state
+          // Add to action queue in the store state
           get().addActionToQueue({
             id: actionId,
-            type: "DELETE_COLLECTION",
+            type: "CREATE_COLLECTION",
             status: "pending",
             createdAt: new Date(),
             relatedEntityId: collectionId,
           });
-        }
+        } catch (error) {
+          console.error("Failed to create collection locally", error);
 
-        // If this was the active collection, clear the selection
-        if (state.activeCollection === collectionId) {
-          set({ activeCollection: null });
-        }
-
-        // Delete associated notes from local DB
-        for (const note of notesToDelete) {
-          await NoteRepository.delete(note.id);
-        }
-      } catch (error) {
-        console.error("Failed to delete collection locally", error);
-
-        // Rollback optimistic update on error
-        const originalCollection =
-          await CollectionRepository.getById(collectionId);
-        if (originalCollection) {
+          // Rollback optimistic update on error
           P(set, (draft) => {
-            draft.collections.data.push(originalCollection);
-            // Restore deleted notes
-            draft.notes.data = [...draft.notes.data, ...notesToDelete];
+            draft.collections.data = draft.collections.data.filter(
+              (c) => c.id !== collectionId
+            );
           });
         }
-      }
-    },
+      },
 
-    updateCollection: async (collection) => {
-      // Get current state synchronously
-      const state = get();
-      const index = state.collections.data.findIndex(
-        (c) => c.id === collection.id
-      );
+      deleteCollection: async (collectionId) => {
+        // Get current state synchronously
+        const state = get();
 
-      // Update in state (optimistic)
-      if (index !== -1) {
-        P(set, (draft) => {
-          draft.collections.data[index] = collection;
-        });
-      }
-
-      try {
-        // Update in local DB
-        await CollectionRepository.update(collection);
-      } catch (error) {
-        console.error("Failed to update collection locally", error);
-
-        // Rollback optimistic update on error
-        const originalCollection = await CollectionRepository.getById(
-          collection.id
-        );
-        if (originalCollection && index !== -1) {
-          P(set, (draft) => {
-            draft.collections.data[index] = originalCollection;
-          });
-        }
-      }
-    },
-
-    swapCollection: async (localId, remoteCollection) => {
-      // Get current state synchronously
-      const state = get();
-
-      // Find the index of the local collection
-      const localIndex = state.collections.data.findIndex(
-        (c) => c.id === localId
-      );
-
-      // Update in state (optimistic)
-      if (localIndex !== -1) {
-        P(set, (draft) => {
-          draft.collections.data[localIndex] = remoteCollection;
-
-          // Update the notes that belong to this collection
-          draft.notes.data = draft.notes.data.map((note) => {
-            if (note.collectionId === localId) {
-              return { ...note, collectionId: remoteCollection.id };
-            }
-            return note;
-          });
-        });
-      }
-
-      try {
-        // Update in local DB
-        await CollectionRepository.swap(localId, remoteCollection);
-      } catch (error) {
-        console.error("Failed to swap collection locally", error);
-
-        // Rollback is complex for this operation, might need manual recovery
-        console.error("Collection swap failed, manual recovery may be needed", {
-          localId,
-          remoteCollection,
-        });
-      }
-    },
-
-    // Note actions
-    setNotesData: (notes) =>
-      P(set, (draft) => {
-        draft.notes.data = notes;
-      }),
-
-    setNotesSyncStatus: (syncStatus) =>
-      P(set, (draft) => {
-        draft.notes.syncStatus = syncStatus;
-      }),
-
-    createNote: async (collectionId, title, content = "") => {
-      // Get current state synchronously
-      const state = get();
-      const noteId = crypto.randomUUID();
-      const ownerId = state.user.id;
-
-      // Create note object
-      const note: Note = {
-        id: noteId,
-        title,
-        description: content,
-        ownerId,
-        collectionId,
-        isPublic: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Add to notes data immediately (optimistic update)
-      P(set, (draft) => {
-        draft.notes.data.push(note);
-      });
-
-      try {
-        // Create in local DB with action - single transaction
-        const actionId = await LocalDataService.createNote(
-          noteId,
-          title,
-          content,
-          ownerId,
-          collectionId
+        // Check for pending create action
+        const pendingCreateIndex = state.actionQueue.findIndex(
+          (action) =>
+            action.type === "CREATE_COLLECTION" &&
+            action.status === "pending" &&
+            action.relatedEntityId === collectionId
         );
 
-        // Add to action queue in the store state
-        get().addActionToQueue({
-          id: actionId,
-          type: "CREATE_NOTE",
-          status: "pending",
-          createdAt: new Date(),
-          relatedEntityId: noteId,
-        });
-      } catch (error) {
-        console.error("Failed to create note locally", error);
-
-        // Rollback optimistic update on error
-        P(set, (draft) => {
-          draft.notes.data = draft.notes.data.filter((n) => n.id !== noteId);
-        });
-      }
-    },
-
-    deleteNote: async (noteId) => {
-      // Get current state synchronously
-      const state = get();
-
-      // Find the note to delete (for rollback if needed)
-      const noteToDelete = state.notes.data.find((note) => note.id === noteId);
-      if (!noteToDelete) return;
-
-      // Check for pending create action
-      const pendingCreateIndex = state.actionQueue.findIndex(
-        (action) =>
-          action.type === "CREATE_NOTE" &&
-          action.status === "pending" &&
-          action.relatedEntityId === noteId
-      );
-
-      // Remove from notes data (optimistic update)
-      P(set, (draft) => {
-        draft.notes.data = draft.notes.data.filter(
-          (note) => note.id !== noteId
+        // Find notes that belong to this collection (for optimistic UI update)
+        const notesToDelete = state.notes.data.filter(
+          (note) => note.collectionId === collectionId
         );
-      });
 
-      try {
-        if (pendingCreateIndex !== -1) {
-          // If note was just created but not synced, remove the create action
-          const actionId = state.actionQueue[pendingCreateIndex].id;
-
-          // Remove from action queue in store state
-          P(set, (draft) => {
-            draft.actionQueue.splice(pendingCreateIndex, 1);
-          });
-
-          // Remove from local DB
-          await ActionQueueRepository.delete(actionId);
-          await NoteRepository.delete(noteId);
-        } else {
-          // Add delete action to queue and delete from local DB
-          const actionId = crypto.randomUUID();
-          await TransactionService.deleteEntityWithAction(
-            "note",
-            noteId,
-            actionId
+        // Remove from collections data (optimistic update)
+        P(set, (draft) => {
+          // Remove the collection
+          draft.collections.data = draft.collections.data.filter(
+            (collection) => collection.id !== collectionId
           );
 
-          // Add to action queue in store state
+          // Also remove all notes that belonged to this collection
+          draft.notes.data = draft.notes.data.filter(
+            (note) => note.collectionId !== collectionId
+          );
+        });
+
+        try {
+          if (pendingCreateIndex !== -1) {
+            // If collection was just created but not synced, remove the create action
+            const actionId = state.actionQueue[pendingCreateIndex].id;
+
+            // Remove from action queue in store state
+            P(set, (draft) => {
+              draft.actionQueue.splice(pendingCreateIndex, 1);
+            });
+
+            // Remove from local DB
+            await ActionQueueRepository.delete(actionId);
+            await CollectionRepository.delete(collectionId);
+          } else {
+            // Add delete action to queue and delete from local DB
+            const actionId = crypto.randomUUID();
+            await TransactionService.deleteEntityWithAction(
+              "collection",
+              collectionId,
+              actionId
+            );
+
+            // Add to action queue in store state
+            get().addActionToQueue({
+              id: actionId,
+              type: "DELETE_COLLECTION",
+              status: "pending",
+              createdAt: new Date(),
+              relatedEntityId: collectionId,
+            });
+          }
+
+          // If this was the active collection, clear the selection
+          if (state.activeCollection === collectionId) {
+            set({ activeCollection: null });
+          }
+
+          // Delete associated notes from local DB
+          for (const note of notesToDelete) {
+            await NoteRepository.delete(note.id);
+          }
+        } catch (error) {
+          console.error("Failed to delete collection locally", error);
+
+          // Rollback optimistic update on error
+          const originalCollection =
+            await CollectionRepository.getById(collectionId);
+          if (originalCollection) {
+            P(set, (draft) => {
+              draft.collections.data.push(originalCollection);
+              // Restore deleted notes
+              draft.notes.data = [...draft.notes.data, ...notesToDelete];
+            });
+          }
+        }
+      },
+
+      updateCollection: async (collection) => {
+        // Get current state synchronously
+        const state = get();
+        const index = state.collections.data.findIndex(
+          (c) => c.id === collection.id
+        );
+
+        // Update in state (optimistic)
+        if (index !== -1) {
+          P(set, (draft) => {
+            draft.collections.data[index] = collection;
+          });
+        }
+
+        try {
+          // Update in local DB
+          await CollectionRepository.update(collection);
+        } catch (error) {
+          console.error("Failed to update collection locally", error);
+
+          // Rollback optimistic update on error
+          const originalCollection = await CollectionRepository.getById(
+            collection.id
+          );
+          if (originalCollection && index !== -1) {
+            P(set, (draft) => {
+              draft.collections.data[index] = originalCollection;
+            });
+          }
+        }
+      },
+
+      swapCollection: async (localId, remoteCollection) => {
+        // Get current state synchronously
+        const state = get();
+
+        // Find the index of the local collection
+        const localIndex = state.collections.data.findIndex(
+          (c) => c.id === localId
+        );
+
+        // Update in state (optimistic)
+        if (localIndex !== -1) {
+          P(set, (draft) => {
+            draft.collections.data[localIndex] = remoteCollection;
+
+            // Update the notes that belong to this collection
+            draft.notes.data = draft.notes.data.map((note) => {
+              if (note.collectionId === localId) {
+                return { ...note, collectionId: remoteCollection.id };
+              }
+              return note;
+            });
+          });
+        }
+
+        try {
+          // Update in local DB
+          await CollectionRepository.swap(localId, remoteCollection);
+        } catch (error) {
+          console.error("Failed to swap collection locally", error);
+
+          // Rollback is complex for this operation, might need manual recovery
+          console.error(
+            "Collection swap failed, manual recovery may be needed",
+            {
+              localId,
+              remoteCollection,
+            }
+          );
+        }
+      },
+
+      // Note actions
+      setNotesData: (notes) =>
+        P(set, (draft) => {
+          draft.notes.data = notes;
+        }),
+
+      setNotesSyncStatus: (syncStatus) =>
+        P(set, (draft) => {
+          draft.notes.syncStatus = syncStatus;
+        }),
+
+      createNote: async (collectionId, title, content = "") => {
+        // Get current state synchronously
+        const state = get();
+        const noteId = crypto.randomUUID();
+        const ownerId = state.user.id;
+
+        // Create note object
+        const note: Note = {
+          id: noteId,
+          title,
+          description: content,
+          ownerId,
+          collectionId,
+          isPublic: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Add to notes data immediately (optimistic update)
+        P(set, (draft) => {
+          draft.notes.data.push(note);
+        });
+
+        try {
+          // Create in local DB with action - single transaction
+          const actionId = await LocalDataService.createNote(
+            noteId,
+            title,
+            content,
+            ownerId,
+            collectionId
+          );
+
+          // Add to action queue in the store state
           get().addActionToQueue({
             id: actionId,
-            type: "DELETE_NOTE",
+            type: "CREATE_NOTE",
             status: "pending",
             createdAt: new Date(),
             relatedEntityId: noteId,
           });
-        }
-      } catch (error) {
-        console.error("Failed to delete note locally", error);
+        } catch (error) {
+          console.error("Failed to create note locally", error);
 
-        // Rollback optimistic update on error
-        if (noteToDelete) {
+          // Rollback optimistic update on error
           P(set, (draft) => {
-            draft.notes.data.push(noteToDelete);
+            draft.notes.data = draft.notes.data.filter((n) => n.id !== noteId);
           });
         }
-      }
-    },
+      },
 
-    updateNote: async (note) => {
-      // Get current state synchronously
-      const state = get();
-      const index = state.notes.data.findIndex((n) => n.id === note.id);
+      deleteNote: async (noteId) => {
+        // Get current state synchronously
+        const state = get();
 
-      // Store original note for potential rollback
-      const originalNote = index !== -1 ? state.notes.data[index] : null;
-
-      // Update in state (optimistic)
-      if (index !== -1) {
-        P(set, (draft) => {
-          draft.notes.data[index] = note;
-        });
-      }
-
-      try {
-        // Update in local DB
-        await NoteRepository.update(note);
-      } catch (error) {
-        console.error("Failed to update note locally", error);
-
-        // Rollback optimistic update on error
-        if (originalNote && index !== -1) {
-          P(set, (draft) => {
-            draft.notes.data[index] = originalNote;
-          });
-        }
-      }
-    },
-
-    removeActionFromQueue: async (actionId) => {
-      P(set, (draft) => {
-        draft.actionQueue = draft.actionQueue.filter(
-          (action) => action.id !== actionId
+        // Find the note to delete (for rollback if needed)
+        const noteToDelete = state.notes.data.find(
+          (note) => note.id === noteId
         );
-      });
+        if (!noteToDelete) return;
 
-      try {
-        // Remove from local DB
-        await ActionQueueRepository.delete(actionId);
-      } catch (error) {
-        console.error("Failed to remove action from queue in DB", error);
-      }
-    },
-  }));
+        // Check for pending create action
+        const pendingCreateIndex = state.actionQueue.findIndex(
+          (action) =>
+            action.type === "CREATE_NOTE" &&
+            action.status === "pending" &&
+            action.relatedEntityId === noteId
+        );
+
+        // Remove from notes data (optimistic update)
+        P(set, (draft) => {
+          draft.notes.data = draft.notes.data.filter(
+            (note) => note.id !== noteId
+          );
+        });
+
+        try {
+          if (pendingCreateIndex !== -1) {
+            // If note was just created but not synced, remove the create action
+            const actionId = state.actionQueue[pendingCreateIndex].id;
+
+            // Remove from action queue in store state
+            P(set, (draft) => {
+              draft.actionQueue.splice(pendingCreateIndex, 1);
+            });
+
+            // Remove from local DB
+            await ActionQueueRepository.delete(actionId);
+            await NoteRepository.delete(noteId);
+          } else {
+            // Add delete action to queue and delete from local DB
+            const actionId = crypto.randomUUID();
+            await TransactionService.deleteEntityWithAction(
+              "note",
+              noteId,
+              actionId
+            );
+
+            // Add to action queue in store state
+            get().addActionToQueue({
+              id: actionId,
+              type: "DELETE_NOTE",
+              status: "pending",
+              createdAt: new Date(),
+              relatedEntityId: noteId,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to delete note locally", error);
+
+          // Rollback optimistic update on error
+          if (noteToDelete) {
+            P(set, (draft) => {
+              draft.notes.data.push(noteToDelete);
+            });
+          }
+        }
+      },
+
+      updateNote: async (note) => {
+        // Get current state synchronously
+        const state = get();
+        const index = state.notes.data.findIndex((n) => n.id === note.id);
+
+        // Store original note for potential rollback
+        const originalNote = index !== -1 ? state.notes.data[index] : null;
+
+        // Update in state (optimistic)
+        if (index !== -1) {
+          P(set, (draft) => {
+            draft.notes.data[index] = note;
+          });
+        }
+
+        try {
+          // Update in local DB
+          await NoteRepository.update(note);
+        } catch (error) {
+          console.error("Failed to update note locally", error);
+
+          // Rollback optimistic update on error
+          if (originalNote && index !== -1) {
+            P(set, (draft) => {
+              draft.notes.data[index] = originalNote;
+            });
+          }
+        }
+      },
+
+      removeActionFromQueue: async (actionId) => {
+        P(set, (draft) => {
+          draft.actionQueue = draft.actionQueue.filter(
+            (action) => action.id !== actionId
+          );
+        });
+
+        try {
+          // Remove from local DB
+          await ActionQueueRepository.delete(actionId);
+        } catch (error) {
+          console.error("Failed to remove action from queue in DB", error);
+        }
+      },
+    }))
+  );
 };
