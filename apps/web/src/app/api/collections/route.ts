@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SSEServerService } from "@/lib/sync/sseServerService";
 import { auth } from "@/features/auth/auth";
 import {
   getCollections,
@@ -39,7 +40,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, createdAt, updatedAt } = body;
+    const { title, createdAt, updatedAt } = body.collection;
+    const clientId = body.clientId;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -51,6 +53,11 @@ export async function POST(req: NextRequest) {
       title,
       ...(createdAt && { createdAt: new Date(createdAt) }),
       ...(updatedAt && { updatedAt: new Date(updatedAt) }),
+    });
+
+    SSEServerService.broadcastSSE(session.user.id, clientId, {
+      type: "COLLECTION_CREATED",
+      collection,
     });
 
     return NextResponse.json(collection);

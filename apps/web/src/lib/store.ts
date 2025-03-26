@@ -14,6 +14,7 @@ import { Collection, Note } from "@/lib/prisma";
 type SyncStatus = "idle" | "syncing" | "synced" | "error";
 
 interface StoreState {
+  clientId: string;
   activeCollection: Collection["id"] | null;
   user: {
     id: string;
@@ -36,6 +37,7 @@ interface StoreState {
 }
 
 interface StoreActions {
+  setClientId: (clientId: string) => void;
   setActiveCollection: (collectionId: Collection["id"]) => void;
   setCollectionsData: (collections: Collection[]) => void;
   setCollectionsSyncStatus: (syncStatus: SyncStatus) => void;
@@ -47,6 +49,11 @@ interface StoreActions {
     remoteCollection: Collection
   ) => Promise<void>;
 
+  // Sync actions that are triggered by SSE events
+  remoteCreatedCollection: (collection: Collection) => Promise<void>;
+  remoteDeletedCollection: (collectionId: Collection["id"]) => Promise<void>;
+  remoteUpdatedCollection: (collection: Collection) => Promise<void>;
+
   setNotesData: (notes: Note[]) => void;
   setNotesSyncStatus: (syncStatus: SyncStatus) => void;
   createNote: (
@@ -56,6 +63,11 @@ interface StoreActions {
   ) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   updateNote: (note: Note) => Promise<void>;
+
+  // Sync actions that are triggered by SSE events
+  remoteCreatedNote: (note: Note) => Promise<void>;
+  remoteDeletedNote: (noteId: string) => Promise<void>;
+  remoteUpdatedNote: (note: Note) => Promise<void>;
 
   removeActionFromQueue: (actionId: string) => Promise<void>;
   addActionToQueue: (action: ActionQueue.Item) => void;
@@ -73,6 +85,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
   return create<Store, [["zustand/devtools", never]]>(
     devtools((set, get) => ({
       ...initialData,
+      clientId: "",
       // State
       activeCollection: null,
       collections: {
@@ -86,6 +99,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       actionQueue: [],
 
       // Actions
+      setClientId: (clientId) => set({ clientId }),
       setActiveCollection: (collectionId) =>
         set({ activeCollection: collectionId }),
 
@@ -313,6 +327,38 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         }
       },
 
+      remoteCreatedCollection: async (collection) => {
+        P(set, (draft) => {
+          draft.collections.data.push(collection);
+        });
+
+        // Update uses "put" which will create if it doesn't exist, so we don't need to check if it exists first
+        await CollectionRepository.update(collection);
+      },
+
+      remoteDeletedCollection: async (collectionId) => {
+        P(set, (draft) => {
+          draft.collections.data = draft.collections.data.filter(
+            (c) => c.id !== collectionId
+          );
+        });
+
+        await CollectionRepository.delete(collectionId);
+      },
+
+      remoteUpdatedCollection: async (collection) => {
+        P(set, (draft) => {
+          const index = draft.collections.data.findIndex(
+            (c) => c.id === collection.id
+          );
+          if (index !== -1) {
+            draft.collections.data[index] = collection;
+          }
+        });
+
+        await CollectionRepository.update(collection);
+      },
+
       // Note actions
       setNotesData: (notes) =>
         P(set, (draft) => {
@@ -471,6 +517,34 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
             });
           }
         }
+      },
+
+      remoteCreatedNote: async (note) => {
+        P(set, (draft) => {
+          draft.notes.data.push(note);
+        });
+
+        // Update uses "put" which will create if it doesn't exist, so we don't need to check if it exists first
+        await NoteRepository.update(note);
+      },
+
+      remoteDeletedNote: async (noteId) => {
+        P(set, (draft) => {
+          draft.notes.data = draft.notes.data.filter((n) => n.id !== noteId);
+        });
+
+        await NoteRepository.delete(noteId);
+      },
+
+      remoteUpdatedNote: async (note) => {
+        P(set, (draft) => {
+          const index = draft.notes.data.findIndex((n) => n.id === note.id);
+          if (index !== -1) {
+            draft.notes.data[index] = note;
+          }
+        });
+
+        await NoteRepository.update(note);
       },
 
       removeActionFromQueue: async (actionId) => {

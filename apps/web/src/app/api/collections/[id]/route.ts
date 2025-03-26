@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SSEServerService } from "@/lib/sync/sseServerService";
 import { auth } from "@/features/auth/auth";
 import { deleteCollection } from "@/features/collections/collections.db";
 
@@ -16,7 +17,9 @@ export async function DELETE(
   }
 
   try {
-    const collectionId = params.id;
+    const collectionId = (await params).id;
+    const body = await req.json();
+    const clientId = body.clientId;
 
     if (!collectionId) {
       return NextResponse.json(
@@ -26,6 +29,11 @@ export async function DELETE(
     }
 
     await deleteCollection(collectionId);
+
+    SSEServerService.broadcastSSE(session.user.id, clientId, {
+      type: "COLLECTION_DELETED",
+      collectionId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

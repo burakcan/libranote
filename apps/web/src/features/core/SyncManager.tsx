@@ -160,5 +160,18 @@ export function SyncManager() {
     setNotesSyncStatus,
   ]);
 
+  useEffect(() => {
+    const eventSource = new EventSource("/api/sse");
+
+    eventSource.onmessage = (event) => {
+      console.log("SyncManager: SSE event", event.data);
+      syncService.processSSEEvent(event.data);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
   return null;
 }

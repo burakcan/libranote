@@ -10,9 +10,15 @@ import { getStoreInstance, StoreInstance } from "@/features/core/StoreProvider";
 // API Layer: Handles communication with server API
 export class ApiService {
   static async createCollection(collection: Collection): Promise<Collection> {
+    const clientId = getStoreInstance()?.getState()?.clientId;
+
+    if (!clientId) {
+      throw new Error("Client ID not found");
+    }
+
     const response = await fetch("/api/collections", {
       method: "POST",
-      body: JSON.stringify(collection),
+      body: JSON.stringify({ collection, clientId }),
     });
 
     if (!response.ok) {
@@ -25,8 +31,15 @@ export class ApiService {
   }
 
   static async deleteCollection(collectionId: string): Promise<void> {
+    const clientId = getStoreInstance()?.getState()?.clientId;
+
+    if (!clientId) {
+      throw new Error("Client ID not found");
+    }
+
     const response = await fetch(`/api/collections/${collectionId}`, {
       method: "DELETE",
+      body: JSON.stringify({ clientId }),
     });
 
     if (!response.ok) {
@@ -339,6 +352,43 @@ export class SyncService {
 
   async removeActionQueueItem(actionId: string): Promise<void> {
     return ActionQueueRepository.delete(actionId);
+  }
+
+  // Process SSE events
+  async processSSEEvent(eventString: string): Promise<void> {
+    try {
+      const event = JSON.parse(eventString) as SSE.Event;
+      const storeState = this.storeInstance?.getState();
+
+      switch (event.type) {
+        case "INIT":
+          storeState?.setClientId(event.clientId);
+          break;
+        case "COLLECTION_CREATED":
+          await storeState?.remoteCreatedCollection(event.collection);
+          break;
+        case "COLLECTION_UPDATED":
+          await storeState?.remoteUpdatedCollection(event.collection);
+          break;
+        case "COLLECTION_DELETED":
+          await storeState?.remoteDeletedCollection(event.collectionId);
+          break;
+        case "NOTE_CREATED":
+          await storeState?.remoteCreatedNote(event.note);
+          break;
+        case "NOTE_UPDATED":
+          await storeState?.remoteUpdatedNote(event.note);
+          break;
+        case "NOTE_DELETED":
+          await storeState?.remoteDeletedNote(event.noteId);
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error("SyncService: Error processing SSE event:", error);
+      throw error;
+    }
   }
 }
 
