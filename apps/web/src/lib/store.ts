@@ -2,14 +2,12 @@ import { produce } from "immer";
 import { Draft } from "immer";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import {
-  LocalDataService,
-  CollectionRepository,
-  NoteRepository,
-  ActionQueueRepository,
-  TransactionService,
-} from "@/lib/local-persistence/localDb";
-import { Collection, Note } from "@/lib/prisma";
+import { Collection, Note } from "@/lib/db/prisma";
+import { ActionQueueRepository } from "@/lib/localDb/ActionQueueRepository";
+import { CollectionRepository } from "@/lib/localDb/CollectionRepository";
+import { LocalDataService } from "@/lib/localDb/LocalDataService";
+import { NoteRepository } from "@/lib/localDb/NoteRepository";
+import { TransactionService } from "@/lib/localDb/TransactionService";
 
 type SyncStatus = "idle" | "syncing" | "synced" | "error";
 
@@ -312,7 +310,10 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
 
         try {
           // Update in local DB
-          await CollectionRepository.swap(localId, remoteCollection);
+          await TransactionService.swapCollectionWithRemote(
+            localId,
+            remoteCollection
+          );
         } catch (error) {
           console.error("Failed to swap collection locally", error);
 

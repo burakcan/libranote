@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/features/auth/auth";
-import { createNote, getNotes } from "@/features/notes/db/notes.db";
+import { auth } from "@/lib/auth/auth";
+import { createNote, getNotes } from "@/lib/db/notes";
+import { SSEServerService } from "@/lib/sync/SSEServerService";
 
 // GET /api/notes - Get all notes for the current user
 export async function GET(req: NextRequest) {
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { title, description, collectionId, createdAt, updatedAt, isPublic } =
-      body;
+      body.note;
+    const clientId = body.clientId;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -65,6 +67,11 @@ export async function POST(req: NextRequest) {
       isPublic,
       createdAt: createdAt ? new Date(createdAt) : undefined,
       updatedAt: updatedAt ? new Date(updatedAt) : undefined,
+    });
+
+    SSEServerService.broadcastSSE(session.user.id, clientId, {
+      type: "NOTE_CREATED",
+      note,
     });
 
     return NextResponse.json(note);

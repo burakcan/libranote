@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import type { PropsWithChildren } from "react";
-import { QueryClientProvider } from "@/features/core/QueryClientProvider";
+import { QueryClientProvider } from "@/components/providers/QueryClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

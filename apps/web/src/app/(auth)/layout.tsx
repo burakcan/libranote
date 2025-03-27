@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/features/auth/auth";
-import { AuthWrapper } from "@/features/auth/AuthWrapper";
+import { AuthWrapper } from "@/components/auth/AuthWrapper";
+import { auth } from "@/lib/auth/auth";
 
 export default async function AuthLayout({
   children,

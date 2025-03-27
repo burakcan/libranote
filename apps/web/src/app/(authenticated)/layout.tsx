@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/features/auth/auth";
-import { StoreProvider } from "@/features/core/StoreProvider";
-import { SyncManager } from "@/features/core/SyncManager";
+import { StoreProvider } from "@/components/providers/StoreProvider";
+import { SyncProvider } from "@/components/providers/SyncProvider";
+import { auth } from "@/lib/auth/auth";
 
 export default async function AuthenticatedLayout({
   children,
@@ -19,7 +19,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <StoreProvider user={session.user}>
-      <SyncManager />
+      <SyncProvider />
       {children}
     </StoreProvider>
   );

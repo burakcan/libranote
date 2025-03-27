@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SSEServerService } from "@/lib/sync/sseServerService";
-import { auth } from "@/features/auth/auth";
-import { deleteCollection } from "@/features/collections/collections.db";
+import { auth } from "@/lib/auth/auth";
+import { deleteCollection } from "@/lib/db/collection";
+import { SSEServerService } from "@/lib/sync/SSEServerService";
 
 // DELETE /api/collections/[id] - Delete a collection
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth.api.getSession({
     headers: req.headers,

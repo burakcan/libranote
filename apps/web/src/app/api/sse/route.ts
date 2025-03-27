@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
-import { SSEServerService } from "@/lib/sync/sseServerService";
-import { auth } from "@/features/auth/auth";
+import { auth } from "@/lib/auth/auth";
+import { SSEServerService } from "@/lib/sync/SSEServerService";
+
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({
     headers: req.headers,
@@ -13,9 +14,7 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream<string>({
     async start(controller) {
       const clientId = SSEServerService.addClient(session.user.id, controller);
-
       SSEServerService.sendInitEvent(session.user.id, clientId);
-
       req.signal.addEventListener("abort", () => {
         SSEServerService.removeClient(session.user.id, clientId);
         controller.close();

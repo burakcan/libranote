@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SSEServerService } from "@/lib/sync/sseServerService";
-import { auth } from "@/features/auth/auth";
-import {
-  getCollections,
-  createCollection,
-} from "@/features/collections/collections.db";
+import { auth } from "@/lib/auth/auth";
+import { getCollections, createCollection } from "@/lib/db/collection";
+import { SSEServerService } from "@/lib/sync/SSEServerService";
 
 // GET /api/collections - Get all collections for the current user
 export async function GET(req: NextRequest) {
