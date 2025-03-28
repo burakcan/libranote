@@ -21,6 +21,19 @@ export class LocalDataService {
     return actionId;
   }
 
+  static async updateCollection(collection: Collection): Promise<string> {
+    const actionId = crypto.randomUUID();
+
+    await TransactionService.updateCollectionWithAction(
+      {
+        ...collection,
+        updatedAt: new Date(),
+      },
+      actionId
+    );
+    return actionId;
+  }
+
   static async createNote(
     id: string,
     title: string,

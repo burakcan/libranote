@@ -1,18 +1,14 @@
 "use client";
 
 import { useStore } from "@/components/providers/StoreProvider";
+import { useCollectionNotes } from "@/lib/store/selectors";
 import { CreateNoteButton } from "./CreateNoteButton";
 import { NoteListItem } from "./NoteListItem";
 
 export function NoteList() {
-  const notes = useStore((state) => state.notes.data);
   const activeCollection = useStore((state) => state.activeCollection);
+  const activeCollectionNotes = useCollectionNotes(activeCollection);
   const collections = useStore((state) => state.collections.data);
-
-  // Filter notes by the active collection
-  const filteredNotes = activeCollection
-    ? notes.filter((note) => note.collectionId === activeCollection)
-    : notes;
 
   // Find the active collection name
   const activeCollectionName = activeCollection
@@ -27,19 +23,13 @@ export function NoteList() {
         </div>
       )}
       <div className="p-4 space-y-1 flex-1 overflow-y-auto">
-        {activeCollection ? (
-          filteredNotes.length > 0 ? (
-            filteredNotes.map((note) => (
-              <NoteListItem key={note.id} note={note} />
-            ))
-          ) : (
-            <div className="text-muted-foreground text-sm px-2 py-4">
-              No notes in this collection
-            </div>
-          )
+        {activeCollectionNotes.length > 0 ? (
+          activeCollectionNotes.map((note) => (
+            <NoteListItem key={note.id} note={note} />
+          ))
         ) : (
           <div className="text-muted-foreground text-sm px-2 py-4">
-            Select a collection to view notes
+            No notes in this collection
           </div>
         )}
       </div>

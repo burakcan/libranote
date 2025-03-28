@@ -47,6 +47,28 @@ export class TransactionService {
     }, `Failed to create note with ID ${note.id} and action queue item`);
   }
 
+  static async updateCollectionWithAction(
+    collection: Collection,
+    actionId: string
+  ): Promise<void> {
+    return wrapDbOperation(async () => {
+      await dexie.transaction(
+        "rw",
+        [dexie.table("collections"), dexie.table("actionQueue")],
+        async (tx) => {
+          await tx.table<Collection>("collections").put(collection);
+          await tx.table<ActionQueue.Item>("actionQueue").add({
+            id: actionId,
+            type: "UPDATE_COLLECTION",
+            relatedEntityId: collection.id,
+            status: "pending",
+            createdAt: new Date(),
+          });
+        }
+      );
+    }, `Failed to update collection with ID ${collection.id} and action queue item`);
+  }
+
   static async deleteEntityWithAction(
     entityType: "collection" | "note",
     entityId: string,
@@ -72,6 +94,19 @@ export class TransactionService {
         }
       );
     }, `Failed to delete ${entityType} with ID ${entityId} and create action queue item`);
+  }
+
+  static async deleteCollectionWithoutAction(id: string): Promise<void> {
+    return wrapDbOperation(async () => {
+      await dexie.transaction(
+        "rw",
+        [dexie.table("collections"), dexie.table("notes")],
+        async (tx) => {
+          await tx.table<Collection>("collections").delete(id);
+          await tx.table<Note>("notes").where({ collectionId: id }).delete();
+        }
+      );
+    }, `Failed to delete collection with ID ${id}`);
   }
 
   static async swapCollectionWithRemote(

@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { executeTransaction } from "@/lib/db/executeTransaction";
-import { prisma, YDocType } from "@/lib/db/prisma";
+import { Collection, prisma, YDocType } from "@/lib/db/prisma";
 import { wrapDbOperation } from "./wrapDbOperation";
 
 export async function getCollections(userId: string) {
@@ -74,16 +74,13 @@ export async function deleteCollection(collectionId: string) {
   }, `Failed to delete collection with ID ${collectionId}`);
 }
 
-export async function updateCollection(collectionId: string, title: string) {
+export async function updateCollection(collection: Collection) {
   return await wrapDbOperation(async () => {
     return await prisma.collection.update({
       where: {
-        id: collectionId,
+        id: collection.id,
       },
-      data: {
-        title,
-        updatedAt: new Date(),
-      },
+      data: collection,
     });
-  }, `Failed to update collection with ID ${collectionId}`);
+  }, `Failed to update collection with ID ${collection.id}`);
 }

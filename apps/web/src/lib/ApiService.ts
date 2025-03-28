@@ -25,6 +25,20 @@ export class ApiService {
     return response.json();
   }
 
+  static async updateCollection(collection: Collection): Promise<Collection> {
+    const clientId = getClientIdOrThrow();
+    const response = await fetch(`/api/collections/${collection.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ collection, clientId }),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to update collection on server: ${response.status} ${response.statusText}`
+      );
+    }
+    return response.json();
+  }
+
   static async deleteCollection(collectionId: string): Promise<void> {
     const clientId = getClientIdOrThrow();
     const response = await fetch(`/api/collections/${collectionId}`, {

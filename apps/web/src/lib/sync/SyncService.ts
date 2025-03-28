@@ -19,17 +19,31 @@ export class SyncService {
 
     const remoteCollection = await ApiService.createCollection(localCollection);
     const store = getStoreInstance()?.getState();
-    if (store) {
-      if (store.activeCollection === localCollection.id) {
-        store.setActiveCollection(remoteCollection.id);
-      }
-      await store.swapCollection(localCollection.id, remoteCollection);
-    } else {
-      await TransactionService.swapCollectionWithRemote(
-        localCollection.id,
-        remoteCollection
-      );
+
+    if (!store) {
+      return;
     }
+
+    await store.swapCollection(localCollection.id, remoteCollection);
+    return remoteCollection;
+  }
+
+  static async syncUpdateCollection(
+    collectionId: string
+  ): Promise<Collection | undefined> {
+    const localCollection = await CollectionRepository.getById(collectionId);
+    if (!localCollection) {
+      console.error(`SyncService: Collection ${collectionId} not found`);
+      return;
+    }
+
+    const remoteCollection = await ApiService.updateCollection(localCollection);
+    const store = getStoreInstance()?.getState();
+    if (!store) {
+      return;
+    }
+
+    await store.swapCollection(localCollection.id, remoteCollection);
     return remoteCollection;
   }
 
@@ -105,6 +119,9 @@ export class SyncService {
       switch (item.type) {
         case "CREATE_COLLECTION":
           await this.syncCreateCollection(item.relatedEntityId);
+          break;
+        case "UPDATE_COLLECTION":
+          await this.syncUpdateCollection(item.relatedEntityId);
           break;
         case "DELETE_COLLECTION":
           await this.syncDeleteCollection(item.relatedEntityId);

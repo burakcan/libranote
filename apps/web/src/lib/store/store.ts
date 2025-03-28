@@ -9,11 +9,12 @@ import { LocalDataService } from "@/lib/localDb/LocalDataService";
 import { NoteRepository } from "@/lib/localDb/NoteRepository";
 import { TransactionService } from "@/lib/localDb/TransactionService";
 
-type SyncStatus = "idle" | "syncing" | "synced" | "error";
+type SyncStatus = "init" | "syncing" | "synced" | "error";
 
 interface StoreState {
   clientId: string;
   activeCollection: Collection["id"] | null;
+  renamingCollection: Collection["id"] | null;
   user: {
     id: string;
     email: string;
@@ -36,7 +37,8 @@ interface StoreState {
 
 interface StoreActions {
   setClientId: (clientId: string) => void;
-  setActiveCollection: (collectionId: Collection["id"]) => void;
+  setActiveCollection: (collectionId: Collection["id"] | null) => void;
+  setRenamingCollection: (collectionId: Collection["id"] | null) => void;
   setCollectionsData: (collections: Collection[]) => void;
   setCollectionsSyncStatus: (syncStatus: SyncStatus) => void;
   createCollection: (title: string) => Promise<void>;
@@ -86,20 +88,25 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       clientId: "",
       // State
       activeCollection: null,
+      renamingCollection: null,
       collections: {
         data: [],
-        syncStatus: "idle" as SyncStatus,
+        syncStatus: "init" as SyncStatus,
       },
       notes: {
         data: [],
-        syncStatus: "idle" as SyncStatus,
+        syncStatus: "init" as SyncStatus,
       },
       actionQueue: [],
 
       // Actions
       setClientId: (clientId) => set({ clientId }),
+
       setActiveCollection: (collectionId) =>
         set({ activeCollection: collectionId }),
+
+      setRenamingCollection: (collectionId) =>
+        set({ renamingCollection: collectionId }),
 
       setCollectionsData: (collections) =>
         P(set, (draft) => {
@@ -120,6 +127,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       createCollection: async (title) => {
         // Get current state synchronously
         const state = get();
+        const prevActiveCollection = state.activeCollection;
         const ownerId = state.user.id;
         const collectionId = crypto.randomUUID();
 
@@ -135,6 +143,8 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         // Add to collections data immediately (optimistic update)
         P(set, (draft) => {
           draft.collections.data.push(collection);
+          draft.activeCollection = collectionId;
+          draft.renamingCollection = collectionId;
         });
 
         try {
@@ -161,6 +171,8 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
             draft.collections.data = draft.collections.data.filter(
               (c) => c.id !== collectionId
             );
+
+            draft.activeCollection = prevActiveCollection;
           });
         }
       },
@@ -268,7 +280,16 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
 
         try {
           // Update in local DB
-          await CollectionRepository.update(collection);
+          const actionId = await LocalDataService.updateCollection(collection);
+
+          // Add to action queue in the store state
+          get().addActionToQueue({
+            id: actionId,
+            type: "UPDATE_COLLECTION",
+            status: "pending",
+            createdAt: new Date(),
+            relatedEntityId: collection.id,
+          });
         } catch (error) {
           console.error("Failed to update collection locally", error);
 
@@ -276,6 +297,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           const originalCollection = await CollectionRepository.getById(
             collection.id
           );
+
           if (originalCollection && index !== -1) {
             P(set, (draft) => {
               draft.collections.data[index] = originalCollection;
@@ -297,6 +319,14 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         if (localIndex !== -1) {
           P(set, (draft) => {
             draft.collections.data[localIndex] = remoteCollection;
+
+            if (state.renamingCollection === localId) {
+              draft.renamingCollection = remoteCollection.id;
+            }
+
+            if (state.activeCollection === localId) {
+              draft.activeCollection = remoteCollection.id;
+            }
 
             // Update the notes that belong to this collection
             draft.notes.data = draft.notes.data.map((note) => {
@@ -342,9 +372,13 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
           draft.collections.data = draft.collections.data.filter(
             (c) => c.id !== collectionId
           );
+
+          draft.notes.data = draft.notes.data.filter(
+            (note) => note.collectionId !== collectionId
+          );
         });
 
-        await CollectionRepository.delete(collectionId);
+        await TransactionService.deleteCollectionWithoutAction(collectionId);
       },
 
       remoteUpdatedCollection: async (collection) => {
