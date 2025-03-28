@@ -47,8 +47,8 @@ export async function createCollection(options: {
         id,
         ownerId: userId,
         title,
-        ...(createdAt && { createdAt }),
-        ...(updatedAt && { updatedAt }),
+        createdAt: createdAt ?? new Date(),
+        updatedAt: updatedAt ?? new Date(),
       },
     });
 
@@ -74,7 +74,7 @@ export async function deleteCollection(collectionId: string) {
   }, `Failed to delete collection with ID ${collectionId}`);
 }
 
-export async function updateCollection(collection: Collection) {
+export async function updateCollection(collection: Partial<Collection>) {
   return await wrapDbOperation(async () => {
     return await prisma.collection.update({
       where: {

@@ -36,23 +36,20 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { title, createdAt, updatedAt } = body.collection;
-    const clientId = body.clientId;
+    const body: { collection: ClientCollection; clientId: string } =
+      await req.json();
 
-    if (!title) {
+    if (!body.collection.title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     // Create the collection with preserved timestamps if provided
     const collection = await createCollection({
+      ...body.collection,
       userId: session.user.id,
-      title,
-      ...(createdAt && { createdAt: new Date(createdAt) }),
-      ...(updatedAt && { updatedAt: new Date(updatedAt) }),
     });
 
-    SSEServerService.broadcastSSE(session.user.id, clientId, {
+    SSEServerService.broadcastSSE(session.user.id, body.clientId, {
       type: "COLLECTION_CREATED",
       collection,
     });

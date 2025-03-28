@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/components/providers/StoreProvider";
-import { Collection } from "@/lib/db/prisma";
 import { useCollectionNotes } from "@/lib/store/selectors";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +20,11 @@ type ALL_NOTES_COLLECTION = {
   updatedAt: Date;
 };
 
-export function CollectionListItem({
-  collection,
-}: {
-  collection: Collection | ALL_NOTES_COLLECTION;
-}) {
+interface CollectionListItemProps {
+  collection: ClientCollection | ALL_NOTES_COLLECTION;
+}
+
+export function CollectionListItem({ collection }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
   const isSyncing = useStore((state) =>
     state.actionQueue.some((action) => action.relatedEntityId === collection.id)

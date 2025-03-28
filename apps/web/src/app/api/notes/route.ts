@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
+    const body: { note: ClientNote; clientId: string } = await req.json();
     const { title, description, collectionId, createdAt, updatedAt, isPublic } =
       body.note;
     const clientId = body.clientId;

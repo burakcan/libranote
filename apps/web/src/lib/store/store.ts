@@ -13,8 +13,8 @@ type SyncStatus = "init" | "syncing" | "synced" | "error";
 
 interface StoreState {
   clientId: string;
-  activeCollection: Collection["id"] | null;
-  renamingCollection: Collection["id"] | null;
+  activeCollection: ClientCollection["id"] | null;
+  renamingCollection: ClientCollection["id"] | null;
   user: {
     id: string;
     email: string;
@@ -25,11 +25,11 @@ interface StoreState {
     updatedAt: Date;
   };
   collections: {
-    data: Collection[];
+    data: ClientCollection[];
     syncStatus: SyncStatus;
   };
   notes: {
-    data: Note[];
+    data: ClientNote[];
     syncStatus: SyncStatus;
   };
   actionQueue: ActionQueue.Item[];
@@ -37,13 +37,13 @@ interface StoreState {
 
 interface StoreActions {
   setClientId: (clientId: string) => void;
-  setActiveCollection: (collectionId: Collection["id"] | null) => void;
-  setRenamingCollection: (collectionId: Collection["id"] | null) => void;
-  setCollectionsData: (collections: Collection[]) => void;
+  setActiveCollection: (collectionId: ClientCollection["id"] | null) => void;
+  setRenamingCollection: (collectionId: ClientCollection["id"] | null) => void;
+  setCollectionsData: (collections: ClientCollection[]) => void;
   setCollectionsSyncStatus: (syncStatus: SyncStatus) => void;
   createCollection: (title: string) => Promise<void>;
-  deleteCollection: (collectionId: Collection["id"]) => Promise<void>;
-  updateCollection: (collection: Collection) => Promise<void>;
+  deleteCollection: (collectionId: ClientCollection["id"]) => Promise<void>;
+  updateCollection: (collection: ClientCollection) => Promise<void>;
   swapCollection: (
     localId: Collection["id"],
     remoteCollection: Collection
@@ -54,7 +54,7 @@ interface StoreActions {
   remoteDeletedCollection: (collectionId: Collection["id"]) => Promise<void>;
   remoteUpdatedCollection: (collection: Collection) => Promise<void>;
 
-  setNotesData: (notes: Note[]) => void;
+  setNotesData: (notes: ClientNote[]) => void;
   setNotesSyncStatus: (syncStatus: SyncStatus) => void;
   createNote: (
     collectionId: string,
@@ -62,7 +62,7 @@ interface StoreActions {
     content?: string
   ) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
-  updateNote: (note: Note) => Promise<void>;
+  updateNote: (note: ClientNote) => Promise<void>;
 
   // Sync actions that are triggered by SSE events
   remoteCreatedNote: (note: Note) => Promise<void>;
@@ -132,7 +132,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         const collectionId = crypto.randomUUID();
 
         // Create collection object
-        const collection: Collection = {
+        const collection: ClientCollection = {
           id: collectionId,
           title,
           ownerId,
@@ -412,7 +412,7 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
         const ownerId = state.user.id;
 
         // Create note object
-        const note: Note = {
+        const note: ClientNote = {
           id: noteId,
           title,
           description: content,

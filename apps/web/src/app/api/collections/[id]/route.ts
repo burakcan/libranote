@@ -17,7 +17,10 @@ export async function PUT(
 
   try {
     const collectionId = (await params).id;
-    const { collection, clientId } = await req.json();
+    const {
+      collection,
+      clientId,
+    }: { collection: ClientCollection; clientId: string } = await req.json();
 
     if (collectionId !== collection.id) {
       return NextResponse.json(

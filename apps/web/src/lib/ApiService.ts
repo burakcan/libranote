@@ -11,7 +11,9 @@ function getClientIdOrThrow(): string {
 }
 
 export class ApiService {
-  static async createCollection(collection: Collection): Promise<Collection> {
+  static async createCollection(
+    collection: ClientCollection
+  ): Promise<Collection> {
     const clientId = getClientIdOrThrow();
     const response = await fetch("/api/collections", {
       method: "POST",
@@ -25,7 +27,9 @@ export class ApiService {
     return response.json();
   }
 
-  static async updateCollection(collection: Collection): Promise<Collection> {
+  static async updateCollection(
+    collection: ClientCollection
+  ): Promise<Collection> {
     const clientId = getClientIdOrThrow();
     const response = await fetch(`/api/collections/${collection.id}`, {
       method: "PUT",
@@ -52,7 +56,7 @@ export class ApiService {
     }
   }
 
-  static async createNote(note: Note): Promise<Note> {
+  static async createNote(note: ClientNote): Promise<Note> {
     const clientId = getClientIdOrThrow();
     const response = await fetch("/api/notes", {
       method: "POST",

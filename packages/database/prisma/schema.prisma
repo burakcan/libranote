@@ -86,14 +86,16 @@ model Jwks {
 // Application models for collections and notes.
 
 model Collection {
-  id        String             @id
-  title     String
-  ownerId   String
-  owner     User               @relation("OwnedCollections", fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  notes     Note[]
-  members   CollectionMember[]
+  id              String             @id
+  title           String
+  ownerId         String
+  owner           User               @relation("OwnedCollections", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt       DateTime
+  serverCreatedAt DateTime           @default(now())
+  updatedAt       DateTime
+  serverUpdatedAt DateTime           @updatedAt
+  notes           Note[]
+  members         CollectionMember[]
 
   @@map("collection")
 }
@@ -120,8 +122,10 @@ model Note {
   collectionId      String
   collection        Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   isPublic          Boolean            @default(false)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime
+  serverCreatedAt   DateTime           @default(now())
+  updatedAt         DateTime
+  serverUpdatedAt   DateTime           @updatedAt
   noteCollaborators NoteCollaborator[]
 
   @@map("note")

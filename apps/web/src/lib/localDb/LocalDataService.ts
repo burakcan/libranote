@@ -1,4 +1,3 @@
-import { Collection, Note } from "@/lib/db/prisma";
 import { ActionQueueRepository } from "./ActionQueueRepository";
 import { TransactionService } from "./TransactionService";
 
@@ -9,7 +8,7 @@ export class LocalDataService {
     ownerId: string
   ): Promise<string> {
     const actionId = crypto.randomUUID();
-    const collection: Collection = {
+    const collection: ClientCollection = {
       id,
       title,
       ownerId,
@@ -21,7 +20,7 @@ export class LocalDataService {
     return actionId;
   }
 
-  static async updateCollection(collection: Collection): Promise<string> {
+  static async updateCollection(collection: ClientCollection): Promise<string> {
     const actionId = crypto.randomUUID();
 
     await TransactionService.updateCollectionWithAction(
@@ -42,7 +41,7 @@ export class LocalDataService {
     collectionId: string
   ): Promise<string> {
     const actionId = crypto.randomUUID();
-    const note: Note = {
+    const note: ClientNote = {
       id,
       title,
       description,

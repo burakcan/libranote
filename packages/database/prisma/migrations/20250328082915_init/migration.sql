@@ -74,8 +74,10 @@ CREATE TABLE "collection" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "ownerId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "serverCreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "serverUpdatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "collection_pkey" PRIMARY KEY ("id")
 );
@@ -99,8 +101,10 @@ CREATE TABLE "note" (
     "ownerId" TEXT NOT NULL,
     "collectionId" TEXT NOT NULL,
     "isPublic" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "serverCreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "serverUpdatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "note_pkey" PRIMARY KEY ("id")
 );

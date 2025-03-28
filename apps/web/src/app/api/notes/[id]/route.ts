@@ -18,7 +18,7 @@ export async function DELETE(
 
   try {
     const noteId = (await params).id;
-    const body = await req.json();
+    const body: { clientId: string } = await req.json();
     const clientId = body.clientId;
 
     if (!noteId) {

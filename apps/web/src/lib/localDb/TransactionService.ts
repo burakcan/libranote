@@ -4,7 +4,7 @@ import { wrapDbOperation } from "./wrapDbOperation";
 
 export class TransactionService {
   static async createCollectionWithAction(
-    collection: Collection,
+    collection: ClientCollection,
     actionId: string
   ): Promise<void> {
     return wrapDbOperation(async () => {
@@ -12,7 +12,7 @@ export class TransactionService {
         "rw",
         [dexie.table("collections"), dexie.table("actionQueue")],
         async (tx) => {
-          await tx.table<Collection>("collections").add(collection);
+          await tx.table<ClientCollection>("collections").add(collection);
           await tx.table<ActionQueue.Item>("actionQueue").add({
             id: actionId,
             type: "CREATE_COLLECTION",
@@ -26,7 +26,7 @@ export class TransactionService {
   }
 
   static async createNoteWithAction(
-    note: Note,
+    note: ClientNote,
     actionId: string
   ): Promise<void> {
     return wrapDbOperation(async () => {
@@ -34,7 +34,7 @@ export class TransactionService {
         "rw",
         [dexie.table("notes"), dexie.table("actionQueue")],
         async (tx) => {
-          await tx.table<Note>("notes").add(note);
+          await tx.table<ClientNote>("notes").add(note);
           await tx.table<ActionQueue.Item>("actionQueue").add({
             id: actionId,
             type: "CREATE_NOTE",
@@ -48,7 +48,7 @@ export class TransactionService {
   }
 
   static async updateCollectionWithAction(
-    collection: Collection,
+    collection: ClientCollection,
     actionId: string
   ): Promise<void> {
     return wrapDbOperation(async () => {
@@ -56,7 +56,7 @@ export class TransactionService {
         "rw",
         [dexie.table("collections"), dexie.table("actionQueue")],
         async (tx) => {
-          await tx.table<Collection>("collections").put(collection);
+          await tx.table<ClientCollection>("collections").put(collection);
           await tx.table<ActionQueue.Item>("actionQueue").add({
             id: actionId,
             type: "UPDATE_COLLECTION",
@@ -102,8 +102,11 @@ export class TransactionService {
         "rw",
         [dexie.table("collections"), dexie.table("notes")],
         async (tx) => {
-          await tx.table<Collection>("collections").delete(id);
-          await tx.table<Note>("notes").where({ collectionId: id }).delete();
+          await tx.table<ClientCollection>("collections").delete(id);
+          await tx
+            .table<ClientNote>("notes")
+            .where({ collectionId: id })
+            .delete();
         }
       );
     }, `Failed to delete collection with ID ${id}`);
@@ -116,7 +119,9 @@ export class TransactionService {
     return wrapDbOperation(async () => {
       if (localId === remoteCollection.id) {
         // If IDs are the same, just update the collection
-        await dexie.table<Collection>("collections").put(remoteCollection);
+        await dexie
+          .table<ClientCollection>("collections")
+          .put(remoteCollection);
         return;
       }
 
@@ -127,17 +132,17 @@ export class TransactionService {
         async (tx) => {
           // 1. Update each note to reference the new collection ID
           await tx
-            .table<Note>("notes")
+            .table<ClientNote>("notes")
             .where({ collectionId: localId })
             .modify({
               collectionId: remoteCollection.id,
             });
 
           // 2. Add the remote collection
-          await tx.table<Collection>("collections").put(remoteCollection);
+          await tx.table<ClientCollection>("collections").put(remoteCollection);
 
           // 3. Delete the local collection
-          await tx.table<Collection>("collections").delete(localId);
+          await tx.table<ClientCollection>("collections").delete(localId);
         }
       );
     }, `Failed to swap collection with ID ${localId} for remote collection ${remoteCollection.id}`);
@@ -157,11 +162,11 @@ export class TransactionService {
 
           // Upsert existing collections / create new ones
           for (const remoteCollection of remoteCollections) {
-            tx.table<Collection>("collections").put(remoteCollection);
+            tx.table<ClientCollection>("collections").put(remoteCollection);
           }
 
           // Delete collections that are no longer in the remote data
-          tx.table<Collection>("collections")
+          tx.table<ClientCollection>("collections")
             .where("id")
             .noneOf(remoteCollections.map((collection) => collection.id))
             .delete();
@@ -179,11 +184,11 @@ export class TransactionService {
 
         // Upsert existing notes / create new ones
         for (const remoteNote of remoteNotes) {
-          tx.table<Note>("notes").put(remoteNote);
+          tx.table<ClientNote>("notes").put(remoteNote);
         }
 
         // Delete notes that are no longer in the remote data
-        tx.table<Note>("notes")
+        tx.table<ClientNote>("notes")
           .where("id")
           .noneOf(remoteNotes.map((note) => note.id))
           .delete();

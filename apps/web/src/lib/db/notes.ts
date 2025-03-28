@@ -63,8 +63,8 @@ export async function createNote(options: {
         title,
         description,
         isPublic: isPublic || false,
-        ...(createdAt && { createdAt }),
-        ...(updatedAt && { updatedAt }),
+        createdAt: createdAt ?? new Date(),
+        updatedAt: updatedAt ?? new Date(),
       },
     });
 
