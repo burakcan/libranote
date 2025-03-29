@@ -9,8 +9,6 @@ import { LocalDataService } from "@/lib/localDb/LocalDataService";
 import { NoteRepository } from "@/lib/localDb/NoteRepository";
 import { TransactionService } from "@/lib/localDb/TransactionService";
 
-type SyncStatus = "init" | "syncing" | "synced" | "error";
-
 interface StoreState {
   clientId: string;
   activeCollection: ClientCollection["id"] | null;
@@ -26,11 +24,9 @@ interface StoreState {
   };
   collections: {
     data: ClientCollection[];
-    syncStatus: SyncStatus;
   };
   notes: {
     data: ClientNote[];
-    syncStatus: SyncStatus;
   };
   actionQueue: ActionQueue.Item[];
 }
@@ -40,7 +36,6 @@ interface StoreActions {
   setActiveCollection: (collectionId: ClientCollection["id"] | null) => void;
   setRenamingCollection: (collectionId: ClientCollection["id"] | null) => void;
   setCollectionsData: (collections: ClientCollection[]) => void;
-  setCollectionsSyncStatus: (syncStatus: SyncStatus) => void;
   createCollection: (title: string) => Promise<void>;
   deleteCollection: (collectionId: ClientCollection["id"]) => Promise<void>;
   updateCollection: (collection: ClientCollection) => Promise<void>;
@@ -55,7 +50,6 @@ interface StoreActions {
   remoteUpdatedCollection: (collection: Collection) => Promise<void>;
 
   setNotesData: (notes: ClientNote[]) => void;
-  setNotesSyncStatus: (syncStatus: SyncStatus) => void;
   createNote: (
     collectionId: string,
     title: string,
@@ -91,16 +85,17 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       renamingCollection: null,
       collections: {
         data: [],
-        syncStatus: "init" as SyncStatus,
       },
       notes: {
         data: [],
-        syncStatus: "init" as SyncStatus,
       },
       actionQueue: [],
 
       // Actions
-      setClientId: (clientId) => set({ clientId }),
+      setClientId: (clientId) => {
+        localStorage.setItem("clientId", clientId);
+        set({ clientId });
+      },
 
       setActiveCollection: (collectionId) =>
         set({ activeCollection: collectionId }),
@@ -111,11 +106,6 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       setCollectionsData: (collections) =>
         P(set, (draft) => {
           draft.collections.data = collections;
-        }),
-
-      setCollectionsSyncStatus: (syncStatus) =>
-        P(set, (draft) => {
-          draft.collections.syncStatus = syncStatus;
         }),
 
       // Add action to queue (helper method)
@@ -398,11 +388,6 @@ export const createStore = (initialData: { user: StoreState["user"] }) => {
       setNotesData: (notes) =>
         P(set, (draft) => {
           draft.notes.data = notes;
-        }),
-
-      setNotesSyncStatus: (syncStatus) =>
-        P(set, (draft) => {
-          draft.notes.syncStatus = syncStatus;
         }),
 
       createNote: async (collectionId, title, content = "") => {

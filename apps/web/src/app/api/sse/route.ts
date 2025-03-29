@@ -11,9 +11,16 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const requestedClientId = req.nextUrl.searchParams.get("clientId") ?? null;
+
   const stream = new ReadableStream<string>({
     async start(controller) {
-      const clientId = SSEServerService.addClient(session.user.id, controller);
+      const clientId = SSEServerService.addClient(
+        session.user.id,
+        requestedClientId,
+        controller
+      );
+
       SSEServerService.sendInitEvent(session.user.id, clientId);
       req.signal.addEventListener("abort", () => {
         SSEServerService.removeClient(session.user.id, clientId);

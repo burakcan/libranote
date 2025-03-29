@@ -1,213 +1,146 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useStore } from "@/components/providers/StoreProvider";
+import { ActionQueueRepository } from "@/lib/localDb/ActionQueueRepository";
 import { CollectionRepository } from "@/lib/localDb/CollectionRepository";
 import { NoteRepository } from "@/lib/localDb/NoteRepository";
 import { SyncService } from "@/lib/sync/SyncService";
+import { useMutex } from "@/lib/useMutex";
+import { useStore } from "./StoreProvider";
 
-export function SyncProvider() {
-  // Sync lock state to prevent concurrent operations
-  const [syncInProgress, setSyncInProgress] = useState(false);
-
+export function SyncProvider(props: PropsWithChildren) {
+  const [initialSyncComplete, setInitialSyncComplete] = useState(false);
+  const [locked, acquireLock] = useMutex();
   const {
-    actionQueue,
-    removeActionFromQueue,
+    clientId,
+    setClientId,
     setCollectionsData,
     setNotesData,
-    collectionsSyncStatus,
-    setCollectionsSyncStatus,
-    notesSyncStatus,
-    setNotesSyncStatus,
-    clientId,
+    removeActionFromQueue,
+    actionQueue,
   } = useStore(
     useShallow((state) => ({
-      actionQueue: state.actionQueue,
-      removeActionFromQueue: state.removeActionFromQueue,
+      clientId: state.clientId,
+      setClientId: state.setClientId,
       setCollectionsData: state.setCollectionsData,
       setNotesData: state.setNotesData,
-      collectionsSyncStatus: state.collections.syncStatus,
-      setCollectionsSyncStatus: state.setCollectionsSyncStatus,
-      notesSyncStatus: state.notes.syncStatus,
-      setNotesSyncStatus: state.setNotesSyncStatus,
-      clientId: state.clientId,
+      removeActionFromQueue: state.removeActionFromQueue,
+      actionQueue: state.actionQueue,
     }))
   );
 
-  // Initial sync effect
+  // Initial sync
   useEffect(() => {
     const syncData = async () => {
-      // Only start sync if both collections and notes are idle AND no sync is in progress
-      if (
-        collectionsSyncStatus !== "init" ||
-        notesSyncStatus !== "init" ||
-        syncInProgress ||
-        !clientId
-      ) {
-        return;
+      if (initialSyncComplete || locked || !clientId) return;
+
+      const releaseLock = acquireLock("SyncProvider:initialSync");
+
+      console.debug("SyncProvider: Syncing data");
+
+      const [localCollections, localNotes, queueItems] = await Promise.all([
+        CollectionRepository.getAll(),
+        NoteRepository.getAll(),
+        ActionQueueRepository.getAll(),
+      ]);
+
+      console.debug(
+        "SyncProvider: Loaded local data",
+        localCollections,
+        localNotes,
+        queueItems
+      );
+
+      setCollectionsData(localCollections);
+      setNotesData(localNotes);
+      console.debug("SyncProvider: Populated store with local data");
+
+      console.debug("SyncProvider: Processing queue items", queueItems);
+      for (const item of queueItems) {
+        // Process the item
+        await SyncService.processActionQueueItem(item);
+
+        // Remove from queue after successful processing
+        await ActionQueueRepository.delete(item.id);
+        await removeActionFromQueue(item.id);
       }
 
-      // Acquire sync lock
-      setSyncInProgress(true);
-      console.debug("SyncManager: Starting sync process (acquired sync lock)");
+      await SyncService.syncRemoteCollectionsToLocal();
+      await SyncService.syncRemoteNotesToLocal();
 
-      setCollectionsSyncStatus("syncing");
-      setNotesSyncStatus("syncing");
+      console.debug("SyncProvider: Synced remote data");
+      console.debug("SyncProvider: Initial sync completed successfully");
 
-      try {
-        // Step 1: Load local data
-        const [localCollections, localNotes, queueItems] = await Promise.all([
-          CollectionRepository.getAll(),
-          NoteRepository.getAll(),
-          SyncService.getActionQueueItems(),
-        ]);
-
-        // Step 2: Set local data to store
-        setCollectionsData(localCollections);
-        setNotesData(localNotes);
-
-        // Step 3: Process all pending actions
-        for (const item of queueItems) {
-          try {
-            // Process the item
-            await SyncService.processActionQueueItem(item);
-            // Remove from queue after successful processing
-            await SyncService.removeActionQueueItem(item.id);
-            await removeActionFromQueue(item.id);
-          } catch (error) {
-            console.error(
-              `SyncManager: Failed to process queue item ${item.id}`,
-              error
-            );
-          }
-        }
-
-        await SyncService.syncRemoteCollectionsToLocal();
-        setCollectionsSyncStatus("synced");
-        console.debug("SyncManager: Collections synced successfully");
-
-        await SyncService.syncRemoteNotesToLocal();
-        setNotesSyncStatus("synced");
-        console.debug("SyncManager: Notes synced successfully");
-
-        console.debug("SyncManager: Sync completed successfully");
-      } catch (error) {
-        console.error("SyncManager: Error during sync process", error);
-        setCollectionsSyncStatus("error");
-        setNotesSyncStatus("error");
-      } finally {
-        // Always release the sync lock when done, regardless of success or failure
-        setSyncInProgress(false);
-        console.debug("SyncManager: Released sync lock");
-      }
+      releaseLock();
+      setInitialSyncComplete(true);
     };
 
     syncData();
   }, [
-    setCollectionsData,
-    setCollectionsSyncStatus,
-    collectionsSyncStatus,
-    setNotesData,
-    setNotesSyncStatus,
-    notesSyncStatus,
-    removeActionFromQueue,
-    syncInProgress,
+    locked,
+    initialSyncComplete,
     clientId,
+    acquireLock,
+    setCollectionsData,
+    setNotesData,
+    removeActionFromQueue,
   ]);
 
   // Process new queue items as they are added
   useEffect(() => {
-    const processNewQueueItems = async () => {
-      // Only process queue if synced AND no sync already in progress
+    async function process() {
       if (
-        actionQueue.length === 0 ||
-        collectionsSyncStatus === "init" ||
-        notesSyncStatus === "init" ||
-        syncInProgress ||
-        !clientId
-      ) {
-        console.debug(
-          "SyncManager: Skipping processing new queue items",
-          actionQueue.length,
-          collectionsSyncStatus,
-          notesSyncStatus,
-          syncInProgress,
-          clientId
-        );
+        locked ||
+        !clientId ||
+        !initialSyncComplete ||
+        actionQueue.length === 0
+      )
         return;
-      }
 
-      console.debug(
-        "SyncManager: Processing new queue items",
-        actionQueue.length,
-        collectionsSyncStatus,
-        notesSyncStatus,
-        syncInProgress,
-        clientId
+      const releaseLock = acquireLock("SyncProvider:queueItemProcessor");
+
+      console.debug("SyncProvider: Processing new queue items");
+
+      const pendingActions = actionQueue.filter(
+        (item) => item.status === "pending"
       );
 
-      // Acquire sync lock
-      setSyncInProgress(true);
-      console.debug(
-        "SyncManager: Processing new queue items (acquired sync lock)"
-      );
+      for (const item of pendingActions) {
+        // Process the item
+        await SyncService.processActionQueueItem(item);
 
-      setCollectionsSyncStatus("syncing");
-      setNotesSyncStatus("syncing");
-
-      try {
-        // Process pending actions in queue
-        const pendingActions = actionQueue.filter(
-          (item) => item.status === "pending"
-        );
-
-        for (const item of pendingActions) {
-          try {
-            await SyncService.processActionQueueItem(item);
-            await SyncService.removeActionQueueItem(item.id);
-            await removeActionFromQueue(item.id);
-            console.debug(
-              "SyncManager: Processed queue item",
-              item.id,
-              "successfully"
-            );
-          } catch (error) {
-            console.error(
-              `SyncManager: Failed to process queue item ${item.id}`,
-              error
-            );
-          }
-        }
-
-        setCollectionsSyncStatus("synced");
-        setNotesSyncStatus("synced");
-      } catch (error) {
-        console.error("SyncManager: Error processing queue items", error);
-        setCollectionsSyncStatus("error");
-        setNotesSyncStatus("error");
-      } finally {
-        // Always release the sync lock when done, regardless of success or failure
-        setSyncInProgress(false);
-        console.debug("SyncManager: Released sync lock");
+        // Remove from queue after successful processing
+        await ActionQueueRepository.delete(item.id);
+        await removeActionFromQueue(item.id);
       }
-    };
 
-    processNewQueueItems();
+      releaseLock();
+    }
+
+    process();
   }, [
     actionQueue,
-    removeActionFromQueue,
-    collectionsSyncStatus,
-    notesSyncStatus,
-    setCollectionsSyncStatus,
-    setNotesSyncStatus,
-    syncInProgress,
+    locked,
     clientId,
+    initialSyncComplete,
+    acquireLock,
+    removeActionFromQueue,
   ]);
 
   // SSE event handling
   useEffect(() => {
-    const eventSource = new EventSource("/api/sse");
+    const localClientId = localStorage.getItem("clientId");
+
+    // If we have a local clientId, set it so other parts of the app can use it.
+    // In most cases, this should be fine since clientId just needs to be unique per user.
+    if (localClientId) {
+      setClientId(localClientId);
+    }
+
+    const eventSource = new EventSource(
+      localClientId ? `/api/sse?clientId=${localClientId}` : "/api/sse"
+    );
 
     eventSource.onmessage = (event) => {
       console.log("SyncManager: SSE event", event.data);
@@ -220,7 +153,7 @@ export function SyncProvider() {
     return () => {
       eventSource.close();
     };
-  }, []);
+  }, [setClientId]);
 
-  return null;
+  return <>{props.children}</>;
 }

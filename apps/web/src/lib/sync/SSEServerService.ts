@@ -9,9 +9,10 @@ export class SSEServerService {
 
   static addClient(
     userId: UserId,
+    requestedClientId: ClientId | null,
     controller: ReadableStreamDefaultController<string>
   ): ClientId {
-    const clientId = crypto.randomUUID();
+    const clientId = requestedClientId ?? crypto.randomUUID();
 
     if (!SSEServerService.clients.has(userId)) {
       SSEServerService.clients.set(userId, new Map());
