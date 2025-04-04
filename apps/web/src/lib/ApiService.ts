@@ -1,105 +1,105 @@
-import { Collection, Note } from "@repo/db";
-import { getStoreInstance } from "@/components/providers/StoreProvider";
+import {
+  ClientCollection,
+  ClientNote,
+  ServerCollection,
+  ServerNote,
+} from "@/types/Entities";
 
-// Helper: consistently fetch the client ID from the global store
-function getClientIdOrThrow(): string {
-  const storeState = getStoreInstance()?.getState();
-  if (!storeState?.clientId) {
-    throw new Error("Client ID not found");
-  }
-  return storeState.clientId;
+const API_URL = import.meta.env.VITE_API_URL;
+
+export interface ApiServiceError extends Error {
+  status: number;
 }
 
 export class ApiService {
-  static async createCollection(
-    collection: ClientCollection
-  ): Promise<Collection> {
-    const clientId = getClientIdOrThrow();
-    const response = await fetch("/api/collections", {
-      method: "POST",
-      body: JSON.stringify({ collection, clientId }),
+  constructor(readonly clientId: string) {}
+
+  async fetch(path: string, options: RequestInit = {}): Promise<Response> {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...options.headers,
+        "Content-Type": "application/json",
+        "x-client-id": this.clientId,
+      },
     });
+
     if (!response.ok) {
-      throw new Error(
-        `Failed to create collection on server: ${response.status} ${response.statusText}`
-      );
+      const error = new Error(response.statusText) as ApiServiceError;
+      error.status = response.status;
+      throw error;
     }
-    return response.json();
+
+    return response;
   }
 
-  static async updateCollection(
+  async createCollection(
     collection: ClientCollection
-  ): Promise<Collection> {
-    const clientId = getClientIdOrThrow();
-    const response = await fetch(`/api/collections/${collection.id}`, {
+  ): Promise<ServerCollection> {
+    const response = await this.fetch("/api/collections", {
+      method: "POST",
+      body: JSON.stringify({ collection }),
+    });
+
+    const data: { collection: ServerCollection } = await response.json();
+
+    return data.collection;
+  }
+
+  async updateCollection(
+    collection: ClientCollection
+  ): Promise<ServerCollection> {
+    const response = await this.fetch(`/api/collections/${collection.id}`, {
       method: "PUT",
-      body: JSON.stringify({ collection, clientId }),
+      body: JSON.stringify({ collection }),
     });
-    if (!response.ok) {
-      throw new Error(
-        `Failed to update collection on server: ${response.status} ${response.statusText}`
-      );
-    }
-    return response.json();
+
+    const data: { collection: ServerCollection } = await response.json();
+
+    return data.collection;
   }
 
-  static async deleteCollection(collectionId: string): Promise<void> {
-    const clientId = getClientIdOrThrow();
-    const response = await fetch(`/api/collections/${collectionId}`, {
+  async deleteCollection(collectionId: string): Promise<void> {
+    await this.fetch(`/api/collections/${collectionId}`, {
       method: "DELETE",
-      body: JSON.stringify({ clientId }),
     });
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete collection on server: ${response.status} ${response.statusText}`
-      );
-    }
   }
 
-  static async createNote(note: ClientNote): Promise<Note> {
-    const clientId = getClientIdOrThrow();
-    const response = await fetch("/api/notes", {
+  async createNote(note: ClientNote): Promise<ServerNote> {
+    const response = await this.fetch("/api/notes", {
       method: "POST",
-      body: JSON.stringify({ note, clientId }),
+      body: JSON.stringify({ note }),
     });
-    if (!response.ok) {
-      throw new Error(
-        `Failed to create note on server: ${response.status} ${response.statusText}`
-      );
-    }
-    return response.json();
+
+    const data: { note: ServerNote } = await response.json();
+
+    return data.note;
   }
 
-  static async deleteNote(noteId: string): Promise<void> {
-    const clientId = getClientIdOrThrow();
-    const response = await fetch(`/api/notes/${noteId}`, {
+  async deleteNote(noteId: string): Promise<void> {
+    await this.fetch(`/api/notes/${noteId}`, {
       method: "DELETE",
-      body: JSON.stringify({ clientId }),
     });
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete note on server: ${response.status} ${response.statusText}`
-      );
-    }
   }
 
-  static async fetchAllCollections(): Promise<Collection[]> {
-    const response = await fetch("/api/collections");
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch collections from server: ${response.status} ${response.statusText}`
-      );
-    }
-    return response.json();
+  async fetchAllCollections(): Promise<ServerCollection[]> {
+    const response = await this.fetch("/api/collections");
+
+    const data: { collections: ServerCollection[] } = await response.json();
+
+    return data.collections;
   }
 
-  static async fetchAllNotes(): Promise<Note[]> {
-    const response = await fetch("/api/notes");
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch notes from server: ${response.status} ${response.statusText}`
-      );
-    }
-    return response.json();
+  async fetchAllNotes(): Promise<ServerNote[]> {
+    const response = await this.fetch("/api/notes");
+
+    const data: { notes: ServerNote[] } = await response.json();
+
+    return data.notes;
+  }
+
+  async getSSEEventSource(): Promise<EventSource> {
+    return new EventSource(`${API_URL}/api/sse?clientId=${this}`);
   }
 }

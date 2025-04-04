@@ -1,26 +1,37 @@
-"use client";
-
-import { FaPlusCircle } from "react-icons/fa";
+import { FileText } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
-import { useStore } from "@/components/providers/StoreProvider";
+import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { useStore } from "@/hooks/useStore";
 
 export function CreateNoteButton() {
-  const createNote = useStore((state) => state.createNote);
-  const activeCollection = useStore((state) => state.activeCollection);
+  const { data: session } = useSessionQuery();
+  const userId = session?.user.id;
+
+  const { createNote, activeCollectionId } = useStore(
+    useShallow((state) => ({
+      createNote: state.notes.createNote,
+      activeCollectionId: state.collections.activeCollectionId,
+    }))
+  );
+
+  if (!activeCollectionId) return null;
+
+  const handleClick = async () => {
+    if (activeCollectionId && userId) {
+      await createNote(activeCollectionId, userId, "New Note");
+    }
+  };
 
   return (
     <Button
+      disabled={!userId}
+      onClick={handleClick}
       variant="ghost"
-      className="w-full justify-start border-1 border-accent"
-      onClick={() => {
-        if (activeCollection) {
-          createNote(activeCollection, "New Note");
-        }
-      }}
-      disabled={!activeCollection}
+      className="border-1 border-accent"
     >
-      <FaPlusCircle className="size-3 mr-2" />
-      New note
+      <FileText className="h-4 w-4" />
+      New
     </Button>
   );
 }

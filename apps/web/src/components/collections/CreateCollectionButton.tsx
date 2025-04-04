@@ -1,20 +1,33 @@
-"use client";
-
-import { FaPlusCircle } from "react-icons/fa";
+import { Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useStore } from "@/components/providers/StoreProvider";
+import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { useStore } from "@/hooks/useStore";
 
 export function CreateCollectionButton() {
-  const createCollection = useStore((state) => state.createCollection);
+  const { data: session } = useSessionQuery();
+  const userId = session?.user.id;
+
+  const createCollection = useStore(
+    (state) => state.collections.createCollection
+  );
+
+  const handleClick = () => {
+    if (!userId) {
+      return;
+    }
+
+    createCollection("New Collection", userId);
+  };
 
   return (
     <Button
+      disabled={!userId}
+      onClick={handleClick}
       variant="ghost"
-      className="w-full justify-start border-1 border-accent"
-      onClick={() => createCollection("New Collection")}
+      className="border-1 border-accent"
     >
-      <FaPlusCircle className="size-3" />
-      New collection
+      <Folder className="h-4 w-4" />
+      New
     </Button>
   );
 }

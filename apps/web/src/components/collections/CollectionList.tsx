@@ -1,7 +1,5 @@
-"use client";
-
 import { useMemo } from "react";
-import { useStore } from "@/components/providers/StoreProvider";
+import { useStore } from "@/hooks/useStore";
 import { CollectionListItem } from "./CollectionListItem";
 
 export function CollectionList() {

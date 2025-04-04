@@ -2,6 +2,7 @@
 
 import { Share2, Trash, MoreHorizontal, Pencil } from "lucide-react";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,9 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useStore } from "@/components/providers/StoreProvider";
-import { useCollectionNotes } from "@/lib/store/selectors";
+import { useStore } from "@/hooks/useStore";
+import { useCollectionNotes } from "@/lib/store/useCollectionNotes";
 import { cn } from "@/lib/utils";
+import { ClientCollection } from "@/types/Entities";
 
 type ALL_NOTES_COLLECTION = {
   id: null;
@@ -26,30 +28,42 @@ interface CollectionListItemProps {
 
 export function CollectionListItem({ collection }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
-  const isSyncing = useStore((state) =>
-    state.actionQueue.some((action) => action.relatedEntityId === collection.id)
+  const {
+    isSyncing,
+    isRenaming = false,
+    isActive = false,
+    setActiveCollectionId,
+    deleteCollection,
+    setRenamingCollection,
+    updateCollection,
+  } = useStore(
+    useShallow((state) => ({
+      isSyncing: state.actionQueue.items.some(
+        (action) =>
+          action.relatedEntityId === collection.id &&
+          action.status === "processing"
+      ),
+      isRenaming:
+        state.collections.renamingCollectionId !== null &&
+        state.collections.renamingCollectionId === collection.id,
+      isActive: state.collections.activeCollectionId === collection.id,
+      setRenamingCollection: state.collections.setRenamingCollectionId,
+      setActiveCollectionId: state.collections.setActiveCollectionId,
+      deleteCollection: state.collections.deleteCollection,
+      updateCollection: state.collections.updateCollection,
+    }))
   );
-  const isRenaming = useStore(
-    (state) =>
-      state.renamingCollection !== null &&
-      state.renamingCollection === collection.id
-  );
-  const setRenamingCollection = useStore(
-    (state) => state.setRenamingCollection
-  );
-  const notes = useCollectionNotes(collection.id);
-  const activeCollection = useStore((state) => state.activeCollection);
-  const setActiveCollection = useStore((state) => state.setActiveCollection);
-  const deleteCollection = useStore((state) => state.deleteCollection);
-  const updateCollection = useStore((state) => state.updateCollection);
-  const isActive = activeCollection === collection.id;
 
-  const setIsRenaming = (isRenaming: boolean) => {
-    setRenamingCollection(isRenaming ? collection.id : null);
+  const totalNotes = useCollectionNotes(collection.id).length;
+
+  const handleRenameCollection = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setRenamingCollection(collection.id);
+    setRenameInput(collection.title);
   };
 
-  const handleRename = () => {
-    setIsRenaming(false);
+  const handleConfirmRename = () => {
+    setRenamingCollection(null);
 
     if (collection.id === null) return;
     if (renameInput.trim() === "") return;
@@ -63,62 +77,66 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
 
   const handleCancelRename = () => {
     setRenameInput(collection.title);
-    setIsRenaming(false);
+    setRenamingCollection(null);
+  };
+
+  const handleDeleteCollection = () => {
+    if (collection.id === null) return;
+    deleteCollection(collection.id);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleConfirmRename();
+    } else if (e.key === "Escape") {
+      handleCancelRename();
+    }
   };
 
   return (
     <div
+      role="button"
       key={collection.id}
       className={cn(
-        "flex items-center justify-between p-2 rounded-md cursor-default hover:bg-accent/30",
-        isActive && "bg-accent/50",
+        "flex items-center justify-between p-2 rounded-md cursor-default",
+        isActive ? "bg-accent/50 shadow-2xl" : "hover:bg-accent/30",
         isRenaming && "p-0",
         isSyncing && "opacity-50"
       )}
-      onClick={() => setActiveCollection(collection.id)}
+      onMouseDown={() => setActiveCollectionId(collection.id)}
     >
       {isRenaming && collection.id !== null ? (
         <Input
           className="w-full text-sm h-9 font-medium pl-8 border-none"
           value={renameInput}
           onChange={(e) => setRenameInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleRename();
-            } else if (e.key === "Escape") {
-              handleCancelRename();
-            }
-          }}
+          onKeyDown={handleInputKeyDown}
           autoFocus
-          onBlur={handleRename}
+          onBlur={handleConfirmRename}
+          onFocus={(e) => e.target.select()}
         />
       ) : (
         <>
-          <div className="flex items-center max-w-full">
-            <div className="w-3 h-3 rounded-full mr-3 bg-accent-foreground" />
-            <span className="text-sm font-medium truncate max-w-32">
+          <div className="flex items-center min-w-0">
+            <div className="w-3 h-3 rounded-full mr-3 bg-accent-foreground flex-shrink-0" />
+            <span className="text-sm font-medium truncate flex-shrink min-w-0">
               {collection.title}
             </span>
-            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
-              {notes.length} {notes.length === 1 ? "note" : "notes"}
+            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              {totalNotes} {totalNotes === 1 ? "note" : "notes"}
             </span>
           </div>
 
           {collection.id !== null && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="focus:outline-none text-muted-foreground"
+                className="focus:outline-none text-muted-foreground ml-2"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteCollection(collection.id);
-                  }}
-                >
+                <DropdownMenuItem onClick={handleDeleteCollection}>
                   <Trash className="text-destructive h-4 w-4 mr-2" />
                   Delete
                 </DropdownMenuItem>
@@ -126,13 +144,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsRenaming(true);
-                    setRenameInput(collection.title);
-                  }}
-                >
+                <DropdownMenuItem onClick={handleRenameCollection}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Rename
                 </DropdownMenuItem>

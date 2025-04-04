@@ -1,8 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": [".env"],
   "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
     "build": {
       "dependsOn": ["^build", "^db:generate"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
@@ -16,10 +19,6 @@
     },
     "check-types": {
       "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
     },
     "db:generate": {
       "cache": false
