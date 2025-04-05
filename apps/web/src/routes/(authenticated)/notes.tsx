@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { CollectionsPanel } from "@/components/collections/CollectionsPanel";
 import { Header } from "@/components/header/Header";
 import { NotesPanel } from "@/components/notes/NotesPanel";
@@ -23,6 +23,7 @@ function RouteComponent() {
       <div className="flex flex-1">
         <CollectionsPanel />
         <NotesPanel />
+        <Outlet />
       </div>
     </main>
   );

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useStore } from "@/hooks/useStore";
 import { useCollectionNotes } from "@/lib/store/useCollectionNotes";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { ClientCollection } from "@/types/Entities";
 
 type ALL_NOTES_COLLECTION = {
@@ -98,8 +99,8 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       role="button"
       key={collection.id}
       className={cn(
-        "flex items-center justify-between p-2 rounded-md cursor-default",
-        isActive ? "bg-accent/50 shadow-2xl" : "hover:bg-accent/30",
+        "flex items-center justify-between h-12 px-2 rounded-md cursor-default",
+        isActive ? "bg-accent/50" : "hover:bg-accent/30",
         isRenaming && "p-0",
         isSyncing && "opacity-50"
       )}
@@ -107,7 +108,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
     >
       {isRenaming && collection.id !== null ? (
         <Input
-          className="w-full text-sm h-9 font-medium pl-8 border-none"
+          className="w-full text-sm h-8 mx-2 font-medium pl-6 border-none"
           value={renameInput}
           onChange={(e) => setRenameInput(e.target.value)}
           onKeyDown={handleInputKeyDown}
@@ -118,7 +119,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       ) : (
         <>
           <div className="flex items-center min-w-0">
-            <div className="w-3 h-3 rounded-full mr-3 bg-accent-foreground flex-shrink-0" />
+            <div className="w-2 h-2 rounded-full ml-1 mr-3 bg-accent-foreground flex-shrink-0" />
             <span className="text-sm font-medium truncate flex-shrink min-w-0">
               {collection.title}
             </span>
@@ -133,7 +134,9 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
                 className="focus:outline-none text-muted-foreground ml-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleDeleteCollection}>

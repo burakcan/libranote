@@ -119,8 +119,8 @@ model Note {
   description       String?
   ownerId           String
   owner             User               @relation("OwnedNotes", fields: [ownerId], references: [id], onDelete: Cascade)
-  collectionId      String
-  collection        Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collectionId      String?
+  collection        Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   isPublic          Boolean            @default(false)
   createdAt         DateTime
   serverCreatedAt   DateTime           @default(now())

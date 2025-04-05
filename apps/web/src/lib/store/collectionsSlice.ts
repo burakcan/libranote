@@ -176,9 +176,12 @@ export const createCollectionsSlice: StateCreator<
 
       await CollectionRepository.update(collection.id, updatedCollection);
 
+      console.log("pendingRelatedActionIndex", pendingRelatedActionIndex);
+
       // If there is a pending create or update action, we don't need to add an update action to the queue
       // we can just update the collection in the local DB and the updated collection will be synced to the remote DB
-      if (pendingRelatedActionIndex !== -1) {
+      if (pendingRelatedActionIndex === -1) {
+        console.log("adding update action to queue");
         await state.actionQueue.addActionToQueue({
           id: crypto.randomUUID(),
           type: "UPDATE_COLLECTION",
@@ -255,6 +258,7 @@ export const createCollectionsSlice: StateCreator<
     },
 
     remoteUpdatedCollection: async (collection) => {
+      console.log("remoteUpdatedCollection", collection);
       P(set, (draft) => {
         const index = draft.collections.data.findIndex(
           (c) => c.id === collection.id

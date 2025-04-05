@@ -20,13 +20,8 @@ export function CreateCollectionButton() {
   };
 
   return (
-    <Button
-      disabled={!userId}
-      onClick={handleClick}
-      variant="ghost"
-      className="border-1 border-accent"
-    >
-      <Folder className="h-4 w-4" />
+    <Button disabled={!userId} onClick={handleClick} variant="outline">
+      <Folder className="h-4 w-4 mr-1" />
       New
     </Button>
   );

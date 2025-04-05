@@ -62,7 +62,7 @@ export type NotesSliceActions = {
   setNotesData: (notes: ClientNote[]) => void;
   syncRemoteNotesToLocal: (remoteNotes: ServerNote[]) => Promise<void>;
   createNote: (
-    collectionId: string,
+    collectionId: string | null,
     ownerId: string,
     title: string,
     content?: string

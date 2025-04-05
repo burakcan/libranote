@@ -165,14 +165,6 @@ export async function createNote(
       return;
     }
 
-    if (!note.collectionId || typeof note.collectionId !== "string") {
-      res.status(400).json({
-        error: "BadRequest",
-        message: "Collection ID is required and must be a string",
-      });
-      return;
-    }
-
     if (!note.createdAt || typeof note.createdAt !== "string") {
       res.status(400).json({
         error: "BadRequest",
@@ -189,34 +181,44 @@ export async function createNote(
       return;
     }
 
-    // Check if user has permission to create notes in this collection with a single query
-    const collection = await prisma.collection.findUnique({
-      where: { id: note.collectionId },
-      include: {
-        members: {
-          where: { userId, canEdit: true },
-          select: { userId: true },
+    if (note.collectionId) {
+      if (typeof note.collectionId !== "string") {
+        res.status(400).json({
+          error: "BadRequest",
+          message: "Collection ID must be a string",
+        });
+        return;
+      }
+
+      // Check if user has permission to create notes in this collection with a single query
+      const collection = await prisma.collection.findUnique({
+        where: { id: note.collectionId },
+        include: {
+          members: {
+            where: { userId, canEdit: true },
+            select: { userId: true },
+          },
         },
-      },
-    });
-
-    if (!collection) {
-      res.status(404).json({
-        error: "NotFound",
-        message: "Collection not found",
       });
-      return;
-    }
 
-    const isOwner = collection.ownerId === userId;
-    const isMember = collection.members.length > 0;
+      if (!collection) {
+        res.status(404).json({
+          error: "NotFound",
+          message: "Collection not found",
+        });
+        return;
+      }
 
-    if (!isOwner && !isMember) {
-      res.status(403).json({
-        error: "Forbidden",
-        message: "You don't have permission to create notes in this collection",
-      });
-      return;
+      const isOwner = collection.ownerId === userId;
+      const isMember = collection.members.length > 0;
+
+      if (!isOwner && !isMember) {
+        res.status(403).json({
+          error: "Forbidden",
+          message: "You don't have permission to create notes in this collection",
+        });
+        return;
+      }
     }
 
     const newNote = await prisma.note.create({

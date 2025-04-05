@@ -15,7 +15,7 @@ export function CollectionList() {
   );
 
   return (
-    <div className="p-2 space-y-2 flex-1 overflow-y-auto">
+    <div className="p-2 space-y-1 flex-1 overflow-y-auto">
       <CollectionListItem
         collection={{
           id: null,

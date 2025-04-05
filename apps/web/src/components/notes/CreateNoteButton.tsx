@@ -15,21 +15,14 @@ export function CreateNoteButton() {
     }))
   );
 
-  if (!activeCollectionId) return null;
-
   const handleClick = async () => {
-    if (activeCollectionId && userId) {
+    if (userId) {
       await createNote(activeCollectionId, userId, "New Note");
     }
   };
 
   return (
-    <Button
-      disabled={!userId}
-      onClick={handleClick}
-      variant="ghost"
-      className="border-1 border-accent"
-    >
+    <Button disabled={!userId} onClick={handleClick} variant="outline">
       <FileText className="h-4 w-4" />
       New
     </Button>

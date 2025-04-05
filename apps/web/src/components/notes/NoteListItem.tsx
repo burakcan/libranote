@@ -1,3 +1,4 @@
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { MoreHorizontal, Trash } from "lucide-react";
 import {
   DropdownMenu,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { ClientNote } from "@/types/Entities";
 
 interface NoteListItemProps {
@@ -14,25 +16,29 @@ interface NoteListItemProps {
 }
 
 export function NoteListItem({ note }: NoteListItemProps) {
+  const { noteId: activeNoteId } = useParams({ strict: false });
   const deleteNote = useStore((state) => state.notes.deleteNote);
+  const navigate = useNavigate();
+
   const handleDelete = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+
+    if (activeNoteId === note.id) {
+      navigate({ to: "/notes" });
+    }
+
     deleteNote(note.id);
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-  };
-
   return (
-    <div
-      role="link"
-      onMouseDown={handleMouseDown}
+    <Link
+      to="/notes/$noteId"
+      params={{ noteId: note.id }}
       className={cn(
-        "flex items-center justify-between p-4 rounded-md cursor-default",
-        // eslint-disable-next-line no-constant-condition
-        false ? "bg-accent/50" : "hover:bg-accent/30"
+        "flex items-center justify-between p-4 rounded-md cursor-default"
       )}
+      activeProps={{ className: "bg-accent/50" }}
+      inactiveProps={{ className: "hover:bg-accent/30" }}
     >
       <div className="flex flex-col min-w-0 mr-2">
         <div className="text-sm font-medium truncate flex-shrink min-w-0">
@@ -48,7 +54,9 @@ export function NoteListItem({ note }: NoteListItemProps) {
           className="focus:outline-none text-muted-foreground flex-shrink-0 ml-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Button variant="ghost" size="icon">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleDelete}>
@@ -57,6 +65,6 @@ export function NoteListItem({ note }: NoteListItemProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </Link>
   );
 }

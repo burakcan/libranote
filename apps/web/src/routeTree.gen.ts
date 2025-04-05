@@ -18,6 +18,7 @@ import { Route as authenticatedNotesImport } from './routes/(authenticated)/note
 import { Route as authSignupImport } from './routes/(auth)/signup'
 import { Route as authSigninImport } from './routes/(auth)/signin'
 import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
+import { Route as authenticatedNotesNoteIdImport } from './routes/(authenticated)/notes.$noteId'
 
 // Create/Update Routes
 
@@ -59,6 +60,12 @@ const authForgotPasswordRoute = authForgotPasswordImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => authRouteRoute,
+} as any)
+
+const authenticatedNotesNoteIdRoute = authenticatedNotesNoteIdImport.update({
+  id: '/$noteId',
+  path: '/$noteId',
+  getParentRoute: () => authenticatedNotesRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -114,6 +121,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedNotesImport
       parentRoute: typeof authenticatedRouteImport
     }
+    '/(authenticated)/notes/$noteId': {
+      id: '/(authenticated)/notes/$noteId'
+      path: '/$noteId'
+      fullPath: '/notes/$noteId'
+      preLoaderRoute: typeof authenticatedNotesNoteIdImport
+      parentRoute: typeof authenticatedNotesImport
+    }
   }
 }
 
@@ -135,12 +149,23 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
+interface authenticatedNotesRouteChildren {
+  authenticatedNotesNoteIdRoute: typeof authenticatedNotesNoteIdRoute
+}
+
+const authenticatedNotesRouteChildren: authenticatedNotesRouteChildren = {
+  authenticatedNotesNoteIdRoute: authenticatedNotesNoteIdRoute,
+}
+
+const authenticatedNotesRouteWithChildren =
+  authenticatedNotesRoute._addFileChildren(authenticatedNotesRouteChildren)
+
 interface authenticatedRouteRouteChildren {
-  authenticatedNotesRoute: typeof authenticatedNotesRoute
+  authenticatedNotesRoute: typeof authenticatedNotesRouteWithChildren
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
-  authenticatedNotesRoute: authenticatedNotesRoute,
+  authenticatedNotesRoute: authenticatedNotesRouteWithChildren,
 }
 
 const authenticatedRouteRouteWithChildren =
@@ -151,7 +176,8 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof authForgotPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
-  '/notes': typeof authenticatedNotesRoute
+  '/notes': typeof authenticatedNotesRouteWithChildren
+  '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
 }
 
 export interface FileRoutesByTo {
@@ -159,7 +185,8 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
-  '/notes': typeof authenticatedNotesRoute
+  '/notes': typeof authenticatedNotesRouteWithChildren
+  '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
 }
 
 export interface FileRoutesById {
@@ -170,14 +197,27 @@ export interface FileRoutesById {
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/signin': typeof authSigninRoute
   '/(auth)/signup': typeof authSignupRoute
-  '/(authenticated)/notes': typeof authenticatedNotesRoute
+  '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
+  '/(authenticated)/notes/$noteId': typeof authenticatedNotesNoteIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/forgot-password' | '/signin' | '/signup' | '/notes'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/signin'
+    | '/signup'
+    | '/notes'
+    | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/forgot-password' | '/signin' | '/signup' | '/notes'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/signin'
+    | '/signup'
+    | '/notes'
+    | '/notes/$noteId'
   id:
     | '__root__'
     | '/'
@@ -187,6 +227,7 @@ export interface FileRouteTypes {
     | '/(auth)/signin'
     | '/(auth)/signup'
     | '/(authenticated)/notes'
+    | '/(authenticated)/notes/$noteId'
   fileRoutesById: FileRoutesById
 }
 
@@ -248,7 +289,14 @@ export const routeTree = rootRoute
     },
     "/(authenticated)/notes": {
       "filePath": "(authenticated)/notes.tsx",
-      "parent": "/(authenticated)"
+      "parent": "/(authenticated)",
+      "children": [
+        "/(authenticated)/notes/$noteId"
+      ]
+    },
+    "/(authenticated)/notes/$noteId": {
+      "filePath": "(authenticated)/notes.$noteId.tsx",
+      "parent": "/(authenticated)/notes"
     }
   }
 }
