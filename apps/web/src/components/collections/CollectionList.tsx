@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStore } from "@/hooks/useStore";
 import { CollectionListItem } from "./CollectionListItem";
 
@@ -15,7 +16,7 @@ export function CollectionList() {
   );
 
   return (
-    <div className="p-2 space-y-1 flex-1 overflow-y-auto">
+    <ScrollArea className="p-2 flex-1 min-h-0">
       <CollectionListItem
         collection={{
           id: null,
@@ -27,6 +28,6 @@ export function CollectionList() {
       {sortedCollections.map((collection) => (
         <CollectionListItem key={collection.id} collection={collection} />
       ))}
-    </div>
+    </ScrollArea>
   );
 }

@@ -99,7 +99,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       role="button"
       key={collection.id}
       className={cn(
-        "flex items-center justify-between h-12 px-2 rounded-md cursor-default",
+        "flex items-center justify-between h-12 px-2 rounded-md cursor-default mb-1",
         isActive ? "bg-accent/50" : "hover:bg-accent/30",
         isRenaming && "p-0",
         isSyncing && "opacity-50"
@@ -133,6 +133,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
               <DropdownMenuTrigger
                 className="focus:outline-none text-muted-foreground ml-2"
                 onClick={(e) => e.stopPropagation()}
+                asChild
               >
                 <Button variant="ghost" size="icon">
                   <MoreHorizontal className="h-4 w-4" />

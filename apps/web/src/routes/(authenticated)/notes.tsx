@@ -18,9 +18,9 @@ export const Route = createFileRoute("/(authenticated)/notes")({
 
 function RouteComponent() {
   return (
-    <main className="h-screen flex flex-col">
+    <main className="h-full flex flex-col">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         <CollectionsPanel />
         <NotesPanel />
         <Outlet />

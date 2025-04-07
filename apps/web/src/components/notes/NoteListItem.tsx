@@ -35,7 +35,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
       to="/notes/$noteId"
       params={{ noteId: note.id }}
       className={cn(
-        "flex items-center justify-between p-4 rounded-md cursor-default"
+        "flex items-center justify-between p-4 rounded-md cursor-default mb-1"
       )}
       activeProps={{ className: "bg-accent/50" }}
       inactiveProps={{ className: "hover:bg-accent/30" }}
@@ -53,6 +53,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
         <DropdownMenuTrigger
           className="focus:outline-none text-muted-foreground flex-shrink-0 ml-2"
           onClick={(e) => e.stopPropagation()}
+          asChild
         >
           <Button variant="ghost" size="icon">
             <MoreHorizontal className="h-4 w-4" />

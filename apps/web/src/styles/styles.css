@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./themes/index.css";
-
+@plugin "@tailwindcss/typography";
+@import "./ProseMirror.css";
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -115,7 +116,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
+    @apply h-full w-full;
     @apply bg-background text-foreground;
   }
 }

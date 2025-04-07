@@ -1,0 +1,14 @@
+.ProseMirror {
+  @apply prose dark:prose-invert prose-lg;
+  @apply flex-auto;
+  @apply p-16;
+  @apply max-w-[100ch];
+
+  :first-child {
+    @apply mt-0 pt-0;
+  }
+
+  &:focus {
+    @apply outline-none;
+  }
+}
