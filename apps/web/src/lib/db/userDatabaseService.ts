@@ -25,7 +25,7 @@ export class UserDatabaseService implements DatabaseService {
       collections:
         "id, title, ownerId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt",
       notes:
-        "id, title, description, ownerId, collectionId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt",
+        "id, title, description, ownerId, collectionId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt, noteYDocState",
       actionQueue: "id, relatedEntityId, type, status, createdAt",
     });
 
@@ -50,4 +50,4 @@ export class UserDatabaseService implements DatabaseService {
 }
 
 // Create a singleton instance
-export const databaseService = new UserDatabaseService();
+export const userDatabaseService = new UserDatabaseService();

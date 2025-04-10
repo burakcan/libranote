@@ -1,9 +1,11 @@
-import { QueryClient, useQuery } from "@tanstack/react-query";
+import { QueryClient, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { authClient } from "@/lib/authClient";
 
 export const QUERY_KEY = ["session"];
 
-export const queryOptions = {
+export const queryOptions: UseQueryOptions<
+  Awaited<ReturnType<typeof authClient.getSession>>
+> = {
   queryKey: QUERY_KEY,
   queryFn: async () => {
     const result = await authClient.getSession();

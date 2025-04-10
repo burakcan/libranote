@@ -1,3 +1,4 @@
+import { CLIENT_ID } from "./clientId";
 import {
   ClientCollection,
   ClientNote,
@@ -12,29 +13,36 @@ export interface ApiServiceError extends Error {
 }
 
 export class ApiService {
-  constructor(readonly clientId: string) {}
+  static async fetch(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<Response> {
+    try {
+      const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        credentials: "include",
+        headers: {
+          ...options.headers,
+          "Content-Type": "application/json",
+          "x-client-id": CLIENT_ID,
+        },
+      });
 
-  async fetch(path: string, options: RequestInit = {}): Promise<Response> {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      credentials: "include",
-      headers: {
-        ...options.headers,
-        "Content-Type": "application/json",
-        "x-client-id": this.clientId,
-      },
-    });
+      if (!response.ok) {
+        const error = new Error(response.statusText) as ApiServiceError;
+        error.status = response.status;
 
-    if (!response.ok) {
-      const error = new Error(response.statusText) as ApiServiceError;
-      error.status = response.status;
+        throw error;
+      }
+
+      return response;
+    } catch (error) {
+      console.error(error);
       throw error;
     }
-
-    return response;
   }
 
-  async createCollection(
+  static async createCollection(
     collection: ClientCollection
   ): Promise<ServerCollection> {
     const response = await this.fetch("/api/collections", {
@@ -47,7 +55,7 @@ export class ApiService {
     return data.collection;
   }
 
-  async updateCollection(
+  static async updateCollection(
     collection: ClientCollection
   ): Promise<ServerCollection> {
     const response = await this.fetch(`/api/collections/${collection.id}`, {
@@ -60,13 +68,13 @@ export class ApiService {
     return data.collection;
   }
 
-  async deleteCollection(collectionId: string): Promise<void> {
+  static async deleteCollection(collectionId: string): Promise<void> {
     await this.fetch(`/api/collections/${collectionId}`, {
       method: "DELETE",
     });
   }
 
-  async createNote(note: ClientNote): Promise<ServerNote> {
+  static async createNote(note: ClientNote): Promise<ServerNote> {
     const response = await this.fetch("/api/notes", {
       method: "POST",
       body: JSON.stringify({ note }),
@@ -77,13 +85,13 @@ export class ApiService {
     return data.note;
   }
 
-  async deleteNote(noteId: string): Promise<void> {
+  static async deleteNote(noteId: string): Promise<void> {
     await this.fetch(`/api/notes/${noteId}`, {
       method: "DELETE",
     });
   }
 
-  async fetchAllCollections(): Promise<ServerCollection[]> {
+  static async fetchAllCollections(): Promise<ServerCollection[]> {
     const response = await this.fetch("/api/collections");
 
     const data: { collections: ServerCollection[] } = await response.json();
@@ -91,7 +99,7 @@ export class ApiService {
     return data.collections;
   }
 
-  async fetchAllNotes(): Promise<ServerNote[]> {
+  static async fetchAllNotes(): Promise<ServerNote[]> {
     const response = await this.fetch("/api/notes");
 
     const data: { notes: ServerNote[] } = await response.json();
@@ -99,7 +107,7 @@ export class ApiService {
     return data.notes;
   }
 
-  async getSSEEventSource(): Promise<EventSource> {
-    return new EventSource(`${API_URL}/api/sse?clientId=${this}`);
+  static async getSSEEventSource(): Promise<EventSource> {
+    return new EventSource(`${API_URL}/api/sse?clientId=${CLIENT_ID}`);
   }
 }

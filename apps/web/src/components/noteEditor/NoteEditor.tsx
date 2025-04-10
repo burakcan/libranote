@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useState } from "react";
 import * as Y from "yjs";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { IndexeddbPersistence } from "@/lib/db/yIndexedDb";
 import { hocuspocusSocket } from "@/lib/hocusPocusSocket";
 
 interface NoteEditorProps {
@@ -34,13 +35,14 @@ export function NoteEditor(props: NoteEditorProps) {
     {
       extensions: [
         ...extensions,
-        ...(yDoc
+        ...(yDoc ? [Collaboration.configure({ document: yDoc })] : []),
+        ...(provider
           ? [
-              Collaboration.configure({ document: yDoc }),
               CollaborationCursor.configure({
                 provider,
                 user: {
                   name: sessionData.data?.user?.name || "Anonymous",
+                  id: sessionData.data?.user?.id,
                   color: getRandomColor(),
                 },
               }),
@@ -52,17 +54,26 @@ export function NoteEditor(props: NoteEditorProps) {
   );
 
   useEffect(() => {
-    const doc = new Y.Doc();
-    setYDoc(doc);
-
-    const provider = new HocuspocusProvider({
-      websocketProvider: hocuspocusSocket,
-      document: doc,
-      name: noteId,
-      token: "123",
+    const doc = new Y.Doc({
+      gc: true,
     });
 
-    setProvider(provider);
+    setYDoc(doc);
+
+    const persistence = new IndexeddbPersistence(noteId, doc);
+
+    let provider: HocuspocusProvider | null = null;
+
+    persistence.whenSynced.then(() => {
+      provider = new HocuspocusProvider({
+        websocketProvider: hocuspocusSocket,
+        document: doc,
+        name: noteId,
+        token: "123",
+      });
+
+      setProvider(provider);
+    });
 
     return () => {
       provider?.destroy();

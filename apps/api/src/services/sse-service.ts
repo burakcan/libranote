@@ -53,12 +53,12 @@ export class SSEService {
       `Broadcasting event ${event.type} from ${senderClientId || "unknown"} to clients of user ${userId}`,
     );
 
-    SSEService.clients.get(userId)?.forEach((controller, clientId) => {
+    SSEService.clients.get(userId)?.forEach((controller) => {
       // Skip the sender if a senderClientId is provided
-      if (senderClientId && clientId === senderClientId) {
-        console.info(`Skipping sender client ${senderClientId}`);
-        return;
-      }
+      // if (senderClientId && clientId === senderClientId) {
+      //   console.info(`Skipping sender client ${senderClientId}`);
+      //   return;
+      // }
 
       controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
     });

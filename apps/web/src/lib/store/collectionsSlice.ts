@@ -258,7 +258,6 @@ export const createCollectionsSlice: StateCreator<
     },
 
     remoteUpdatedCollection: async (collection) => {
-      console.log("remoteUpdatedCollection", collection);
       P(set, (draft) => {
         const index = draft.collections.data.findIndex(
           (c) => c.id === collection.id

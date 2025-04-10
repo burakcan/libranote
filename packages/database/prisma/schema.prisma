@@ -127,6 +127,7 @@ model Note {
   updatedAt         DateTime
   serverUpdatedAt   DateTime           @updatedAt
   noteCollaborators NoteCollaborator[]
+  noteYDocState     NoteYDocState?
 
   @@map("note")
 }
@@ -144,16 +145,13 @@ model NoteCollaborator {
   @@map("note_collaborator")
 }
 
-enum YDocType {
-  COLLECTION
-  NOTE
-}
-
-model YDocState {
-  id         String   @id // same as the collection or note ID
-  docType    YDocType // "collection" or "note"
+model NoteYDocState {
+  id         String   @id
   encodedDoc Bytes // yjs doc as a binary blob
   updatedAt  DateTime @updatedAt
+  note       Note     @relation(fields: [id], references: [id], onDelete: Cascade)
+  noteId     String
 
-  @@map("y_doc_state")
+  @@unique([id, noteId])
+  @@map("note_y_doc_state")
 }

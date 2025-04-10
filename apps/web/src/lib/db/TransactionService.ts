@@ -1,4 +1,4 @@
-import { databaseService } from "./db";
+import { userDatabaseService } from "./userDatabaseService";
 import { wrapDbOperation } from "./wrapDbOperation";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import {
@@ -15,7 +15,7 @@ export class TransactionService {
   ): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("collections"), db.table("actionQueue")],
@@ -43,7 +43,7 @@ export class TransactionService {
   static async createNote(note: ClientNote, actionId?: string): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("notes"), db.table("actionQueue")],
@@ -71,7 +71,7 @@ export class TransactionService {
   static async updateNote(note: ClientNote, actionId?: string): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("notes"), db.table("actionQueue")],
@@ -102,7 +102,7 @@ export class TransactionService {
   ): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("collections"), db.table("actionQueue")],
@@ -133,7 +133,7 @@ export class TransactionService {
   ): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("collections"), db.table("notes"), db.table("actionQueue")],
@@ -168,7 +168,7 @@ export class TransactionService {
   static async deleteNote(noteId: string, actionId?: string): Promise<void> {
     return wrapDbOperation(
       async () => {
-        const db = databaseService.getDatabase();
+        const db = userDatabaseService.getDatabase();
         await db.transaction(
           "rw",
           [db.table("notes"), db.table("actionQueue")],
@@ -198,7 +198,7 @@ export class TransactionService {
     remoteCollection: ServerCollection
   ): Promise<void> {
     return wrapDbOperation(async () => {
-      const db = databaseService.getDatabase();
+      const db = userDatabaseService.getDatabase();
       if (localId === remoteCollection.id) {
         // If IDs are the same, just update the collection
         await db.table<ClientCollection>("collections").put(remoteCollection);
@@ -234,7 +234,7 @@ export class TransactionService {
     remoteNote: ServerNote
   ): Promise<void> {
     return wrapDbOperation(async () => {
-      const db = databaseService.getDatabase();
+      const db = userDatabaseService.getDatabase();
       if (localId === remoteNote.id) {
         // If IDs are the same, just update the note
         await db.table<ClientNote>("notes").put(remoteNote);
@@ -256,7 +256,7 @@ export class TransactionService {
     remoteCollections: ServerCollection[]
   ): Promise<void> {
     return wrapDbOperation(async () => {
-      const db = databaseService.getDatabase();
+      const db = userDatabaseService.getDatabase();
       await db.transaction("rw", [db.table("collections")], async (tx) => {
         // Upsert existing collections / create new ones
         for (const remoteCollection of remoteCollections) {
@@ -277,7 +277,7 @@ export class TransactionService {
     remoteNotes: ServerNote[]
   ): Promise<void> {
     return wrapDbOperation(async () => {
-      const db = databaseService.getDatabase();
+      const db = userDatabaseService.getDatabase();
       await db.transaction("rw", [db.table("notes")], async (tx) => {
         // Upsert existing notes / create new ones
         for (const remoteNote of remoteNotes) {

@@ -3,10 +3,15 @@ import { ApiService, ApiServiceError } from "@/lib/ApiService";
 import { ActionQueueRepository } from "@/lib/db/ActionQueueRepository";
 import { CollectionRepository } from "@/lib/db/CollectionRepository";
 import { NoteRepository } from "@/lib/db/NoteRepository";
+import { router } from "@/lib/router";
 import { Store } from "@/lib/store";
+import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import { ServerCollection, ServerNote } from "@/types/Entities";
 import { SSEEvent } from "@/types/SSE";
+
+export const SYNCING_EVENT = "syncing";
+export const SYNCED_EVENT = "synced";
 
 let instance: SyncService | null = null;
 
@@ -16,10 +21,7 @@ export class SyncService extends EventTarget {
   eventSource: EventSource | null = null;
   unsubscribeQueue: (() => void) | null = null;
 
-  constructor(
-    private readonly store: UseBoundStore<StoreApi<Store>>,
-    private readonly apiService: ApiService
-  ) {
+  constructor(private readonly store: UseBoundStore<StoreApi<Store>>) {
     super();
 
     if (instance) {
@@ -30,27 +32,19 @@ export class SyncService extends EventTarget {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     instance = this;
 
+    this.sync();
+
     setTimeout(() => {
       this.watchOnlineStatus();
     }, 0);
   }
 
   watchOnlineStatus() {
-    if (navigator.onLine) {
-      console.debug("SyncService: Online");
-      this.sync();
-    } else {
-      console.debug("SyncService: Offline");
-      this.stopSync();
-    }
-
     window.addEventListener("online", () => {
-      console.debug("SyncService: Online");
       this.sync();
     });
 
     window.addEventListener("offline", () => {
-      console.debug("SyncService: Offline");
       this.stopSync();
     });
   }
@@ -61,26 +55,30 @@ export class SyncService extends EventTarget {
       return;
     }
 
-    this.dispatchEvent(new CustomEvent("syncing"));
-
     this.syncing = true;
+
+    this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
     console.debug("SyncService: Syncing");
 
     await this.loadLocalDataToStore();
     await this.processActionQueue();
 
-    await Promise.all([
-      this.syncRemoteCollectionsToLocal(),
-      this.syncRemoteNotesToLocal(),
-    ]);
+    try {
+      await Promise.all([
+        this.syncRemoteCollectionsToLocal(),
+        this.syncRemoteNotesToLocal(),
+      ]);
+    } catch (error) {
+      console.error("SyncService: Error syncing", error);
+    }
 
     console.debug("SyncService: Initial sync completed successfully");
 
     this.syncing = false;
     this.synced = true;
 
-    this.dispatchEvent(new CustomEvent("synced"));
+    this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
 
     this.listenQueue();
     this.listenSSE();
@@ -97,11 +95,11 @@ export class SyncService extends EventTarget {
         currentIds.some((id) => !prevIds.includes(id));
 
       if (hasChanges) {
-        this.dispatchEvent(new CustomEvent("syncing"));
+        this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
         await this.processActionQueue();
 
-        this.dispatchEvent(new CustomEvent("synced"));
+        this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
       }
     });
   }
@@ -115,11 +113,11 @@ export class SyncService extends EventTarget {
     );
 
     this.eventSource.onmessage = async (event) => {
-      this.dispatchEvent(new CustomEvent("syncing"));
+      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
       await this.processSSEEvent(event.data);
 
-      this.dispatchEvent(new CustomEvent("synced"));
+      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
     };
   }
 
@@ -129,6 +127,9 @@ export class SyncService extends EventTarget {
       const store = this.store.getState();
 
       if (!store) return;
+
+      console.debug("SyncService: Processing SSE event", event);
+
       switch (event.type) {
         case "INIT":
           break;
@@ -194,7 +195,14 @@ export class SyncService extends EventTarget {
 
     for (const item of sortedItems) {
       if (item.status === "pending") {
-        await this.processActionQueueItem(item);
+        try {
+          await this.processActionQueueItem(item);
+        } catch (error) {
+          console.error(
+            `SyncService: Error processing action queue item ${item.id}:`,
+            error
+          );
+        }
       }
     }
 
@@ -215,13 +223,13 @@ export class SyncService extends EventTarget {
           await this.syncUpdateCollection(item.relatedEntityId);
           break;
         case "DELETE_COLLECTION":
-          await this.apiService.deleteCollection(item.relatedEntityId);
+          await ApiService.deleteCollection(item.relatedEntityId);
           break;
         case "CREATE_NOTE":
           await this.syncCreateNote(item.relatedEntityId);
           break;
         case "DELETE_NOTE":
-          await this.apiService.deleteNote(item.relatedEntityId);
+          await ApiService.deleteNote(item.relatedEntityId);
           break;
         default:
           console.error(`SyncService: Unknown queue item type: ${item.type}`);
@@ -256,8 +264,7 @@ export class SyncService extends EventTarget {
       return;
     }
 
-    const remoteCollection =
-      await this.apiService.createCollection(localCollection);
+    const remoteCollection = await ApiService.createCollection(localCollection);
 
     await this.store
       .getState()
@@ -276,8 +283,7 @@ export class SyncService extends EventTarget {
       return;
     }
 
-    const remoteCollection =
-      await this.apiService.updateCollection(localCollection);
+    const remoteCollection = await ApiService.updateCollection(localCollection);
 
     await this.store
       .getState()
@@ -294,16 +300,29 @@ export class SyncService extends EventTarget {
       return;
     }
 
-    const remoteNote = await this.apiService.createNote(localNote);
+    const remoteNote = await ApiService.createNote(localNote);
 
     await this.store.getState().notes.swapNote(localNote.id, remoteNote);
+
+    const params = router.matchRoute(Route.fullPath) as
+      | false
+      | {
+          noteId: string;
+        };
+
+    if (params && params.noteId === noteId) {
+      router.navigate({
+        to: "/notes/$noteId",
+        params: { noteId: remoteNote.id },
+      });
+    }
 
     return remoteNote;
   }
 
   // Sync remote data to local
   async syncRemoteCollectionsToLocal(): Promise<ServerCollection[]> {
-    const remoteCollections = await this.apiService.fetchAllCollections();
+    const remoteCollections = await ApiService.fetchAllCollections();
 
     await this.store
       .getState()
@@ -318,7 +337,7 @@ export class SyncService extends EventTarget {
   }
 
   async syncRemoteNotesToLocal(): Promise<ServerNote[]> {
-    const remoteNotes = await this.apiService.fetchAllNotes();
+    const remoteNotes = await ApiService.fetchAllNotes();
 
     await this.store.getState().notes.syncRemoteNotesToLocal(remoteNotes);
 

@@ -4,7 +4,7 @@ import { useSyncContext } from "@/hooks/useSyncContext";
 import { cn } from "@/lib/utils";
 
 export function SyncStatus() {
-  const isOnline = useOnlineStatus();
+  const { isOnline } = useOnlineStatus();
   const { isSyncing } = useSyncContext();
   const deferredSyncStatus = useIgnoreQuickChange(100, isSyncing);
 

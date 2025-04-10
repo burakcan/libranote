@@ -62,6 +62,11 @@ export const createNotesSlice: StateCreator<
         isPublic: false,
         createdAt: new Date(),
         updatedAt: new Date(),
+        noteYDocState: {
+          id: noteId,
+          noteId,
+          updatedAt: new Date(),
+        },
       };
 
       P(set, (draft) => {

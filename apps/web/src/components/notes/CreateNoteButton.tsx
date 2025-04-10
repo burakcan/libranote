@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { useStore } from "@/hooks/useStore";
 export function CreateNoteButton() {
   const { data: session } = useSessionQuery();
   const userId = session?.user.id;
+  const navigate = useNavigate();
 
   const { createNote, activeCollectionId } = useStore(
     useShallow((state) => ({
@@ -17,7 +19,11 @@ export function CreateNoteButton() {
 
   const handleClick = async () => {
     if (userId) {
-      await createNote(activeCollectionId, userId, "New Note");
+      const note = await createNote(activeCollectionId, userId, "New Note");
+      navigate({
+        to: "/notes/$noteId",
+        params: { noteId: note.id },
+      });
     }
   };
 

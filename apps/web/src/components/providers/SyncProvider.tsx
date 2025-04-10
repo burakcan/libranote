@@ -1,8 +1,6 @@
 import { createContext, useEffect, useRef, useState } from "react";
 import { useStoreInstance, useStore } from "@/hooks/useStore";
-import { ApiService } from "@/lib/ApiService";
-import { databaseService } from "@/lib/db/db";
-import { SyncService } from "@/lib/SyncService";
+import { SYNCED_EVENT, SYNCING_EVENT, SyncService } from "@/lib/SyncService";
 
 interface SyncContextType {
   syncService: SyncService | null;
@@ -17,7 +15,6 @@ export const SyncContext = createContext<SyncContextType>({
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
-  const clientId = useStore((state) => state.clientId);
   const userId = useStore((state) => state.userId);
   const store = useStoreInstance();
   const syncServiceRef = useRef<SyncService | null>(null);
@@ -30,29 +27,27 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const handleSynced = () => {
       setIsSyncing(false);
     };
+
     async function initializeServices() {
       if (syncServiceRef.current) {
         return;
       }
 
-      await databaseService.initialize(userId);
-      const apiService = new ApiService(clientId);
-      const syncService = new SyncService(store, apiService);
+      const syncService = new SyncService(store);
       syncServiceRef.current = syncService;
 
-      syncService.addEventListener("syncing", handleSyncing);
-      syncService.addEventListener("synced", handleSynced);
+      syncService.addEventListener(SYNCING_EVENT, handleSyncing);
+      syncService.addEventListener(SYNCED_EVENT, handleSynced);
     }
 
     initializeServices();
 
     return () => {
-      databaseService.cleanup();
-
-      syncServiceRef.current?.removeEventListener("syncing", handleSyncing);
-      syncServiceRef.current?.removeEventListener("synced", handleSynced);
+      syncServiceRef.current?.removeEventListener(SYNCING_EVENT, handleSyncing);
+      syncServiceRef.current?.removeEventListener(SYNCED_EVENT, handleSynced);
+      syncServiceRef.current = null;
     };
-  }, [store, clientId, userId]);
+  }, [store, userId]);
 
   return (
     <SyncContext.Provider

@@ -2,11 +2,14 @@ import { Server } from '@hocuspocus/server';
 import * as Y from 'yjs';
 // import * as jose from 'jose';
 
+export * from '@repo/db';
+import { PrismaClient } from '@repo/db';
+
+export const prisma: PrismaClient = new PrismaClient();
+
 const DEFAULT_PORT = 3001;
 
 // const JWKS = jose.createRemoteJWKSet(new URL(process.env.JWKS_URL as string));
-
-const persisted = new Map<string, Uint8Array>();
 
 const server = Server.configure({
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
@@ -22,13 +25,50 @@ const server = Server.configure({
 
   async onStoreDocument(data) {
     const update = Y.encodeStateAsUpdateV2(data.document);
-    persisted.set(data.documentName, update);
+
+    console.info(`Storing document: ${data.documentName}`);
+
+    await prisma.noteYDocState.upsert({
+      where: {
+        id: data.documentName,
+      },
+      update: { encodedDoc: update },
+      create: {
+        id: data.documentName,
+        noteId: data.documentName,
+        encodedDoc: update,
+      },
+    });
+
+    console.log('Notifying the sse webhook', data.documentName);
+
+    await fetch(process.env.SSE_WEBHOOK_URL as string, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event: {
+          type: 'NOTE_UPDATED',
+          noteId: data.documentName,
+        },
+      }),
+    });
   },
 
   async onLoadDocument(data) {
-    const update = persisted.get(data.documentName);
+    const yDocState = await prisma.noteYDocState.findUnique({
+      where: {
+        id: data.documentName,
+      },
+      select: {
+        encodedDoc: true,
+      },
+    });
 
-    if (update) {
+    const update = yDocState?.encodedDoc;
+
+    if (update?.length) {
       Y.applyUpdateV2(data.document, update);
     }
 

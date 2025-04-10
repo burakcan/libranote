@@ -196,12 +196,27 @@ export async function updateCollection(
         title: collection.title,
         updatedAt: new Date(collection.updatedAt),
       },
+      include: { members: { select: { userId: true } } },
     });
 
     SSEService.broadcastSSE(userId, clientId, {
       type: "COLLECTION_UPDATED",
       collection: updatedCollection,
     });
+
+    if (userId !== updatedCollection.ownerId) {
+      SSEService.broadcastSSE(updatedCollection.ownerId, clientId, {
+        type: "COLLECTION_UPDATED",
+        collection: updatedCollection,
+      });
+    }
+
+    for (const member of updatedCollection.members) {
+      SSEService.broadcastSSE(member.userId, clientId, {
+        type: "COLLECTION_UPDATED",
+        collection: updatedCollection,
+      });
+    }
 
     res.status(200).json({ collection: updatedCollection });
 

@@ -15,6 +15,11 @@ const whereCanViewNote = (userId: string) => ({
     },
     {
       collection: {
+        ownerId: userId,
+      },
+    },
+    {
+      collection: {
         members: {
           some: { userId },
         },
@@ -68,6 +73,11 @@ export async function getNotes(req: Request, res: Response) {
     const notes = await prisma.note.findMany({
       where: whereCanViewNote(userId),
       orderBy: { updatedAt: "desc" },
+      include: {
+        noteYDocState: {
+          omit: { encodedDoc: true },
+        },
+      },
     });
 
     res.status(200).json({ notes });
@@ -95,6 +105,11 @@ export async function getNotesByCollection(req: Request, res: Response) {
         ...whereCanViewNote(userId),
       },
       orderBy: { updatedAt: "desc" },
+      include: {
+        noteYDocState: {
+          omit: { encodedDoc: true },
+        },
+      },
     });
 
     res.status(200).json({ notes });
@@ -122,6 +137,11 @@ export async function getNote(req: Request, res: Response) {
         id,
         ...whereCanViewNote(userId),
       },
+      include: {
+        noteYDocState: {
+          omit: { encodedDoc: true },
+        },
+      },
     });
 
     res.status(200).json({ note });
@@ -145,7 +165,7 @@ export async function createNote(
     {
       note: Pick<
         Note,
-        "title" | "description" | "isPublic" | "updatedAt" | "createdAt" | "collectionId"
+        "title" | "description" | "isPublic" | "updatedAt" | "createdAt" | "collectionId" | "id"
       >;
     }
   >,
@@ -221,18 +241,62 @@ export async function createNote(
       }
     }
 
-    const newNote = await prisma.note.create({
-      data: {
-        id: randomUUID(),
-        title: note.title,
-        description: note.description || null,
-        ownerId: userId,
-        collectionId: note.collectionId,
-        createdAt: new Date(note.createdAt),
-        updatedAt: new Date(note.updatedAt),
-        isPublic: note.isPublic,
+    // first try to use the note id from the request body,
+    // if it clashes with an existing note, then create a new id
+
+    let newNote: Note;
+
+    const noteData: Prisma.NoteCreateArgs["data"] = {
+      id: note.id,
+      title: note.title,
+      description: note.description || null,
+      ownerId: userId,
+      collectionId: note.collectionId,
+      createdAt: new Date(note.createdAt),
+      updatedAt: new Date(note.updatedAt),
+      isPublic: note.isPublic,
+      noteYDocState: {
+        create: {
+          encodedDoc: new Uint8Array(),
+          noteId: note.id,
+        },
       },
-    });
+    };
+
+    try {
+      newNote = await prisma.note.create({
+        data: noteData,
+        include: {
+          noteYDocState: {
+            omit: { encodedDoc: true },
+          },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        // if the note id already exists, create a new one
+        const newId = randomUUID();
+        newNote = await prisma.note.create({
+          data: {
+            ...noteData,
+            id: newId,
+            noteYDocState: {
+              create: {
+                noteId: newId,
+                encodedDoc: new Uint8Array(),
+              },
+            },
+          },
+          include: {
+            noteYDocState: {
+              omit: { encodedDoc: true },
+            },
+          },
+        });
+      } else {
+        throw error;
+      }
+    }
 
     // Broadcast event to other clients
     if (clientId) {
@@ -240,6 +304,29 @@ export async function createNote(
         type: "NOTE_CREATED",
         note: newNote,
       });
+
+      if (userId !== newNote.ownerId) {
+        SSEService.broadcastSSE(newNote.ownerId, clientId, {
+          type: "NOTE_CREATED",
+          note: newNote,
+        });
+      }
+
+      if (newNote.collectionId) {
+        const collection = await prisma.collection.findUnique({
+          where: { id: newNote.collectionId },
+          include: { members: { select: { userId: true } } },
+        });
+
+        if (collection) {
+          for (const member of collection.members) {
+            SSEService.broadcastSSE(member.userId, clientId, {
+              type: "NOTE_CREATED",
+              note: newNote,
+            });
+          }
+        }
+      }
     }
 
     res.status(201).json({ note: newNote });
@@ -291,6 +378,11 @@ export async function updateNote(
         ...whereCanEditNote(userId),
       },
       data: note,
+      include: {
+        noteYDocState: {
+          omit: { encodedDoc: true },
+        },
+      },
     });
 
     // Broadcast event to other clients
@@ -330,7 +422,7 @@ export async function deleteNote(req: Request, res: Response) {
 
   try {
     // Delete note
-    await prisma.note.delete({
+    const deletedNote = await prisma.note.delete({
       where: {
         id,
         ...whereCanDeleteNote(userId),
@@ -343,6 +435,29 @@ export async function deleteNote(req: Request, res: Response) {
         type: "NOTE_DELETED",
         noteId: id,
       });
+
+      if (userId !== deletedNote.ownerId) {
+        SSEService.broadcastSSE(deletedNote.ownerId, clientId, {
+          type: "NOTE_DELETED",
+          noteId: id,
+        });
+      }
+
+      if (deletedNote.collectionId) {
+        const collection = await prisma.collection.findUnique({
+          where: { id: deletedNote.collectionId },
+          include: { members: { select: { userId: true } } },
+        });
+
+        if (collection) {
+          for (const member of collection.members) {
+            SSEService.broadcastSSE(member.userId, clientId, {
+              type: "NOTE_DELETED",
+              noteId: id,
+            });
+          }
+        }
+      }
     }
 
     res.status(204).send();

@@ -11,6 +11,7 @@ import {
   Redo,
   Undo,
 } from "lucide-react";
+import { useStore } from "@/hooks/useStore";
 import { NoteEditor } from "../noteEditor/NoteEditor";
 import { Button } from "../ui/button";
 
@@ -19,6 +20,10 @@ interface NotePanelProps {
 }
 
 export function NotePanel(props: NotePanelProps) {
+  const note = useStore((state) =>
+    state.notes.data.find((note) => note.id === props.noteId)
+  );
+
   return (
     <div className="flex flex-col flex-1">
       {/* Editor Header */}
@@ -85,7 +90,9 @@ export function NotePanel(props: NotePanelProps) {
 
       {/* Status Bar */}
       <div className="border-t border-border/50 p-2 px-4 flex justify-between items-center text-xs text-muted-foreground">
-        <div>Last edited: Just now</div>
+        <div>
+          Last edited: {note?.noteYDocState?.updatedAt.toLocaleString()}
+        </div>
         <div>0 words</div>
       </div>
     </div>

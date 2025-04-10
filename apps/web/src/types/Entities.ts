@@ -1,7 +1,9 @@
-import { type Collection, type Note } from "@repo/db";
+import { type Collection, type Note, type NoteYDocState } from "@repo/db";
 
 export type ServerCollection = Collection;
-export type ServerNote = Note;
+export type ServerNote = Note & {
+  noteYDocState: Omit<NoteYDocState, "encodedDoc">;
+};
 
 type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
