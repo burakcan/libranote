@@ -66,6 +66,20 @@ export async function notifyWebhook(req: Request, res: Response) {
         noteYDocState: {
           omit: { encodedDoc: true },
         },
+        noteCollaborators: {
+          select: {
+            userId: true,
+          },
+        },
+        collection: {
+          select: {
+            members: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -77,10 +91,24 @@ export async function notifyWebhook(req: Request, res: Response) {
       return;
     }
 
-    SSEService.broadcastSSE(updatedNote.ownerId, undefined, {
-      type: "NOTE_UPDATED",
-      note: updatedNote,
-    });
+    const userIdsToNotify = new Set<string>();
+
+    for (const collaborator of updatedNote.noteCollaborators) {
+      userIdsToNotify.add(collaborator.userId);
+    }
+
+    if (updatedNote.collection) {
+      for (const member of updatedNote.collection.members) {
+        userIdsToNotify.add(member.userId);
+      }
+    }
+
+    for (const userId of userIdsToNotify) {
+      SSEService.broadcastSSE(userId, undefined, {
+        type: "NOTE_UPDATED",
+        note: updatedNote,
+      });
+    }
 
     res.status(200).json({ message: "ok" });
     return;

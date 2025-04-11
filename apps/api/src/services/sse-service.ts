@@ -1,3 +1,4 @@
+import { prisma } from "../db/prisma.js";
 import type { SSEEvent } from "../types/sse.js";
 
 type UserId = string;
@@ -80,5 +81,74 @@ export class SSEService {
    */
   static getClientCount(userId: UserId): number {
     return SSEService.clients.get(userId)?.size || 0;
+  }
+
+  /**
+   * Broadcast an event to all members of a collection
+   */
+  static async broadcastSSEToCollectionMembers(
+    collectionId: string,
+    event: SSEEvent,
+    senderUserId: UserId,
+    senderClientId: string | undefined,
+  ) {
+    const collection = await prisma.collection.findUnique({
+      where: { id: collectionId },
+      include: { members: { select: { userId: true } } },
+    });
+
+    const userIds = new Set<string>();
+    const collectionMembers = collection?.members.map((member) => member.userId) || [];
+
+    for (const userId of collectionMembers) {
+      userIds.add(userId);
+    }
+
+    userIds.add(senderUserId);
+
+    for (const userId of userIds) {
+      SSEService.broadcastSSE(userId, senderClientId, event);
+    }
+  }
+
+  /**
+   * Broadcast an event to all collaborators of a note & the collection members of the note's collection
+   */
+  static async broadcastSSEToNoteCollaborators(
+    noteId: string,
+    event: SSEEvent,
+    senderUserId: UserId,
+    senderClientId: string | undefined,
+  ) {
+    const note = await prisma.note.findUnique({
+      where: { id: noteId },
+      include: {
+        collection: {
+          include: {
+            members: { select: { userId: true } },
+          },
+        },
+        noteCollaborators: { select: { userId: true } },
+      },
+    });
+
+    const userIds = new Set<string>();
+    const noteCollaborators =
+      note?.noteCollaborators.map((collaborator) => collaborator.userId) || [];
+    const collectionMembers = note?.collection?.members.map((member) => member.userId) || [];
+
+    for (const userId of noteCollaborators) {
+      userIds.add(userId);
+    }
+
+    for (const userId of collectionMembers) {
+      userIds.add(userId);
+    }
+
+    userIds.add(senderUserId);
+
+    for (const userId of userIds) {
+      SSEService.broadcastSSE(userId, senderClientId, event);
+    }
   }
 }

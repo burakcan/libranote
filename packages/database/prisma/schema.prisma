@@ -25,7 +25,7 @@ model User {
   noteCollaborators NoteCollaborator[]
   collectionMembers CollectionMember[]
   ownedCollections  Collection[]       @relation("OwnedCollections")
-  ownedNotes        Note[]             @relation("OwnedNotes")
+  createdNotes      Note[]             @relation("CreatedNotes")
 
   @@map("user")
 }
@@ -117,8 +117,8 @@ model Note {
   id                String             @id
   title             String
   description       String?
-  ownerId           String
-  owner             User               @relation("OwnedNotes", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdById       String
+  createdBy         User               @relation("CreatedNotes", fields: [createdById], references: [id], onDelete: Cascade)
   collectionId      String?
   collection        Collection?        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   isPublic          Boolean            @default(false)
@@ -132,14 +132,20 @@ model Note {
   @@map("note")
 }
 
+enum NoteCollaboratorRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
 model NoteCollaborator {
-  id        String   @id
+  id        String               @id
   noteId    String
   userId    String
-  canEdit   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      NoteCollaboratorRole
+  createdAt DateTime             @default(now())
+  note      Note                 @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([noteId, userId])
   @@map("note_collaborator")

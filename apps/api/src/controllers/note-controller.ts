@@ -1,13 +1,10 @@
 import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
-import { Prisma, prisma, type Note } from "../db/prisma.js";
+import { NoteCollaboratorRole, Prisma, prisma, type Note } from "../db/prisma.js";
 import { SSEService } from "../services/sse-service.js";
 
 const whereCanViewNote = (userId: string) => ({
   OR: [
-    {
-      ownerId: userId,
-    },
     {
       noteCollaborators: {
         some: { userId },
@@ -31,11 +28,13 @@ const whereCanViewNote = (userId: string) => ({
 const whereCanEditNote = (userId: string) => ({
   OR: [
     {
-      ownerId: userId,
-    },
-    {
       noteCollaborators: {
-        some: { userId, canEdit: true },
+        some: {
+          userId,
+          role: {
+            in: [NoteCollaboratorRole.OWNER, NoteCollaboratorRole.EDITOR],
+          },
+        },
       },
     },
     {
@@ -51,7 +50,12 @@ const whereCanEditNote = (userId: string) => ({
 const whereCanDeleteNote = (userId: string) => ({
   OR: [
     {
-      ownerId: userId,
+      noteCollaborators: {
+        some: {
+          userId,
+          role: NoteCollaboratorRole.OWNER,
+        },
+      },
     },
     {
       collection: {
@@ -250,11 +254,18 @@ export async function createNote(
       id: note.id,
       title: note.title,
       description: note.description || null,
-      ownerId: userId,
+      createdById: userId,
       collectionId: note.collectionId,
       createdAt: new Date(note.createdAt),
       updatedAt: new Date(note.updatedAt),
       isPublic: note.isPublic,
+      noteCollaborators: {
+        create: {
+          userId,
+          role: NoteCollaboratorRole.OWNER,
+          id: randomUUID(),
+        },
+      },
       noteYDocState: {
         create: {
           encodedDoc: new Uint8Array(),
@@ -299,34 +310,13 @@ export async function createNote(
     }
 
     // Broadcast event to other clients
-    if (clientId) {
-      SSEService.broadcastSSE(userId, clientId, {
-        type: "NOTE_CREATED",
-        note: newNote,
-      });
-
-      if (userId !== newNote.ownerId) {
-        SSEService.broadcastSSE(newNote.ownerId, clientId, {
-          type: "NOTE_CREATED",
-          note: newNote,
-        });
-      }
-
-      if (newNote.collectionId) {
-        const collection = await prisma.collection.findUnique({
-          where: { id: newNote.collectionId },
-          include: { members: { select: { userId: true } } },
-        });
-
-        if (collection) {
-          for (const member of collection.members) {
-            SSEService.broadcastSSE(member.userId, clientId, {
-              type: "NOTE_CREATED",
-              note: newNote,
-            });
-          }
-        }
-      }
+    if (newNote.collectionId) {
+      SSEService.broadcastSSEToCollectionMembers(
+        newNote.collectionId,
+        { type: "NOTE_CREATED", note: newNote },
+        userId,
+        clientId,
+      );
     }
 
     res.status(201).json({ note: newNote });
@@ -386,12 +376,12 @@ export async function updateNote(
     });
 
     // Broadcast event to other clients
-    if (clientId) {
-      SSEService.broadcastSSE(userId, clientId, {
-        type: "NOTE_UPDATED",
-        note: updatedNote,
-      });
-    }
+    SSEService.broadcastSSEToNoteCollaborators(
+      updatedNote.id,
+      { type: "NOTE_UPDATED", note: updatedNote },
+      userId,
+      clientId,
+    );
 
     res.status(200).json({ note: updatedNote });
   } catch (error) {
@@ -430,34 +420,13 @@ export async function deleteNote(req: Request, res: Response) {
     });
 
     // Broadcast event to other clients
-    if (clientId && id) {
-      SSEService.broadcastSSE(userId, clientId, {
-        type: "NOTE_DELETED",
-        noteId: id,
-      });
-
-      if (userId !== deletedNote.ownerId) {
-        SSEService.broadcastSSE(deletedNote.ownerId, clientId, {
-          type: "NOTE_DELETED",
-          noteId: id,
-        });
-      }
-
-      if (deletedNote.collectionId) {
-        const collection = await prisma.collection.findUnique({
-          where: { id: deletedNote.collectionId },
-          include: { members: { select: { userId: true } } },
-        });
-
-        if (collection) {
-          for (const member of collection.members) {
-            SSEService.broadcastSSE(member.userId, clientId, {
-              type: "NOTE_DELETED",
-              noteId: id,
-            });
-          }
-        }
-      }
+    if (deletedNote.collectionId) {
+      SSEService.broadcastSSEToCollectionMembers(
+        deletedNote.collectionId,
+        { type: "NOTE_DELETED", noteId: deletedNote.id },
+        userId,
+        clientId,
+      );
     }
 
     res.status(204).send();

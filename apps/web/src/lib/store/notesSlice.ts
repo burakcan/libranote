@@ -51,13 +51,13 @@ export const createNotesSlice: StateCreator<
       await TransactionService.syncRemoteNotesToLocal(remoteNotes);
     },
 
-    createNote: async (collectionId, ownerId, title, content = "") => {
+    createNote: async (collectionId, createdById, title, content = "") => {
       const noteId = crypto.randomUUID();
       const note: ClientNote = {
         id: noteId,
         title,
         description: content,
-        ownerId,
+        createdById,
         collectionId,
         isPublic: false,
         createdAt: new Date(),

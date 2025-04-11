@@ -20,6 +20,7 @@ export function CreateNoteButton() {
   const handleClick = async () => {
     if (userId) {
       const note = await createNote(activeCollectionId, userId, "New Note");
+
       navigate({
         to: "/notes/$noteId",
         params: { noteId: note.id },
