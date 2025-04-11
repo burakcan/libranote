@@ -113,13 +113,32 @@ export class SSEService {
 
   /**
    * Broadcast an event to all collaborators of a note & the collection members of the note's collection
+   * If explicitCollaboratorIds is provided, it will be used instead of fetching collaborators from DB
+   * Useful for broadcasting after a note is deleted when DB entry no longer exists
    */
   static async broadcastSSEToNoteCollaborators(
     noteId: string,
     event: SSEEvent,
     senderUserId: UserId,
     senderClientId: string | undefined,
+    explicitCollaboratorIds?: string[],
   ) {
+    const userIds = new Set<string>();
+
+    // If explicit collaborator IDs are provided, use them (for deleted notes)
+    if (explicitCollaboratorIds && explicitCollaboratorIds.length > 0) {
+      explicitCollaboratorIds.forEach((userId) => userIds.add(userId));
+      userIds.add(senderUserId);
+
+      // Broadcast to all identified users
+      for (const userId of userIds) {
+        SSEService.broadcastSSE(userId, senderClientId, event);
+      }
+
+      return;
+    }
+
+    // Otherwise, fetch note data normally
     const note = await prisma.note.findUnique({
       where: { id: noteId },
       include: {
@@ -132,7 +151,6 @@ export class SSEService {
       },
     });
 
-    const userIds = new Set<string>();
     const noteCollaborators =
       note?.noteCollaborators.map((collaborator) => collaborator.userId) || [];
     const collectionMembers = note?.collection?.members.map((member) => member.userId) || [];

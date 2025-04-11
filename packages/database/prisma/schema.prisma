@@ -155,9 +155,8 @@ model NoteYDocState {
   id         String   @id
   encodedDoc Bytes // yjs doc as a binary blob
   updatedAt  DateTime @updatedAt
-  note       Note     @relation(fields: [id], references: [id], onDelete: Cascade)
-  noteId     String
+  noteId     String   @unique
+  note       Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
-  @@unique([id, noteId])
   @@map("note_y_doc_state")
 }

@@ -9,6 +9,13 @@ import {
   updateNote,
   deleteNote,
 } from "../controllers/note-controller.js";
+import { validate } from "../middleware/validate.js";
+import {
+  createNoteSchema,
+  updateNoteSchema,
+  noteParamsSchema,
+  collectionParamsSchema,
+} from "../validators/note-validators.js";
 
 const router: Router = express.Router();
 
@@ -17,10 +24,14 @@ router.use(requireAuth);
 
 // Note routes
 router.get("/", getNotes);
-router.get("/:id", getNote);
-router.get("/collection/:collectionId", getNotesByCollection);
-router.post("/", createNote);
-router.put("/:id", updateNote);
-router.delete("/:id", deleteNote);
+router.get("/:id", validate(noteParamsSchema, "params"), getNote);
+router.get(
+  "/collection/:collectionId",
+  validate(collectionParamsSchema, "params"),
+  getNotesByCollection,
+);
+router.post("/", validate(createNoteSchema), createNote);
+router.put("/:id", validate(noteParamsSchema, "params"), validate(updateNoteSchema), updateNote);
+router.delete("/:id", validate(noteParamsSchema, "params"), deleteNote);
 
 export default router;

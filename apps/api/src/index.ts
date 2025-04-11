@@ -9,6 +9,7 @@ import collectionRoutes from "./routes/collection-routes.js";
 import noteRoutes from "./routes/note-routes.js";
 import sseRoutes from "./routes/sse-routes.js";
 import { notifyWebhook } from "./controllers/sse-controller.js";
+import { errorHandler } from "./middleware/error-handler.js";
 
 const app = express();
 
@@ -39,13 +40,7 @@ app.use("/api/sse", sseRoutes);
 app.post("/api/webhook/sse", notifyWebhook);
 
 // Error handling middleware
-app.use((err: Error, _req: express.Request, res: express.Response) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: "InternalServerError",
-    message: "An unexpected error occurred",
-  });
-});
+app.use(errorHandler);
 
 // Start the server
 app.listen(env.PORT, () => {
