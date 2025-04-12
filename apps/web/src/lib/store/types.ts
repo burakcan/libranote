@@ -43,7 +43,7 @@ export type CollectionsSliceActions = {
   ) => Promise<void>;
   createCollection: (
     title: string,
-    ownerId: string
+    createdById: string
   ) => Promise<ClientCollection>;
   deleteCollection: (collectionId: ClientCollection["id"]) => Promise<void>;
   updateCollection: (collection: ClientCollection) => Promise<void>;

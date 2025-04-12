@@ -8,6 +8,12 @@ import {
   updateCollection,
   deleteCollection,
 } from "../controllers/collection-controller.js";
+import { validate } from "../middleware/validate.js";
+import {
+  createCollectionSchema,
+  updateCollectionSchema,
+  collectionParamsSchema,
+} from "../validators/collection-validators.js";
 
 const router: Router = express.Router();
 
@@ -16,9 +22,14 @@ router.use(requireAuth);
 
 // Collection routes
 router.get("/", getCollections);
-router.get("/:id", getCollection);
-router.post("/", createCollection);
-router.put("/:id", updateCollection);
-router.delete("/:id", deleteCollection);
+router.get("/:id", validate(collectionParamsSchema, "params"), getCollection);
+router.post("/", validate(createCollectionSchema), createCollection);
+router.put(
+  "/:id",
+  validate(collectionParamsSchema, "params"),
+  validate(updateCollectionSchema),
+  updateCollection,
+);
+router.delete("/:id", validate(collectionParamsSchema, "params"), deleteCollection);
 
 export default router;

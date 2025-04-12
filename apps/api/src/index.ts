@@ -8,7 +8,7 @@ import { env } from "./env.js";
 import collectionRoutes from "./routes/collection-routes.js";
 import noteRoutes from "./routes/note-routes.js";
 import sseRoutes from "./routes/sse-routes.js";
-import { notifyWebhook } from "./controllers/sse-controller.js";
+import { handleWebhook } from "./controllers/sse-controller.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 const app = express();
@@ -37,7 +37,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/collections", collectionRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/sse", sseRoutes);
-app.post("/api/webhook/sse", notifyWebhook);
+app.post("/api/webhook/sse", handleWebhook);
 
 // Error handling middleware
 app.use(errorHandler);

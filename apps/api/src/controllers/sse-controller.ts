@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { Readable } from "stream";
 import { SSEService } from "../services/sse-service.js";
 import { prisma } from "../db/prisma.js";
+import type { WebhookEvent } from "../types/webhook.js";
 
 /**
  * Handle SSE connection for real-time updates
@@ -56,61 +57,28 @@ export async function connectSSE(req: Request, res: Response) {
   stream.pipe(res);
 }
 
-export async function notifyWebhook(req: Request, res: Response) {
-  const { event } = req.body;
+export async function handleWebhook(req: Request, res: Response) {
+  const { event } = req.body as { event: WebhookEvent };
 
-  if (event.type === "NOTE_UPDATED") {
-    const updatedNote = await prisma.note.findUnique({
-      where: { id: event.noteId },
-      include: {
-        noteYDocState: {
-          omit: { encodedDoc: true },
-        },
-        noteCollaborators: {
-          select: {
-            userId: true,
-          },
-        },
-        collection: {
-          select: {
-            members: {
-              select: {
-                userId: true,
-              },
-            },
-          },
-        },
+  const updatedNote = await prisma.note.findUnique({
+    where: { id: event.noteId },
+    include: {
+      noteYDocState: {
+        omit: { encodedDoc: true },
       },
-    });
+    },
+  });
 
-    if (!updatedNote) {
-      res.status(404).json({
-        error: "NotFound",
-        message: "Note not found",
-      });
-      return;
-    }
-
-    const userIdsToNotify = new Set<string>();
-
-    for (const collaborator of updatedNote.noteCollaborators) {
-      userIdsToNotify.add(collaborator.userId);
-    }
-
-    if (updatedNote.collection) {
-      for (const member of updatedNote.collection.members) {
-        userIdsToNotify.add(member.userId);
-      }
-    }
-
-    for (const userId of userIdsToNotify) {
-      SSEService.broadcastSSE(userId, undefined, {
+  if (event.type === "NOTE_UPDATED" && updatedNote) {
+    SSEService.broadcastSSEToNoteCollaborators(
+      event.noteId,
+      {
         type: "NOTE_UPDATED",
         note: updatedNote,
-      });
-    }
-
-    res.status(200).json({ message: "ok" });
-    return;
+      },
+      undefined,
+      undefined,
+    );
   }
+  res.status(200).send();
 }

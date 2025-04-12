@@ -88,8 +88,8 @@ model Jwks {
 model Collection {
   id              String             @id
   title           String
-  ownerId         String
-  owner           User               @relation("OwnedCollections", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       User               @relation("OwnedCollections", fields: [createdById], references: [id], onDelete: Cascade)
   createdAt       DateTime
   serverCreatedAt DateTime           @default(now())
   updatedAt       DateTime
@@ -100,14 +100,20 @@ model Collection {
   @@map("collection")
 }
 
+enum CollectionMemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
 model CollectionMember {
-  id           String     @id
+  id           String               @id
   userId       String
   collectionId String
-  canEdit      Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  role         CollectionMemberRole
+  createdAt    DateTime             @default(now())
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
   @@unique([collectionId, userId])
   @@map("collection_member")

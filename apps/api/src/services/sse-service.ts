@@ -85,19 +85,37 @@ export class SSEService {
 
   /**
    * Broadcast an event to all members of a collection
+   * If explicitMemberIds is provided, it will be used instead of fetching members from DB
+   * Useful for broadcasting after a collection is deleted when DB entry no longer exists
    */
   static async broadcastSSEToCollectionMembers(
     collectionId: string,
     event: SSEEvent,
     senderUserId: UserId,
     senderClientId: string | undefined,
+    explicitMemberIds?: string[],
   ) {
+    const userIds = new Set<string>();
+
+    // If explicit member IDs are provided, use them (for deleted collections)
+    if (explicitMemberIds && explicitMemberIds.length > 0) {
+      explicitMemberIds.forEach((userId) => userIds.add(userId));
+      userIds.add(senderUserId);
+
+      // Broadcast to all identified users
+      for (const userId of userIds) {
+        SSEService.broadcastSSE(userId, senderClientId, event);
+      }
+
+      return;
+    }
+
+    // Otherwise, fetch collection data normally
     const collection = await prisma.collection.findUnique({
       where: { id: collectionId },
       include: { members: { select: { userId: true } } },
     });
 
-    const userIds = new Set<string>();
     const collectionMembers = collection?.members.map((member) => member.userId) || [];
 
     for (const userId of collectionMembers) {
@@ -119,7 +137,7 @@ export class SSEService {
   static async broadcastSSEToNoteCollaborators(
     noteId: string,
     event: SSEEvent,
-    senderUserId: UserId,
+    senderUserId: UserId | undefined,
     senderClientId: string | undefined,
     explicitCollaboratorIds?: string[],
   ) {
@@ -128,7 +146,8 @@ export class SSEService {
     // If explicit collaborator IDs are provided, use them (for deleted notes)
     if (explicitCollaboratorIds && explicitCollaboratorIds.length > 0) {
       explicitCollaboratorIds.forEach((userId) => userIds.add(userId));
-      userIds.add(senderUserId);
+
+      if (senderUserId) userIds.add(senderUserId);
 
       // Broadcast to all identified users
       for (const userId of userIds) {
@@ -163,7 +182,7 @@ export class SSEService {
       userIds.add(userId);
     }
 
-    userIds.add(senderUserId);
+    if (senderUserId) userIds.add(senderUserId);
 
     for (const userId of userIds) {
       SSEService.broadcastSSE(userId, senderClientId, event);

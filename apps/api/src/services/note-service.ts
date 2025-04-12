@@ -1,5 +1,11 @@
 import { randomUUID } from "crypto";
-import { NoteCollaboratorRole, Prisma, prisma, type Note } from "../db/prisma.js";
+import {
+  CollectionMemberRole,
+  NoteCollaboratorRole,
+  Prisma,
+  prisma,
+  type Note,
+} from "../db/prisma.js";
 import { SSEService } from "./sse-service.js";
 import { ForbiddenError, NotFoundError } from "../utils/errors.js";
 
@@ -13,11 +19,6 @@ export class NotePermissions {
         {
           noteCollaborators: {
             some: { userId },
-          },
-        },
-        {
-          collection: {
-            ownerId: userId,
           },
         },
         {
@@ -47,7 +48,10 @@ export class NotePermissions {
         {
           collection: {
             members: {
-              some: { userId, canEdit: true },
+              some: {
+                userId,
+                role: { in: [CollectionMemberRole.OWNER, CollectionMemberRole.EDITOR] },
+              },
             },
           },
         },
@@ -69,7 +73,10 @@ export class NotePermissions {
         {
           collection: {
             members: {
-              some: { userId, canEdit: true },
+              some: {
+                userId,
+                role: { in: [CollectionMemberRole.OWNER, CollectionMemberRole.EDITOR] },
+              },
             },
           },
         },
@@ -137,23 +144,18 @@ export class NoteService {
    */
   private static async verifyCollectionEditPermission(userId: string, collectionId: string) {
     const collection = await prisma.collection.findUnique({
-      where: { id: collectionId },
-      include: {
+      where: {
+        id: collectionId,
         members: {
-          where: { userId, canEdit: true },
-          select: { userId: true },
+          some: {
+            userId,
+            role: { in: [CollectionMemberRole.OWNER, CollectionMemberRole.EDITOR] },
+          },
         },
       },
     });
 
     if (!collection) {
-      throw new NotFoundError("Collection not found");
-    }
-
-    const isOwner = collection.ownerId === userId;
-    const isMember = collection.members.length > 0;
-
-    if (!isOwner && !isMember) {
       throw new ForbiddenError("You don't have permission to create notes in this collection");
     }
   }
@@ -169,6 +171,11 @@ export class NoteService {
     >,
     clientId: string,
   ) {
+    // Verify collection permissions if a collection is specified
+    if (noteData.collectionId) {
+      await this.verifyCollectionEditPermission(userId, noteData.collectionId);
+    }
+
     // Create note with appropriate data
     const createData: Prisma.NoteCreateArgs["data"] = {
       id: noteData.id,

@@ -62,12 +62,12 @@ export const createCollectionsSlice: StateCreator<
       await TransactionService.syncRemoteCollectionsToLocal(remoteCollections);
     },
 
-    createCollection: async (title, ownerId) => {
+    createCollection: async (title, createdById) => {
       const collectionId = crypto.randomUUID();
       const collection: ClientCollection = {
         id: collectionId,
         title,
-        ownerId,
+        createdById,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -253,7 +253,7 @@ export const createCollectionsSlice: StateCreator<
       await CollectionRepository.delete(collectionId);
 
       for (const note of notesToDelete) {
-        await state.notes.deleteNote(note.id);
+        await state.notes.deleteNote(note.id, true);
       }
     },
 
