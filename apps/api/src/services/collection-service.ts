@@ -31,7 +31,52 @@ export class CollectionPermissions {
       members: { some: { userId, role: CollectionMemberRole.OWNER } },
     };
   }
+
+  static whereCanSeeMembers(userId: string) {
+    return {
+      members: {
+        some: { userId, role: { in: [CollectionMemberRole.OWNER, CollectionMemberRole.EDITOR] } },
+      },
+    };
+  }
+
+  static whereCanInvite(userId: string) {
+    return {
+      members: {
+        some: { userId, role: { in: [CollectionMemberRole.OWNER] } },
+      },
+    };
+  }
+
+  static whereCanRemoveMember(userId: string, userIdToRemove: string) {
+    if (userId === userIdToRemove) {
+      return {
+        members: { some: { userId } },
+      };
+    }
+
+    return {
+      members: { some: { userId, role: CollectionMemberRole.OWNER } },
+    };
+  }
+
+  static whereCanUpdateMemberRole(userId: string) {
+    return {
+      members: { some: { userId, role: CollectionMemberRole.OWNER } },
+    };
+  }
 }
+
+/**
+ * Default include object for collection queries that includes the members
+ */
+const collectionDefaultInclude = (userId: string) => ({
+  members: {
+    where: {
+      userId,
+    },
+  },
+});
 
 export class CollectionService {
   /**
@@ -41,6 +86,7 @@ export class CollectionService {
     return prisma.collection.findMany({
       where: CollectionPermissions.whereCanView(userId),
       orderBy: { updatedAt: "desc" },
+      include: collectionDefaultInclude(userId),
     });
   }
 
@@ -53,6 +99,7 @@ export class CollectionService {
         id: collectionId,
         ...CollectionPermissions.whereCanView(userId),
       },
+      include: collectionDefaultInclude(userId),
     });
 
     if (!collection) {
@@ -85,6 +132,7 @@ export class CollectionService {
           },
         },
       },
+      include: collectionDefaultInclude(userId),
     });
 
     // Broadcast event to collection members (which is just the creator at this point)
@@ -117,9 +165,7 @@ export class CollectionService {
         title: updateData.title,
         updatedAt: new Date(updateData.updatedAt),
       },
-      include: {
-        members: { select: { userId: true } },
-      },
+      include: collectionDefaultInclude(userId),
     });
 
     // Broadcast to all collection members
@@ -181,5 +227,205 @@ export class CollectionService {
     );
 
     return collection;
+  }
+
+  /**
+   * Get members for a collection
+   */
+  static async getMembers(userId: string, collectionId: string) {
+    const members = await prisma.collectionMember.findMany({
+      where: {
+        collectionId,
+        collection: CollectionPermissions.whereCanSeeMembers(userId),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return members.map((member) => ({
+      id: member.id,
+      userId: member.user.id,
+      email: member.user.email,
+      name: member.user.name,
+      role: member.role,
+    }));
+  }
+
+  /**
+   * Invite a member to a collection
+   */
+  static async inviteToCollection(
+    userId: string,
+    collectionId: string,
+    email: string,
+    role: CollectionMemberRole,
+    clientId: string,
+  ) {
+    const collection = await prisma.collection.findUnique({
+      where: {
+        id: collectionId,
+        ...CollectionPermissions.whereCanInvite(userId),
+      },
+    });
+
+    if (!collection) {
+      throw new NotFoundError("Collection not found");
+    }
+
+    const userToInvite = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!userToInvite) {
+      throw new NotFoundError("User not found");
+    }
+
+    const newMember = await prisma.collectionMember.create({
+      data: {
+        id: randomUUID(),
+        collectionId,
+        userId: userToInvite.id,
+        role,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    SSEService.broadcastSSEToCollectionMembers(
+      collectionId,
+      {
+        type: "COLLECTION_MEMBER_JOINED",
+        userId: newMember.userId,
+        collection: collection,
+      },
+      userId,
+      clientId,
+    );
+
+    return {
+      id: newMember.id,
+      userId: newMember.user.id,
+      email: newMember.user.email,
+      name: newMember.user.name,
+      role: newMember.role,
+    };
+  }
+
+  /**
+   * Remove a member from a collection
+   */
+  static async removeMember(
+    userId: string,
+    collectionId: string,
+    userIdToRemove: string,
+    clientId: string,
+  ) {
+    const member = await prisma.collectionMember.findFirst({
+      where: {
+        userId: userIdToRemove,
+        collectionId,
+        collection: CollectionPermissions.whereCanRemoveMember(userId, userIdToRemove),
+      },
+      include: {
+        collection: true,
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundError("Member not found");
+    }
+
+    await SSEService.broadcastSSEToCollectionMembers(
+      collectionId,
+      {
+        type: "COLLECTION_MEMBER_LEFT",
+        userId: userIdToRemove,
+        collection: member.collection,
+      },
+      userId,
+      clientId,
+    );
+
+    await prisma.collectionMember.delete({
+      where: {
+        id: member.id,
+      },
+    });
+
+    return {
+      id: member.id,
+      userId: member.userId,
+      role: member.role,
+    };
+  }
+
+  /**
+   * Update a member's role in a collection
+   */
+  static async updateMemberRole(
+    userId: string,
+    collectionId: string,
+    userIdToUpdate: string,
+    role: CollectionMemberRole,
+    clientId: string,
+  ) {
+    const member = await prisma.collectionMember.findFirst({
+      where: {
+        userId: userIdToUpdate,
+        collectionId,
+        collection: CollectionPermissions.whereCanUpdateMemberRole(userId),
+      },
+      include: {
+        collection: true,
+        user: true,
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundError("Member not found");
+    }
+
+    await prisma.collectionMember.update({
+      where: {
+        id: member.id,
+        collectionId,
+        collection: CollectionPermissions.whereCanUpdateMemberRole(userId),
+      },
+      data: { role },
+    });
+
+    SSEService.broadcastSSEToCollectionMembers(
+      collectionId,
+      {
+        type: "COLLECTION_MEMBER_ROLE_UPDATED",
+        userId: member.userId,
+        role: member.role,
+        collection: member.collection,
+      },
+      userId,
+      clientId,
+    );
+
+    return {
+      id: member.id,
+      userId: member.user.id,
+      email: member.user.email,
+      name: member.user.name,
+      role: member.role,
+    };
   }
 }

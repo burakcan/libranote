@@ -14,6 +14,10 @@ const DEFAULT_PORT = 3001;
 const server = Server.configure({
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
   onAuthenticate: async (socket) => {
+    console.info(`Authenticated: ${socket.documentName} - ${socket.token}`);
+
+    console.log('Documents size: ', server.documents.size);
+    console.log('Total connections: ', server.getConnectionsCount());
     // const { payload } = await jose.jwtVerify(socket.token, JWKS);
     // if (!payload || !payload.sub) {
     //   throw new Error('Invalid token');
@@ -21,9 +25,14 @@ const server = Server.configure({
     // // TODO: Check if user has access to the document
     // console.info(`Authenticated: ${socket.documentName} - ${payload.sub}`);
     // return true;
+    return true;
   },
 
   async onStoreDocument(data) {
+    if (data.documentName === 'keep-alive') {
+      return;
+    }
+
     const update = Y.encodeStateAsUpdateV2(data.document);
 
     console.info(`Storing document: ${data.documentName}`);
@@ -49,7 +58,7 @@ const server = Server.configure({
       },
       body: JSON.stringify({
         event: {
-          type: 'NOTE_UPDATED',
+          type: 'NOTE_YDOC_STATE_UPDATED',
           noteId: data.documentName,
         },
       }),

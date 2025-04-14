@@ -1,5 +1,6 @@
 import Dexie from "dexie";
 import * as Y from "yjs";
+import { NoteYDocStateRepository } from "./NoteYDocStateRepository";
 
 /**
  * Number of incremental updates after which we merge into a single snapshot.
@@ -213,6 +214,10 @@ export class IndexeddbPersistence extends EventTarget {
         }
       })
       .catch((e) => console.error("Error storing update:", e));
+
+    NoteYDocStateRepository.update(this.name, {
+      updatedAt: new Date(),
+    });
   }
 
   /**

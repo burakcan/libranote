@@ -1,19 +1,28 @@
 "use client";
 
-import { Share2, Trash, MoreHorizontal, Pencil } from "lucide-react";
+import { CollectionMemberRole } from "@repo/db";
+import {
+  Share2,
+  Trash,
+  MoreHorizontal,
+  Pencil,
+  UserRoundX,
+} from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import SharingModal from "@/components/collections/CollectionSharingModal";
 import { useStore } from "@/hooks/useStore";
 import { useCollectionNotes } from "@/lib/store/useCollectionNotes";
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
 import { ClientCollection } from "@/types/Entities";
 
 type ALL_NOTES_COLLECTION = {
@@ -21,6 +30,11 @@ type ALL_NOTES_COLLECTION = {
   title: "All Notes";
   createdAt: Date;
   updatedAt: Date;
+  members: [
+    {
+      role: CollectionMemberRole;
+    },
+  ];
 };
 
 interface CollectionListItemProps {
@@ -29,6 +43,7 @@ interface CollectionListItemProps {
 
 export function CollectionListItem({ collection }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
+  const [sharingModalOpen, setSharingModalOpen] = useState(false);
   const {
     isSyncing,
     isRenaming = false,
@@ -37,6 +52,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
     deleteCollection,
     setRenamingCollection,
     updateCollection,
+    leaveCollection,
   } = useStore(
     useShallow((state) => ({
       isSyncing: state.actionQueue.items.some(
@@ -52,10 +68,12 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       setActiveCollectionId: state.collections.setActiveCollectionId,
       deleteCollection: state.collections.deleteCollection,
       updateCollection: state.collections.updateCollection,
+      leaveCollection: state.collections.leaveCollection,
     }))
   );
 
   const totalNotes = useCollectionNotes(collection.id).length;
+  const isOwner = collection.members[0].role === "OWNER";
 
   const handleRenameCollection = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -79,11 +97,6 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
   const handleCancelRename = () => {
     setRenameInput(collection.title);
     setRenamingCollection(null);
-  };
-
-  const handleDeleteCollection = () => {
-    if (collection.id === null) return;
-    deleteCollection(collection.id);
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -140,22 +153,56 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDeleteCollection}>
-                  <Trash className="text-destructive h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRenameCollection}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Rename
-                </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSharingModalOpen(true);
+                    }}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </DropdownMenuItem>
+                )}
+                {isOwner && (
+                  <DropdownMenuItem onClick={handleRenameCollection}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Rename
+                  </DropdownMenuItem>
+                )}
+                {isOwner && <DropdownMenuSeparator />}
+                {isOwner ? (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteCollection(collection.id);
+                    }}
+                  >
+                    <Trash className="text-destructive h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      leaveCollection(collection.id);
+                    }}
+                  >
+                    <UserRoundX className="text-destructive h-4 w-4 mr-2" />
+                    Leave
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
         </>
+      )}
+      {collection.id !== null && (
+        <SharingModal
+          setOpen={setSharingModalOpen}
+          open={sharingModalOpen}
+          collectionId={collection.id}
+        />
       )}
     </div>
   );

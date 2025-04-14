@@ -1,4 +1,9 @@
-import { ServerCollection, ServerNote } from "./Entities";
+import {
+  ServerCollection,
+  ServerCollectionMember,
+  ServerNote,
+  ServerNoteYDocState,
+} from "./Entities";
 
 export type SSEEventType =
   | "INIT"
@@ -44,6 +49,29 @@ export interface SSENoteDeletedEvent {
   noteId: string;
 }
 
+export interface SSEyDocUpdatedEvent {
+  type: "NOTE_YDOC_STATE_UPDATED";
+  ydocState: ServerNoteYDocState;
+}
+
+export interface SSECollectionMemberJoinedEvent {
+  type: "COLLECTION_MEMBER_JOINED";
+  userId: string;
+  collection: ServerCollection;
+}
+
+export interface SSECollectionMemberLeftEvent {
+  type: "COLLECTION_MEMBER_LEFT";
+  userId: string;
+  collection: ServerCollection;
+}
+
+export interface SSECollectionMemberRoleUpdatedEvent {
+  type: "COLLECTION_MEMBER_ROLE_UPDATED";
+  userId: string;
+  role: ServerCollectionMember["role"];
+}
+
 export type SSEEvent =
   | SSEInitEvent
   | SSECollectionCreatedEvent
@@ -51,4 +79,8 @@ export type SSEEvent =
   | SSECollectionDeletedEvent
   | SSENoteCreatedEvent
   | SSENoteUpdatedEvent
-  | SSENoteDeletedEvent;
+  | SSENoteDeletedEvent
+  | SSEyDocUpdatedEvent
+  | SSECollectionMemberJoinedEvent
+  | SSECollectionMemberLeftEvent
+  | SSECollectionMemberRoleUpdatedEvent;

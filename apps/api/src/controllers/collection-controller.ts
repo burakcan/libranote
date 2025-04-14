@@ -101,3 +101,100 @@ export async function deleteCollection(req: Request, res: Response, next: NextFu
     next(error);
   }
 }
+
+/**
+ * Get members for a collection
+ */
+export async function getMembers(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req;
+    const { id } = req.params;
+    if (!id) {
+      throw new Error("Collection ID is required");
+    }
+
+    const members = await CollectionService.getMembers(userId, id);
+    res.status(200).json({ members });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Invite a member to a collection
+ */
+export async function inviteToCollection(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req;
+    const { id } = req.params;
+
+    if (!id) {
+      throw new Error("Collection ID is required");
+    }
+
+    const { email, role } = req.body;
+    const clientId = (req.headers["x-client-id"] as string) || "";
+
+    const newMember = await CollectionService.inviteToCollection(userId, id, email, role, clientId);
+    res.status(201).json({ member: newMember });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Remove a member from a collection
+ */
+export async function removeMember(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req;
+    const { id, userId: userIdToRemove } = req.params;
+
+    if (!id) {
+      throw new Error("Collection ID is required");
+    }
+
+    if (!userIdToRemove) {
+      throw new Error("Member ID is required");
+    }
+
+    const clientId = (req.headers["x-client-id"] as string) || "";
+
+    await CollectionService.removeMember(userId, id, userIdToRemove, clientId);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update a member's role in a collection
+ */
+export async function updateMemberRole(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req;
+    const { id, userId: userIdToUpdate } = req.params;
+
+    if (!id) {
+      throw new Error("Collection ID is required");
+    }
+
+    if (!userIdToUpdate) {
+      throw new Error("Member ID is required");
+    }
+
+    const { role } = req.body;
+    const clientId = (req.headers["x-client-id"] as string) || "";
+
+    const updatedMember = await CollectionService.updateMemberRole(
+      userId,
+      id,
+      userIdToUpdate,
+      role,
+      clientId,
+    );
+    res.status(200).json({ member: updatedMember });
+  } catch (error) {
+    next(error);
+  }
+}

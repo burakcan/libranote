@@ -23,10 +23,11 @@ export class UserDatabaseService implements DatabaseService {
 
     this.db.version(1).stores({
       collections:
-        "id, title, ownerId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt",
+        "id, title, ownerId, createdAt, member, updatedAt, serverCreatedAt, serverUpdatedAt",
       notes:
         "id, title, description, createdById, collectionId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt, noteYDocState",
       actionQueue: "id, relatedEntityId, type, status, createdAt",
+      noteYDocState: "id, noteId, updatedAt",
     });
 
     await this.db.open();

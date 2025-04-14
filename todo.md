@@ -1,4 +1,5 @@
-- Better "sse notification"
-  instead of manually finding all clients, do something like "NotifyNoteClients"
-
-- Move ownerId to members with role "owner"
+- Initial login first example notes
+- User collaboration color
+- Collection color
+- ID generation other than UUID
+- Keep active collection in session storage

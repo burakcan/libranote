@@ -25,3 +25,8 @@ export const updateCollectionSchema = z.object({
 export const collectionParamsSchema = z.object({
   id: z.string().uuid(),
 });
+
+export const collectionMemberParamsSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
+});

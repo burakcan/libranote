@@ -1,3 +1,6 @@
+import { HocuspocusProvider } from "@hocuspocus/provider";
+import { HocuspocusProviderWebsocket } from "@hocuspocus/provider";
+import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
 import { ApiService, ApiServiceError } from "@/lib/ApiService";
 import { ActionQueueRepository } from "@/lib/db/ActionQueueRepository";
@@ -5,10 +8,28 @@ import { CollectionRepository } from "@/lib/db/CollectionRepository";
 import { NoteRepository } from "@/lib/db/NoteRepository";
 import { router } from "@/lib/router";
 import { Store } from "@/lib/store";
+import { NoteYDocStateRepository } from "./db/NoteYDocStateRepository";
+import { IndexeddbPersistence } from "./db/yIndexedDb";
+import { queryClient } from "./queryClient";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
-import { ServerCollection, ServerNote } from "@/types/Entities";
+import {
+  ServerCollection,
+  ServerNote,
+  ServerNoteYDocState,
+} from "@/types/Entities";
 import { SSEEvent } from "@/types/SSE";
+
+const syncSocket = new HocuspocusProviderWebsocket({
+  url: import.meta.env.VITE_HOCUSPOCUS_URL || "",
+});
+
+new HocuspocusProvider({
+  websocketProvider: syncSocket,
+  document: new Y.Doc(),
+  name: "keep-alive",
+  token: "123",
+});
 
 export const SYNCING_EVENT = "syncing";
 export const SYNCED_EVENT = "synced";
@@ -49,6 +70,20 @@ export class SyncService extends EventTarget {
     });
   }
 
+  getCurrentNoteId() {
+    const params = router.matchRoute(Route.fullPath) as
+      | false
+      | {
+          noteId: string;
+        };
+
+    if (!params) {
+      return null;
+    }
+
+    return params.noteId;
+  }
+
   async sync() {
     if (this.syncing) {
       console.debug("SyncService: Already syncing");
@@ -60,6 +95,8 @@ export class SyncService extends EventTarget {
     this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
     console.debug("SyncService: Syncing");
+
+    this.syncNoteYDocStates();
 
     await this.loadLocalDataToStore();
     await this.processActionQueue();
@@ -143,6 +180,7 @@ export class SyncService extends EventTarget {
           await store.collections.remoteDeletedCollection(event.collectionId);
           break;
         case "NOTE_CREATED":
+          this.syncNoteYDocStates(event.note.noteYDocState);
           await store.notes.remoteCreatedNote(event.note);
           break;
         case "NOTE_UPDATED":
@@ -150,6 +188,33 @@ export class SyncService extends EventTarget {
           break;
         case "NOTE_DELETED":
           await store.notes.remoteDeletedNote(event.noteId);
+          break;
+        case "NOTE_YDOC_STATE_UPDATED":
+          await this.syncNoteYDocStates(event.ydocState);
+          break;
+        case "COLLECTION_MEMBER_JOINED": {
+          const remoteCollection = await ApiService.fetchCollection(
+            event.collection.id
+          );
+
+          await store.collections.remoteJoinedCollection(
+            event.userId,
+            remoteCollection
+          );
+          break;
+        }
+        case "COLLECTION_MEMBER_LEFT": {
+          queryClient.invalidateQueries({
+            queryKey: ["collection-members", event.collection.id],
+          });
+
+          await store.collections.remoteLeftCollection(
+            event.userId,
+            event.collection
+          );
+          break;
+        }
+        case "COLLECTION_MEMBER_ROLE_UPDATED":
           break;
         default:
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -160,6 +225,77 @@ export class SyncService extends EventTarget {
       console.error("SyncService: Error processing SSE event:", error);
       throw error;
     }
+  }
+
+  async syncNoteYDocStates(remoteYDocState?: ServerNoteYDocState) {
+    const remoteYDocStates = remoteYDocState
+      ? [remoteYDocState]
+      : await ApiService.fetchAllYDocStates();
+
+    console.debug("SyncService: Syncing YDoc states", remoteYDocStates);
+
+    for (const remoteYDocState of remoteYDocStates) {
+      await this.syncNoteYDocState(remoteYDocState);
+    }
+  }
+
+  async syncNoteYDocState(remoteYDocState: ServerNoteYDocState) {
+    const localYDocState = await NoteYDocStateRepository.getById(
+      remoteYDocState.id
+    );
+
+    if (!localYDocState) {
+      console.log(
+        "SyncService: YDoc state not found, creating",
+        remoteYDocState.id
+      );
+      await NoteYDocStateRepository.put(remoteYDocState);
+    }
+
+    if (localYDocState?.updatedAt === remoteYDocState.updatedAt) {
+      return;
+    }
+
+    if (remoteYDocState.noteId === this.getCurrentNoteId()) {
+      NoteYDocStateRepository.update(remoteYDocState.id, remoteYDocState);
+      return;
+    }
+
+    console.debug("SyncService: Syncing YDoc", remoteYDocState.id);
+
+    const doc = new Y.Doc();
+    const persistence = new IndexeddbPersistence(remoteYDocState.id, doc);
+
+    return new Promise((resolve) => {
+      persistence.whenSynced.then(() => {
+        const provider = new HocuspocusProvider({
+          websocketProvider: syncSocket,
+          document: doc,
+          name: remoteYDocState.id,
+          token: "123",
+        });
+
+        provider.on("synced", () => {
+          console.debug("SyncService: YDoc synced", remoteYDocState.id);
+
+          NoteYDocStateRepository.update(remoteYDocState.id, remoteYDocState);
+
+          provider.destroy();
+          persistence.destroy();
+          doc.destroy();
+
+          resolve(doc);
+        });
+
+        provider.on("close", () => {
+          console.debug("SyncService: YDoc disconnected", remoteYDocState.id);
+
+          provider.destroy();
+          persistence.destroy();
+          doc.destroy();
+        });
+      });
+    });
   }
 
   async loadLocalDataToStore() {
@@ -224,6 +360,12 @@ export class SyncService extends EventTarget {
           break;
         case "DELETE_COLLECTION":
           await ApiService.deleteCollection(item.relatedEntityId);
+          break;
+        case "LEAVE_COLLECTION":
+          await ApiService.removeCollectionMember(
+            item.relatedEntityId,
+            this.store.getState().userId
+          );
           break;
         case "CREATE_NOTE":
           await this.syncCreateNote(item.relatedEntityId);
@@ -303,19 +445,6 @@ export class SyncService extends EventTarget {
     const remoteNote = await ApiService.createNote(localNote);
 
     await this.store.getState().notes.swapNote(localNote.id, remoteNote);
-
-    const params = router.matchRoute(Route.fullPath) as
-      | false
-      | {
-          noteId: string;
-        };
-
-    if (params && params.noteId === noteId) {
-      router.navigate({
-        to: "/notes/$noteId",
-        params: { noteId: remoteNote.id },
-      });
-    }
 
     return remoteNote;
   }

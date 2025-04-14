@@ -5,4 +5,9 @@ export interface NoteUpdatedWebhookEvent {
   noteId: string;
 }
 
-export type WebhookEvent = NoteUpdatedWebhookEvent;
+export interface NoteYDocStateUpdatedWebhookEvent {
+  type: "NOTE_YDOC_STATE_UPDATED";
+  noteId: string;
+}
+
+export type WebhookEvent = NoteUpdatedWebhookEvent | NoteYDocStateUpdatedWebhookEvent;

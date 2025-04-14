@@ -8,6 +8,7 @@ import { env } from "./env.js";
 import collectionRoutes from "./routes/collection-routes.js";
 import noteRoutes from "./routes/note-routes.js";
 import sseRoutes from "./routes/sse-routes.js";
+import ydocStateRoutes from "./routes/ydocstate-routes.js";
 import { handleWebhook } from "./controllers/sse-controller.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -37,6 +38,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/collections", collectionRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/sse", sseRoutes);
+app.use("/api/ydocstates", ydocStateRoutes);
 app.post("/api/webhook/sse", handleWebhook);
 
 // Error handling middleware

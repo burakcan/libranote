@@ -2,6 +2,7 @@ export type ActionQueueItemType =
   | "CREATE_COLLECTION"
   | "DELETE_COLLECTION"
   | "UPDATE_COLLECTION"
+  | "LEAVE_COLLECTION"
   | "CREATE_NOTE"
   | "DELETE_NOTE"
   | "UPDATE_NOTE";

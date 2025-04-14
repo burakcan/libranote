@@ -3,6 +3,7 @@ import { Readable } from "stream";
 import { SSEService } from "../services/sse-service.js";
 import { prisma } from "../db/prisma.js";
 import type { WebhookEvent } from "../types/webhook.js";
+import { NotFoundError } from "../utils/errors.js";
 
 /**
  * Handle SSE connection for real-time updates
@@ -60,16 +61,20 @@ export async function connectSSE(req: Request, res: Response) {
 export async function handleWebhook(req: Request, res: Response) {
   const { event } = req.body as { event: WebhookEvent };
 
-  const updatedNote = await prisma.note.findUnique({
-    where: { id: event.noteId },
-    include: {
-      noteYDocState: {
-        omit: { encodedDoc: true },
+  if (event.type === "NOTE_UPDATED") {
+    const updatedNote = await prisma.note.findUnique({
+      where: { id: event.noteId },
+      include: {
+        noteYDocState: {
+          omit: { encodedDoc: true },
+        },
       },
-    },
-  });
+    });
 
-  if (event.type === "NOTE_UPDATED" && updatedNote) {
+    if (!updatedNote) {
+      throw new NotFoundError("Note not found");
+    }
+
     SSEService.broadcastSSEToNoteCollaborators(
       event.noteId,
       {
@@ -79,6 +84,30 @@ export async function handleWebhook(req: Request, res: Response) {
       undefined,
       undefined,
     );
+  } else if (event.type === "NOTE_YDOC_STATE_UPDATED") {
+    const ydocState = await prisma.noteYDocState.findUnique({
+      where: { id: event.noteId },
+      select: {
+        id: true,
+        updatedAt: true,
+        noteId: true,
+      },
+    });
+
+    if (!ydocState) {
+      throw new NotFoundError("YDoc state not found");
+    }
+
+    SSEService.broadcastSSEToNoteCollaborators(
+      event.noteId,
+      {
+        type: "NOTE_YDOC_STATE_UPDATED",
+        ydocState,
+      },
+      undefined,
+      undefined,
+    );
   }
+
   res.status(200).send();
 }

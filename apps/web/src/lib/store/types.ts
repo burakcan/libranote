@@ -51,11 +51,20 @@ export type CollectionsSliceActions = {
     localId: ClientCollection["id"],
     remoteCollection: ServerCollection
   ) => Promise<void>;
+  leaveCollection: (collectionId: ClientCollection["id"]) => Promise<void>;
   remoteCreatedCollection: (collection: ServerCollection) => Promise<void>;
   remoteDeletedCollection: (
     collectionId: ClientCollection["id"]
   ) => Promise<void>;
   remoteUpdatedCollection: (collection: ServerCollection) => Promise<void>;
+  remoteJoinedCollection: (
+    userId: string,
+    collection: ServerCollection
+  ) => Promise<void>;
+  remoteLeftCollection: (
+    userId: string,
+    collection: ServerCollection
+  ) => Promise<void>;
 };
 
 export type NotesSliceActions = {

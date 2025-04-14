@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 import { NoteRepository } from "@/lib/db/NoteRepository";
 import { TransactionService } from "@/lib/db/TransactionService";
+import { NoteYDocStateRepository } from "../db/NoteYDocStateRepository";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";
@@ -110,6 +111,7 @@ export const createNotesSlice: StateCreator<
 
       // Delete note from local DB
       await NoteRepository.delete(noteId);
+      await NoteYDocStateRepository.delete(noteId);
 
       // Delete actions
       for (const action of actionsToDelete) {
@@ -181,6 +183,7 @@ export const createNotesSlice: StateCreator<
         draft.notes.data = draft.notes.data.filter((n) => n.id !== noteId);
       });
       await NoteRepository.delete(noteId);
+      await NoteYDocStateRepository.delete(noteId);
     },
 
     remoteUpdatedNote: async (note) => {

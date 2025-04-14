@@ -2,7 +2,7 @@
  * Types for Server-Sent Events
  */
 
-import type { Collection, Note } from "@repo/db";
+import type { Collection, CollectionMember, Note, NoteYDocState } from "@repo/db";
 
 export type SSEEventType =
   | "INIT"
@@ -48,6 +48,30 @@ export interface SSENoteDeletedEvent {
   noteId: string;
 }
 
+export interface SSENoteYDocStateUpdatedEvent {
+  type: "NOTE_YDOC_STATE_UPDATED";
+  ydocState: Omit<NoteYDocState, "encodedDoc">;
+}
+
+export interface SSECollectionMemberJoinedEvent {
+  type: "COLLECTION_MEMBER_JOINED";
+  userId: string;
+  collection: Collection;
+}
+
+export interface SSECollectionMemberLeftEvent {
+  type: "COLLECTION_MEMBER_LEFT";
+  userId: string;
+  collection: Collection;
+}
+
+export interface SSECollectionMemberRoleUpdatedEvent {
+  type: "COLLECTION_MEMBER_ROLE_UPDATED";
+  userId: string;
+  role: CollectionMember["role"];
+  collection: Collection;
+}
+
 export type SSEEvent =
   | SSEInitEvent
   | SSECollectionCreatedEvent
@@ -55,4 +79,8 @@ export type SSEEvent =
   | SSECollectionDeletedEvent
   | SSENoteCreatedEvent
   | SSENoteUpdatedEvent
-  | SSENoteDeletedEvent;
+  | SSENoteDeletedEvent
+  | SSENoteYDocStateUpdatedEvent
+  | SSECollectionMemberJoinedEvent
+  | SSECollectionMemberLeftEvent
+  | SSECollectionMemberRoleUpdatedEvent;

@@ -1,9 +1,11 @@
 import { CLIENT_ID } from "./clientId";
 import {
   ClientCollection,
+  ClientCollectionMember,
   ClientNote,
   ServerCollection,
   ServerNote,
+  ServerNoteYDocState,
 } from "@/types/Entities";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -91,6 +93,16 @@ export class ApiService {
     });
   }
 
+  static async fetchCollection(
+    collectionId: string
+  ): Promise<ServerCollection> {
+    const response = await this.fetch(`/api/collections/${collectionId}`);
+
+    const data: { collection: ServerCollection } = await response.json();
+
+    return data.collection;
+  }
+
   static async fetchAllCollections(): Promise<ServerCollection[]> {
     const response = await this.fetch("/api/collections");
 
@@ -107,7 +119,68 @@ export class ApiService {
     return data.notes;
   }
 
-  static async getSSEEventSource(): Promise<EventSource> {
-    return new EventSource(`${API_URL}/api/sse?clientId=${CLIENT_ID}`);
+  static async fetchAllYDocStates(): Promise<ServerNoteYDocState[]> {
+    const response = await this.fetch("/api/ydocstates");
+
+    const data: { ydocStates: ServerNoteYDocState[] } = await response.json();
+
+    return data.ydocStates;
+  }
+
+  static async getCollectionMembers(
+    collectionId: string
+  ): Promise<ClientCollectionMember[]> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/members`
+    );
+
+    const data: { members: ClientCollectionMember[] } = await response.json();
+
+    return data.members;
+  }
+
+  static async inviteCollectionMember(
+    collectionId: string,
+    email: string,
+    role: ClientCollectionMember["role"]
+  ): Promise<ClientCollectionMember> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/members/invite`,
+      {
+        method: "POST",
+        body: JSON.stringify({ email, role }),
+      }
+    );
+
+    const data: { member: ClientCollectionMember } = await response.json();
+
+    return data.member;
+  }
+
+  static async removeCollectionMember(
+    collectionId: string,
+    userId: string
+  ): Promise<void> {
+    await this.fetch(`/api/collections/${collectionId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  static async updateMemberRole(
+    collectionId: string,
+    userId: string,
+    role: ClientCollectionMember["role"]
+  ): Promise<ClientCollectionMember> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/members/${userId}/role`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ role }),
+      }
+    );
+
+    const data: { member: ClientCollectionMember } = await response.json();
+
+    return data.member;
   }
 }

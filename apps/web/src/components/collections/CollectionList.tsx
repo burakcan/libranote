@@ -23,6 +23,11 @@ export function CollectionList() {
           title: "All Notes",
           createdAt: new Date(),
           updatedAt: new Date(),
+          members: [
+            {
+              role: "OWNER",
+            },
+          ],
         }}
       />
       {sortedCollections.map((collection) => (

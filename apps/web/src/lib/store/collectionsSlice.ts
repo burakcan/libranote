@@ -70,6 +70,15 @@ export const createCollectionsSlice: StateCreator<
         createdById,
         createdAt: new Date(),
         updatedAt: new Date(),
+        members: [
+          {
+            id: crypto.randomUUID(),
+            userId: createdById,
+            role: "OWNER",
+            createdAt: new Date(),
+            collectionId,
+          },
+        ],
       };
 
       P(set, (draft) => {
@@ -223,6 +232,60 @@ export const createCollectionsSlice: StateCreator<
       );
     },
 
+    leaveCollection: async (collectionId) => {
+      const state = get();
+
+      const collectionToLeave = state.collections.data.find(
+        (collection) => collection.id === collectionId
+      );
+
+      if (!collectionToLeave) {
+        console.error(`Collection ${collectionId} not found`);
+        return;
+      }
+
+      const actionsToDelete = state.actionQueue.items.filter(
+        (action) =>
+          action.status === "pending" && action.relatedEntityId === collectionId
+      );
+
+      const notesToDelete = state.notes.data.filter(
+        (note) => note.collectionId === collectionId
+      );
+
+      // Delete collection from local state
+      P(set, (draft) => {
+        draft.collections.data = draft.collections.data.filter(
+          (collection) => collection.id !== collectionId
+        );
+
+        if (state.collections.activeCollectionId === collectionId) {
+          draft.collections.activeCollectionId = null;
+        }
+      });
+
+      // Delete collection from local DB
+      await CollectionRepository.delete(collectionId);
+
+      // Delete notes
+      for (const note of notesToDelete) {
+        await state.notes.deleteNote(note.id, true);
+      }
+
+      // Delete actions
+      for (const action of actionsToDelete) {
+        await state.actionQueue.removeActionFromQueue(action.id);
+      }
+
+      await state.actionQueue.addActionToQueue({
+        id: crypto.randomUUID(),
+        type: "LEAVE_COLLECTION",
+        status: "pending",
+        createdAt: new Date(),
+        relatedEntityId: collectionId,
+      });
+    },
+
     remoteCreatedCollection: async (collection) => {
       P(set, (draft) => {
         if (!draft.collections.data.some((c) => c.id === collection.id)) {
@@ -271,6 +334,26 @@ export const createCollectionsSlice: StateCreator<
       });
 
       await CollectionRepository.put(collection);
+    },
+
+    remoteJoinedCollection: async (userId, collection) => {
+      const state = get();
+
+      if (state.userId !== userId) {
+        return;
+      }
+
+      await state.collections.remoteCreatedCollection(collection);
+    },
+
+    remoteLeftCollection: async (userId, collection) => {
+      const state = get();
+
+      if (state.userId !== userId) {
+        return;
+      }
+
+      await state.collections.remoteDeletedCollection(collection.id);
     },
   },
 });
