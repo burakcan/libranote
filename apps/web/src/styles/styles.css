@@ -1,8 +1,10 @@
+@plugin "@tailwindcss/typography";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./themes/index.css";
-@plugin "@tailwindcss/typography";
 @import "./ProseMirror.css";
+@import "./CodeBlock.css";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

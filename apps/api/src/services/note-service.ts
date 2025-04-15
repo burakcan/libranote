@@ -176,6 +176,15 @@ export class NoteService {
       await this.verifyCollectionEditPermission(userId, noteData.collectionId);
     }
 
+    const collectionOwner = noteData.collectionId
+      ? await prisma.collectionMember.findFirst({
+          where: {
+            collectionId: noteData.collectionId,
+            role: CollectionMemberRole.OWNER,
+          },
+        })
+      : null;
+
     // Create note with appropriate data
     const createData: Prisma.NoteCreateArgs["data"] = {
       id: noteData.id,
@@ -187,8 +196,9 @@ export class NoteService {
       updatedAt: new Date(noteData.updatedAt),
       isPublic: noteData.isPublic,
       noteCollaborators: {
+        // if the collection has an owner, make them the owner of the note
         create: {
-          userId,
+          userId: collectionOwner?.userId || userId,
           role: NoteCollaboratorRole.OWNER,
           id: randomUUID(),
         },
@@ -260,6 +270,10 @@ export class NoteService {
       include: noteDefaultInclude,
     });
 
+    if (!updatedNote) {
+      throw new NotFoundError("Note not found");
+    }
+
     // Broadcast event to other clients
     SSEService.broadcastSSEToNoteCollaborators(
       updatedNote.id,
@@ -285,12 +299,27 @@ export class NoteService {
         noteCollaborators: {
           select: { userId: true },
         },
+        collection: {
+          select: {
+            members: {
+              select: { userId: true },
+            },
+          },
+        },
       },
     });
 
     if (!noteToDelete) {
       throw new NotFoundError("Note not found");
     }
+
+    const userIds = new Set<string>();
+    const noteCollaboratorUserIds = noteToDelete.noteCollaborators.map((c) => c.userId) || [];
+    const collectionMemberUserIds = noteToDelete.collection?.members.map((m) => m.userId) || [];
+
+    [userId, ...noteCollaboratorUserIds, ...collectionMemberUserIds].forEach((userId) =>
+      userIds.add(userId),
+    );
 
     // Delete note
     const deletedNote = await prisma.note.delete({
@@ -306,7 +335,7 @@ export class NoteService {
       { type: "NOTE_DELETED", noteId: deletedNote.id },
       userId,
       clientId,
-      noteToDelete.noteCollaborators.map((c) => c.userId),
+      Array.from(userIds),
     );
 
     return deletedNote;

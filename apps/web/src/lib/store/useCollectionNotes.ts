@@ -13,7 +13,10 @@ export const useCollectionNotes = (
       : allNotes;
 
     return [...filteredNotes].sort((a, b) => {
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      return (
+        new Date(b.noteYDocState.updatedAt).getTime() -
+        new Date(a.noteYDocState.updatedAt).getTime()
+      );
     });
   }, [collectionId, allNotes]);
 };

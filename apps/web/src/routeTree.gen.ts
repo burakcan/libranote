@@ -18,6 +18,7 @@ import { Route as authenticatedNotesImport } from './routes/(authenticated)/note
 import { Route as authSignupImport } from './routes/(auth)/signup'
 import { Route as authSigninImport } from './routes/(auth)/signin'
 import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
+import { Route as authenticatedNotesIndexImport } from './routes/(authenticated)/notes.index'
 import { Route as authenticatedNotesNoteIdImport } from './routes/(authenticated)/notes.$noteId'
 
 // Create/Update Routes
@@ -60,6 +61,12 @@ const authForgotPasswordRoute = authForgotPasswordImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => authRouteRoute,
+} as any)
+
+const authenticatedNotesIndexRoute = authenticatedNotesIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => authenticatedNotesRoute,
 } as any)
 
 const authenticatedNotesNoteIdRoute = authenticatedNotesNoteIdImport.update({
@@ -128,6 +135,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedNotesNoteIdImport
       parentRoute: typeof authenticatedNotesImport
     }
+    '/(authenticated)/notes/': {
+      id: '/(authenticated)/notes/'
+      path: '/'
+      fullPath: '/notes/'
+      preLoaderRoute: typeof authenticatedNotesIndexImport
+      parentRoute: typeof authenticatedNotesImport
+    }
   }
 }
 
@@ -151,10 +165,12 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 
 interface authenticatedNotesRouteChildren {
   authenticatedNotesNoteIdRoute: typeof authenticatedNotesNoteIdRoute
+  authenticatedNotesIndexRoute: typeof authenticatedNotesIndexRoute
 }
 
 const authenticatedNotesRouteChildren: authenticatedNotesRouteChildren = {
   authenticatedNotesNoteIdRoute: authenticatedNotesNoteIdRoute,
+  authenticatedNotesIndexRoute: authenticatedNotesIndexRoute,
 }
 
 const authenticatedNotesRouteWithChildren =
@@ -178,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof authSignupRoute
   '/notes': typeof authenticatedNotesRouteWithChildren
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
+  '/notes/': typeof authenticatedNotesIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -185,8 +202,8 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
-  '/notes': typeof authenticatedNotesRouteWithChildren
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
+  '/notes': typeof authenticatedNotesIndexRoute
 }
 
 export interface FileRoutesById {
@@ -199,6 +216,7 @@ export interface FileRoutesById {
   '/(auth)/signup': typeof authSignupRoute
   '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
   '/(authenticated)/notes/$noteId': typeof authenticatedNotesNoteIdRoute
+  '/(authenticated)/notes/': typeof authenticatedNotesIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -210,14 +228,15 @@ export interface FileRouteTypes {
     | '/signup'
     | '/notes'
     | '/notes/$noteId'
+    | '/notes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/forgot-password'
     | '/signin'
     | '/signup'
-    | '/notes'
     | '/notes/$noteId'
+    | '/notes'
   id:
     | '__root__'
     | '/'
@@ -228,6 +247,7 @@ export interface FileRouteTypes {
     | '/(auth)/signup'
     | '/(authenticated)/notes'
     | '/(authenticated)/notes/$noteId'
+    | '/(authenticated)/notes/'
   fileRoutesById: FileRoutesById
 }
 
@@ -291,11 +311,16 @@ export const routeTree = rootRoute
       "filePath": "(authenticated)/notes.tsx",
       "parent": "/(authenticated)",
       "children": [
-        "/(authenticated)/notes/$noteId"
+        "/(authenticated)/notes/$noteId",
+        "/(authenticated)/notes/"
       ]
     },
     "/(authenticated)/notes/$noteId": {
       "filePath": "(authenticated)/notes.$noteId.tsx",
+      "parent": "/(authenticated)/notes"
+    },
+    "/(authenticated)/notes/": {
+      "filePath": "(authenticated)/notes.index.tsx",
       "parent": "/(authenticated)/notes"
     }
   }

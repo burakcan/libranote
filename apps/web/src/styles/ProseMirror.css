@@ -1,5 +1,5 @@
 .ProseMirror {
-  @apply prose dark:prose-invert prose-lg;
+  @apply prose dark:prose-invert;
   @apply flex-auto;
   @apply p-16;
   @apply max-w-[100ch];
@@ -23,6 +23,151 @@
   }
 
   .collaboration-cursor__label {
-    display: none;
+    border-radius: 3px 3px 3px 0;
+    color: #0d0d0d;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+    left: -1px;
+    line-height: normal;
+    padding: 0.1rem 0.3rem;
+    position: absolute;
+    top: -1.4em;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  h1.note-title.is-empty::before {
+    @apply text-muted-foreground/30;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  h1.note-title + p.is-empty::before {
+    @apply text-muted-foreground/30;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  *::selection {
+    @apply bg-accent;
+  }
+
+  .blur-highlight {
+    @apply bg-accent h-full inline-block;
+  }
+
+  /* Main task list container */
+  .task-list {
+    @apply m-0 p-0 mb-4;
+  }
+
+  /* Task item */
+  .task-list .task-item {
+    @apply flex items-start gap-2 p-2 pl-4 rounded-md transition-colors;
+    @apply hover:bg-muted/80;
+    @apply m-0 -ml-4;
+  }
+
+  /* Checked task styling */
+  .task-list .task-item[data-checked="true"] div p {
+    @apply text-muted-foreground line-through;
+  }
+
+  /* Label that contains the checkbox */
+  .task-list .task-item label {
+    @apply flex items-center justify-center mt-1 cursor-pointer;
+  }
+
+  /* Hide the default checkbox */
+  .task-list .task-item label input[type="checkbox"] {
+    @apply sr-only;
+  }
+
+  /* Custom checkbox styling (the span after input) */
+  .task-list .task-item label span {
+    @apply flex items-center justify-center w-5 h-5 border-2 rounded-md transition-all;
+    @apply border-muted-foreground;
+    @apply hover:border-muted-foreground/80;
+  }
+
+  /* Focus state for accessibility */
+  .task-list .task-item label input[type="checkbox"]:focus-visible + span {
+    @apply ring-2 ring-offset-2 ring-primary;
+  }
+
+  /* Checked state styling */
+  .task-list .task-item label input[type="checkbox"]:checked + span {
+    @apply bg-primary border-primary;
+  }
+
+  /* Add checkmark to checked items */
+  .task-list .task-item label input[type="checkbox"]:checked + span::after {
+    content: "✓";
+    @apply text-white text-sm flex items-center justify-center;
+  }
+
+  /* Content container */
+  .task-list .task-item div {
+    @apply flex-1 min-w-0;
+  }
+
+  /* Text styling */
+  .task-list .task-item div p {
+    @apply p-0 m-0;
+    @apply text-lg;
+    @apply break-words transition-all;
+  }
+
+  .note-image {
+    @apply max-w-[100%] h-auto rounded-md border border-border;
+    @apply hover:outline-2 hover:outline-offset-2 hover:outline-secondary;
+    @apply cursor-default;
+    @apply block;
+  }
+
+  .note-image.ProseMirror-selectednode {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  .ProseMirror-gapcursor {
+    @apply block h-6 w-0 border-l-1 border-black dark:border-white;
+    @apply ml-[-1px];
+    @apply pointer-events-none;
+    @apply relative;
+    @apply animate-[blink_1.5s_infinite_steps(1)];
+    @apply opacity-0;
+  }
+
+  .code {
+    @apply bg-muted px-2 py-1 rounded-md;
+
+    &::before {
+      @apply hidden;
+    }
+
+    &::after {
+      @apply hidden;
+    }
+  }
+
+  code.hljs {
+    @apply bg-muted px-2 py-1 rounded-md;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

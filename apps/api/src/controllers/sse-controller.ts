@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { Readable } from "stream";
 import { SSEService } from "../services/sse-service.js";
 import { prisma } from "../db/prisma.js";
@@ -58,7 +58,7 @@ export async function connectSSE(req: Request, res: Response) {
   stream.pipe(res);
 }
 
-export async function handleWebhook(req: Request, res: Response) {
+export async function handleWebhook(req: Request, res: Response, next: NextFunction) {
   const { event } = req.body as { event: WebhookEvent };
 
   if (event.type === "NOTE_UPDATED") {
@@ -72,7 +72,8 @@ export async function handleWebhook(req: Request, res: Response) {
     });
 
     if (!updatedNote) {
-      throw new NotFoundError("Note not found");
+      next(new NotFoundError("Note not found"));
+      return;
     }
 
     SSEService.broadcastSSEToNoteCollaborators(
@@ -95,7 +96,8 @@ export async function handleWebhook(req: Request, res: Response) {
     });
 
     if (!ydocState) {
-      throw new NotFoundError("YDoc state not found");
+      next(new NotFoundError("YDoc state not found"));
+      return;
     }
 
     SSEService.broadcastSSEToNoteCollaborators(

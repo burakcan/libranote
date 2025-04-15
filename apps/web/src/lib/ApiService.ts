@@ -93,6 +93,17 @@ export class ApiService {
     });
   }
 
+  static async updateNote(note: ClientNote): Promise<ServerNote> {
+    const response = await this.fetch(`/api/notes/${note.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ note }),
+    });
+
+    const data: { note: ServerNote } = await response.json();
+
+    return data.note;
+  }
+
   static async fetchCollection(
     collectionId: string
   ): Promise<ServerCollection> {

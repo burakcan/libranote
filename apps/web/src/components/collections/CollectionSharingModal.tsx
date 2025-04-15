@@ -1,9 +1,9 @@
 "use client";
 
+import Avatar from "boring-avatars";
 import { Loader2, Mail, Send, X } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useCollectionMembersQuery } from "@/hooks/useCollectionMembersQuery";
 import { useInviteCollectionMemberMutation } from "@/hooks/useInviteCollectionMemberMutation";
 import { useRemoveCollectionMemberMutation } from "@/hooks/useRemoveCollectionMemberMutation";
-import { getInitials } from "@/lib/utils";
+import { getUserColors } from "@/lib/utils";
 import { ClientCollectionMember } from "@/types/Entities";
 
 interface SharingModalProps {
@@ -78,11 +78,14 @@ export default function CollectionSharingModal(props: SharingModalProps) {
                   className="flex items-center justify-between gap-4"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>
-                        {getInitials(member.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Avatar
+                      name={member.userId}
+                      key={member.userId}
+                      size={28}
+                      className="outline-1 outline-offset-1 outline-primary rounded-full ml-1"
+                      variant="beam"
+                      colors={[...getUserColors(member.userId)]}
+                    />
                     <div>
                       <p className="text-sm font-medium">{member.name}</p>
                       <p className="text-xs text-muted-foreground">

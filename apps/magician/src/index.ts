@@ -37,32 +37,36 @@ const server = Server.configure({
 
     console.info(`Storing document: ${data.documentName}`);
 
-    await prisma.noteYDocState.upsert({
-      where: {
-        id: data.documentName,
-      },
-      update: { encodedDoc: update },
-      create: {
-        id: data.documentName,
-        noteId: data.documentName,
-        encodedDoc: update,
-      },
-    });
-
-    console.log('Notifying the sse webhook', data.documentName);
-
-    await fetch(process.env.SSE_WEBHOOK_URL as string, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        event: {
-          type: 'NOTE_YDOC_STATE_UPDATED',
-          noteId: data.documentName,
+    try {
+      await prisma.noteYDocState.upsert({
+        where: {
+          id: data.documentName,
         },
-      }),
-    });
+        update: { encodedDoc: update },
+        create: {
+          id: data.documentName,
+          noteId: data.documentName,
+          encodedDoc: update,
+        },
+      });
+
+      console.log('Notifying the sse webhook', data.documentName);
+
+      await fetch(process.env.SSE_WEBHOOK_URL as string, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: {
+            type: 'NOTE_YDOC_STATE_UPDATED',
+            noteId: data.documentName,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to store document:', error);
+    }
   },
 
   async onLoadDocument(data) {

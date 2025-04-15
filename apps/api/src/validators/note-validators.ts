@@ -3,7 +3,7 @@ import { z } from "zod";
 // Basic note schema
 export const noteSchema = z.object({
   id: z.string().uuid().optional(),
-  title: z.string().min(1, "Title is required"),
+  title: z.string(),
   description: z.string().nullable().optional(),
   isPublic: z.boolean().optional().default(false),
   createdAt: z.string().datetime(),
@@ -19,7 +19,7 @@ export const createNoteSchema = z.object({
 // Update note request schema
 export const updateNoteSchema = z.object({
   note: z.object({
-    title: z.string().min(1, "Title is required").optional(),
+    title: z.string(),
     description: z.string().nullable().optional(),
     isPublic: z.boolean().optional(),
     updatedAt: z.string().datetime().optional(),

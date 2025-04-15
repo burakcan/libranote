@@ -158,7 +158,7 @@ export const createNotesSlice: StateCreator<
 
       // If there is a pending create or update action, we don't need to add an update action to the queue
       // we can just update the note in the local DB and the updated note will be synced to the remote DB
-      if (pendingRelatedActionIndex !== -1) {
+      if (pendingRelatedActionIndex === -1) {
         await state.actionQueue.addActionToQueue({
           id: crypto.randomUUID(),
           type: "UPDATE_NOTE",

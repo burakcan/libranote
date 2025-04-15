@@ -1,5 +1,6 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { HocuspocusProviderWebsocket } from "@hocuspocus/provider";
+import { debounce } from "es-toolkit";
 import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
 import { ApiService, ApiServiceError } from "@/lib/ApiService";
@@ -54,6 +55,7 @@ export class SyncService extends EventTarget {
     instance = this;
 
     this.sync();
+    this.listenSSE();
 
     setTimeout(() => {
       this.watchOnlineStatus();
@@ -118,7 +120,6 @@ export class SyncService extends EventTarget {
     this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
 
     this.listenQueue();
-    this.listenSSE();
   }
 
   async listenQueue() {
@@ -132,10 +133,12 @@ export class SyncService extends EventTarget {
         currentIds.some((id) => !prevIds.includes(id));
 
       if (hasChanges) {
+        this.syncing = true;
         this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
         await this.processActionQueue();
 
+        this.syncing = false;
         this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
       }
     });
@@ -150,11 +153,29 @@ export class SyncService extends EventTarget {
     );
 
     this.eventSource.onmessage = async (event) => {
-      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
+      const callback = async () => {
+        this.syncing = true;
+        this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
 
-      await this.processSSEEvent(event.data);
+        await this.processSSEEvent(event.data);
 
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
+        this.syncing = false;
+        this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
+      };
+
+      if (this.syncing) {
+        this.addEventListener(
+          SYNCED_EVENT,
+          () => {
+            callback();
+          },
+          { once: true }
+        );
+
+        return;
+      }
+
+      callback();
     };
   }
 
@@ -186,12 +207,37 @@ export class SyncService extends EventTarget {
         case "NOTE_UPDATED":
           await store.notes.remoteUpdatedNote(event.note);
           break;
-        case "NOTE_DELETED":
+        case "NOTE_DELETED": {
+          if (this.getCurrentNoteId() === event.noteId) {
+            router.navigate({ to: "/notes" });
+          }
+
           await store.notes.remoteDeletedNote(event.noteId);
           break;
-        case "NOTE_YDOC_STATE_UPDATED":
+        }
+        case "NOTE_YDOC_STATE_UPDATED": {
+          const note = await store.notes.data.find(
+            (note) => note.id === event.ydocState.noteId
+          );
+
+          if (!note) {
+            console.error(
+              "SyncService: Note not found",
+              event.ydocState.noteId
+            );
+            return;
+          }
+
+          await store.notes.remoteUpdatedNote({
+            ...note,
+            serverCreatedAt: note.serverCreatedAt || new Date(),
+            serverUpdatedAt: note.serverUpdatedAt || new Date(),
+            noteYDocState: event.ydocState,
+          });
+
           await this.syncNoteYDocStates(event.ydocState);
           break;
+        }
         case "COLLECTION_MEMBER_JOINED": {
           const remoteCollection = await ApiService.fetchCollection(
             event.collection.id
@@ -373,6 +419,9 @@ export class SyncService extends EventTarget {
         case "DELETE_NOTE":
           await ApiService.deleteNote(item.relatedEntityId);
           break;
+        case "UPDATE_NOTE":
+          await this.syncUpdateNoteDebounced(item.relatedEntityId);
+          break;
         default:
           console.error(`SyncService: Unknown queue item type: ${item.type}`);
       }
@@ -443,6 +492,23 @@ export class SyncService extends EventTarget {
     }
 
     const remoteNote = await ApiService.createNote(localNote);
+
+    await this.store.getState().notes.swapNote(localNote.id, remoteNote);
+
+    return remoteNote;
+  }
+
+  syncUpdateNoteDebounced = debounce(this.syncUpdateNote.bind(this), 1000);
+
+  async syncUpdateNote(noteId: string): Promise<ServerNote | undefined> {
+    const localNote = await NoteRepository.getById(noteId);
+
+    if (!localNote) {
+      console.error(`SyncService: Note ${noteId} not found`);
+      return;
+    }
+
+    const remoteNote = await ApiService.updateNote(localNote);
 
     await this.store.getState().notes.swapNote(localNote.id, remoteNote);
 

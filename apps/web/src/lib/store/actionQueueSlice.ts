@@ -46,6 +46,9 @@ export const createActionQueueSlice: StateCreator<
         const index = draft.actionQueue.items.findIndex(
           (action) => action.id === actionId
         );
+
+        if (index === -1) return;
+
         draft.actionQueue.items[index].status = status;
       });
     },
