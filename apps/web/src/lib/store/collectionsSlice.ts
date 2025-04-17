@@ -2,11 +2,12 @@ import type { StateCreator } from "zustand";
 import { CollectionRepository } from "@/lib/db/CollectionRepository";
 import { TransactionService } from "@/lib/db/TransactionService";
 import type { Store, InitialStoreState } from "./types";
+import { ALL_NOTES_COLLECTION_ID } from "./useCollectionNotes";
 import { P } from "./utils";
 import { ClientCollection } from "@/types/Entities";
 
 const initialCollectionsState: InitialStoreState["collections"] = {
-  activeCollectionId: null,
+  activeCollectionId: ALL_NOTES_COLLECTION_ID,
   renamingCollectionId: null,
   data: [],
 };
@@ -128,7 +129,7 @@ export const createCollectionsSlice: StateCreator<
         );
 
         if (state.collections.activeCollectionId === collectionId) {
-          draft.collections.activeCollectionId = null;
+          draft.collections.activeCollectionId = ALL_NOTES_COLLECTION_ID;
         }
       });
 
@@ -260,7 +261,7 @@ export const createCollectionsSlice: StateCreator<
         );
 
         if (state.collections.activeCollectionId === collectionId) {
-          draft.collections.activeCollectionId = null;
+          draft.collections.activeCollectionId = ALL_NOTES_COLLECTION_ID;
         }
       });
 
@@ -309,7 +310,7 @@ export const createCollectionsSlice: StateCreator<
         );
 
         if (get().collections.activeCollectionId === collectionId) {
-          draft.collections.activeCollectionId = null;
+          draft.collections.activeCollectionId = ALL_NOTES_COLLECTION_ID;
         }
       });
 

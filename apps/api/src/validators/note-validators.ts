@@ -23,6 +23,8 @@ export const updateNoteSchema = z.object({
     description: z.string().nullable().optional(),
     isPublic: z.boolean().optional(),
     updatedAt: z.string().datetime().optional(),
+    // collectionId empty string or uuid
+    collectionId: z.string().uuid().nullable().optional(),
   }),
 });
 

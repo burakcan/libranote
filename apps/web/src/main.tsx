@@ -3,9 +3,9 @@ import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import SWReloadPrompt from "@/components/swReloadPrompt/SWReloadPrompt";
 import { queryClient } from "@/lib/queryClient";
 import { router } from "@/lib/router";
-
 // Register the router instance for type safety
 declare module "@tanstack/react-router" {
   interface Register {
@@ -24,6 +24,7 @@ if (!rootElement.innerHTML) {
 
   root.render(
     <StrictMode>
+      <SWReloadPrompt />
       <TooltipProvider>
         <QueryClientProvider client={queryClient}>
           <App />

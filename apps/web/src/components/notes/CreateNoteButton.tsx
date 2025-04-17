@@ -4,6 +4,10 @@ import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
+import {
+  ALL_NOTES_COLLECTION_ID,
+  UNCATEGORIZED_COLLECTION_ID,
+} from "@/lib/store/useCollectionNotes";
 
 export function CreateNoteButton() {
   const { data: session } = useSessionQuery();
@@ -18,8 +22,14 @@ export function CreateNoteButton() {
   );
 
   const handleClick = async () => {
+    const collectionId =
+      activeCollectionId === ALL_NOTES_COLLECTION_ID ||
+      activeCollectionId === UNCATEGORIZED_COLLECTION_ID
+        ? null
+        : activeCollectionId;
+
     if (userId) {
-      const note = await createNote(activeCollectionId, userId, "New Note");
+      const note = await createNote(collectionId, userId, "Untitled Note");
 
       navigate({
         to: "/notes/$noteId",

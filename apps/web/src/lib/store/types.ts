@@ -1,3 +1,7 @@
+import {
+  UNCATEGORIZED_COLLECTION_ID,
+  ALL_NOTES_COLLECTION_ID,
+} from "@/lib/store/useCollectionNotes";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import {
   ClientCollection,
@@ -11,7 +15,10 @@ export interface StoreState {
   clientId: string;
   userId: string;
   collections: {
-    activeCollectionId: ClientCollection["id"] | null;
+    activeCollectionId:
+      | ClientCollection["id"]
+      | typeof UNCATEGORIZED_COLLECTION_ID
+      | typeof ALL_NOTES_COLLECTION_ID;
     renamingCollectionId: ClientCollection["id"] | null;
     data: ClientCollection[];
   };
@@ -33,7 +40,12 @@ export type InitialStoreState = Omit<StoreState, "clientId" | "userId">;
 export type RootSliceActions = {};
 
 export type CollectionsSliceActions = {
-  setActiveCollectionId: (collectionId: ClientCollection["id"] | null) => void;
+  setActiveCollectionId: (
+    collectionId:
+      | ClientCollection["id"]
+      | typeof UNCATEGORIZED_COLLECTION_ID
+      | typeof ALL_NOTES_COLLECTION_ID
+  ) => void;
   setRenamingCollectionId: (
     collectionId: ClientCollection["id"] | null
   ) => void;
@@ -71,25 +83,32 @@ export type NotesSliceActions = {
   setNotesData: (notes: ClientNote[]) => void;
   syncRemoteNotesToLocal: (remoteNotes: ServerNote[]) => Promise<void>;
   createNote: (
-    collectionId: string | null,
+    collectionId: ClientCollection["id"] | null,
     createdById: string,
     title: string,
     content?: string
   ) => Promise<ClientNote>;
-  deleteNote: (noteId: string, noAction?: boolean) => Promise<void>;
+  deleteNote: (noteId: ClientNote["id"], noAction?: boolean) => Promise<void>;
   updateNote: (note: ClientNote) => Promise<void>;
   remoteCreatedNote: (note: ServerNote) => Promise<void>;
-  remoteDeletedNote: (noteId: string) => Promise<void>;
+  remoteDeletedNote: (noteId: ClientNote["id"]) => Promise<void>;
   remoteUpdatedNote: (note: ServerNote) => Promise<void>;
-  swapNote: (localId: string, remoteNote: ServerNote) => Promise<void>;
+  swapNote: (
+    localId: ClientNote["id"],
+    remoteNote: ServerNote
+  ) => Promise<void>;
+  moveNoteToCollection: (
+    noteId: ClientNote["id"],
+    collectionId: ClientCollection["id"] | null
+  ) => Promise<void>;
 };
 
 export type ActionQueueSliceActions = {
   addActionToQueue: (action: ActionQueueItem) => Promise<void>;
-  removeActionFromQueue: (actionId: string) => Promise<void>;
+  removeActionFromQueue: (actionId: ActionQueueItem["id"]) => Promise<void>;
   setActionQueueItems: (items: ActionQueueItem[]) => void;
   setActionQueueItemStatus: (
-    actionId: string,
+    actionId: ActionQueueItem["id"],
     status: ActionQueueItem["status"]
   ) => Promise<void>;
 };

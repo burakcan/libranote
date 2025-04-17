@@ -1,10 +1,10 @@
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
+import dotenv from "dotenv";
 import path from "path";
 import { defineConfig, PluginOption } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
-import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ export default defineConfig({
     tailwindcss(),
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       devOptions: {
         enabled: true,
       },
@@ -28,6 +28,16 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "session",
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === "image",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "images-cache",
+              expiration: {
+                maxEntries: 50,
+              },
             },
           },
         ],
@@ -42,5 +52,8 @@ export default defineConfig({
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 3010,
     allowedHosts: ["localhost", "127.0.0.1", "libranote.relaymate.com"],
+  },
+  esbuild: {
+    drop: ["console", "debugger"],
   },
 });

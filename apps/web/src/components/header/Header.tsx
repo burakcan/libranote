@@ -1,6 +1,6 @@
 import { Notebook, Settings } from "lucide-react";
+import { SearchBar } from "@/components/search/SearchBar";
 import { Button } from "../ui/button";
-import { SearchBar } from "./SearchBar";
 import { SyncStatus } from "./SyncStatus";
 
 export function Header() {

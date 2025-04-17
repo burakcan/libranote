@@ -12,6 +12,7 @@ import { Store } from "@/lib/store";
 import { NoteYDocStateRepository } from "./db/NoteYDocStateRepository";
 import { IndexeddbPersistence } from "./db/yIndexedDb";
 import { queryClient } from "./queryClient";
+import { SearchService } from "./SearchService";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import {
@@ -54,7 +55,7 @@ export class SyncService extends EventTarget {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     instance = this;
 
-    this.sync();
+    this.syncAll();
     this.listenSSE();
 
     setTimeout(() => {
@@ -64,7 +65,7 @@ export class SyncService extends EventTarget {
 
   watchOnlineStatus() {
     window.addEventListener("online", () => {
-      this.sync();
+      this.syncAll();
     });
 
     window.addEventListener("offline", () => {
@@ -86,7 +87,7 @@ export class SyncService extends EventTarget {
     return params.noteId;
   }
 
-  async sync() {
+  async syncAll() {
     if (this.syncing) {
       console.debug("SyncService: Already syncing");
       return;
@@ -330,15 +331,9 @@ export class SyncService extends EventTarget {
           persistence.destroy();
           doc.destroy();
 
+          SearchService.updateNoteFromYDoc(remoteYDocState.noteId);
+
           resolve(doc);
-        });
-
-        provider.on("close", () => {
-          console.debug("SyncService: YDoc disconnected", remoteYDocState.id);
-
-          provider.destroy();
-          persistence.destroy();
-          doc.destroy();
         });
       });
     });

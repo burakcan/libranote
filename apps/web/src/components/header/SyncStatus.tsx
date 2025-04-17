@@ -11,7 +11,7 @@ export function SyncStatus() {
   return (
     <div className="flex flex-col justify-center items-end">
       <div className="flex items-center text-sm gap-2">
-        {isOnline ? "Online" : "Offline"}
+        {isOnline ? "Connected" : "Disconnected"}
         <div
           className={cn(
             "size-2 rounded-full",

@@ -12,13 +12,15 @@ import {
   List,
   ListOrdered,
   Heading3,
-  ALargeSmall,
   Unlink,
   Check,
   X,
   ListChecks,
   ImagePlus,
   CodeSquare,
+  Pilcrow,
+  Strikethrough,
+  Underline,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -103,7 +105,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
 
       <div className="flex items-center gap-1">
         <ToolbarButton
-          icon={<ALargeSmall className="h-4 w-4" />}
+          icon={<Pilcrow className="h-4 w-4" />}
           onClick={() => editor?.chain().focus().setParagraph().run()}
           tooltip="Paragraph"
           active={editor?.isActive("paragraph")}
@@ -143,16 +145,30 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
       <div className="flex items-center gap-1">
         <ToolbarButton
           icon={<Bold className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().toggleBold().run()}
+          onClick={() => editor?.commands.toggleBold()}
           tooltip="Bold"
           active={editor?.isActive("bold")}
           disabled={isNoteTitle}
         />
         <ToolbarButton
           icon={<Italic className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          onClick={() => editor?.commands.toggleItalic()}
           tooltip="Italic"
           active={editor?.isActive("italic")}
+          disabled={isNoteTitle}
+        />
+        <ToolbarButton
+          icon={<Strikethrough className="h-4 w-4" />}
+          onClick={() => editor?.commands.toggleStrike()}
+          tooltip="Strikethrough"
+          active={editor?.isActive("strike")}
+          disabled={isNoteTitle}
+        />
+        <ToolbarButton
+          icon={<Underline className="h-4 w-4" />}
+          onClick={() => editor?.commands.toggleMark("underline")}
+          tooltip="Underline"
+          active={editor?.isActive("underline")}
           disabled={isNoteTitle}
         />
         <ToolbarButton

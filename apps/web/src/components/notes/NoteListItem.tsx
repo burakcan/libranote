@@ -1,9 +1,11 @@
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { MoreHorizontal, Trash } from "lucide-react";
+import { MoreHorizontal, Share2, Trash } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/hooks/useStore";
@@ -17,7 +19,11 @@ interface NoteListItemProps {
 
 export function NoteListItem({ note }: NoteListItemProps) {
   const { noteId: activeNoteId } = useParams({ strict: false });
-  const deleteNote = useStore((state) => state.notes.deleteNote);
+  const { deleteNote } = useStore(
+    useShallow((state) => ({
+      deleteNote: state.notes.deleteNote,
+    }))
+  );
   const navigate = useNavigate();
 
   const handleDelete = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -59,7 +65,16 @@ export function NoteListItem({ note }: NoteListItemProps) {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleDelete}>
             <Trash className="text-destructive h-4 w-4 mr-2" />
             Delete

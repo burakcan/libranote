@@ -2,6 +2,7 @@ import type { StateCreator } from "zustand";
 import { NoteRepository } from "@/lib/db/NoteRepository";
 import { TransactionService } from "@/lib/db/TransactionService";
 import { NoteYDocStateRepository } from "../db/NoteYDocStateRepository";
+import { SearchService } from "../SearchService";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";
@@ -40,13 +41,27 @@ export const createNotesSlice: StateCreator<
           } else {
             // If the note does not exist, add it
             draft.notes.data.push(remoteNote);
+
+            SearchService.addNote({
+              id: remoteNote.id,
+              title: remoteNote.title,
+              content: remoteNote.description || "",
+            });
           }
         }
 
         // Delete notes that are no longer in the remote data
-        draft.notes.data = draft.notes.data.filter((note) =>
-          remoteNotes.some((remoteNote) => remoteNote.id === note.id)
-        );
+        draft.notes.data = draft.notes.data.filter((note) => {
+          const shouldBeDeleted = !remoteNotes.some(
+            (remoteNote) => remoteNote.id === note.id
+          );
+
+          if (shouldBeDeleted) {
+            SearchService.removeNote(note.id);
+          }
+
+          return !shouldBeDeleted;
+        });
       });
 
       await TransactionService.syncRemoteNotesToLocal(remoteNotes);
@@ -82,6 +97,12 @@ export const createNotesSlice: StateCreator<
         status: "pending",
         createdAt: new Date(),
         relatedEntityId: noteId,
+      });
+
+      SearchService.addNote({
+        id: noteId,
+        title,
+        content,
       });
 
       return note;
@@ -131,6 +152,8 @@ export const createNotesSlice: StateCreator<
           relatedEntityId: noteId,
         });
       }
+
+      SearchService.removeNote(noteId);
     },
 
     updateNote: async (note) => {
@@ -176,6 +199,12 @@ export const createNotesSlice: StateCreator<
         }
       });
       await NoteRepository.put(note);
+
+      SearchService.addNote({
+        id: note.id,
+        title: note.title,
+        content: note.description || "",
+      });
     },
 
     remoteDeletedNote: async (noteId) => {
@@ -184,6 +213,8 @@ export const createNotesSlice: StateCreator<
       });
       await NoteRepository.delete(noteId);
       await NoteYDocStateRepository.delete(noteId);
+
+      SearchService.removeNote(noteId);
     },
 
     remoteUpdatedNote: async (note) => {
@@ -218,6 +249,53 @@ export const createNotesSlice: StateCreator<
       }
 
       await TransactionService.swapNoteWithRemote(localId, remoteNote);
+
+      if (remoteNote.id !== localId) {
+        SearchService.removeNote(localId);
+
+        SearchService.addNote({
+          id: remoteNote.id,
+          title: remoteNote.title,
+          content: remoteNote.description || "",
+        }).then(() => {
+          SearchService.updateNoteFromYDoc(remoteNote.id);
+        });
+      }
+    },
+
+    moveNoteToCollection: async (noteId, collectionId) => {
+      const state = get();
+      const pendingRelatedActionIndex = state.actionQueue.items.findIndex(
+        (action) =>
+          (action.type === "CREATE_NOTE" || action.type === "UPDATE_NOTE") &&
+          action.status === "pending" &&
+          action.relatedEntityId === noteId
+      );
+
+      P(set, (draft) => {
+        const index = draft.notes.data.findIndex((n) => n.id === noteId);
+
+        if (index !== -1) {
+          draft.notes.data[index] = {
+            ...draft.notes.data[index],
+            collectionId,
+          };
+        }
+      });
+
+      await NoteRepository.update(noteId, {
+        collectionId,
+      });
+
+      if (pendingRelatedActionIndex === -1) {
+        await state.actionQueue.addActionToQueue({
+          id: crypto.randomUUID(),
+          type: "UPDATE_NOTE",
+          status: "pending",
+          createdAt: new Date(),
+          relatedEntityId: noteId,
+        });
+      }
     },
   },
 });

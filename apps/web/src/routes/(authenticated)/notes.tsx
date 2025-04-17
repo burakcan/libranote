@@ -5,6 +5,7 @@ import { NotesPanel } from "@/components/notes/NotesPanel";
 
 export const Route = createFileRoute("/(authenticated)/notes")({
   component: RouteComponent,
+  notFoundComponent: () => <div>Notes not found</div>,
   pendingComponent: () => (
     <main className="h-screen flex flex-col">
       <header className="h-12 flex-shrink-0 border-b border-sidebar-border/70 bg-sidebar" />

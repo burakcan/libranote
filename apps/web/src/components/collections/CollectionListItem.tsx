@@ -1,6 +1,3 @@
-"use client";
-
-import { CollectionMemberRole } from "@repo/db";
 import {
   Share2,
   Trash,
@@ -21,25 +18,39 @@ import {
 import { Input } from "@/components/ui/input";
 import SharingModal from "@/components/collections/CollectionSharingModal";
 import { useStore } from "@/hooks/useStore";
-import { useCollectionNotes } from "@/lib/store/useCollectionNotes";
+import {
+  useCollectionNotes,
+  UNCATEGORIZED_COLLECTION_ID,
+  ALL_NOTES_COLLECTION_ID,
+} from "@/lib/store/useCollectionNotes";
 import { cn } from "@/lib/utils";
 import { ClientCollection } from "@/types/Entities";
 
 type ALL_NOTES_COLLECTION = {
-  id: null;
-  title: "All Notes";
-  createdAt: Date;
-  updatedAt: Date;
-  members: [
-    {
-      role: CollectionMemberRole;
-    },
-  ];
+  id: typeof ALL_NOTES_COLLECTION_ID;
+  title: string;
 };
 
-interface CollectionListItemProps {
-  collection: ClientCollection | ALL_NOTES_COLLECTION;
-}
+type UNCATEGORIZED_COLLECTION = {
+  id: typeof UNCATEGORIZED_COLLECTION_ID;
+  title: string;
+};
+
+type CollectionListItemProps = {
+  collection:
+    | ClientCollection
+    | ALL_NOTES_COLLECTION
+    | UNCATEGORIZED_COLLECTION;
+};
+
+const isSpecialCollection = (
+  collection: CollectionListItemProps["collection"]
+): collection is ALL_NOTES_COLLECTION | UNCATEGORIZED_COLLECTION => {
+  return (
+    collection.id === ALL_NOTES_COLLECTION_ID ||
+    collection.id === UNCATEGORIZED_COLLECTION_ID
+  );
+};
 
 export function CollectionListItem({ collection }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
@@ -72,8 +83,11 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
     }))
   );
 
+  const allOrUncategorizedCollection = isSpecialCollection(collection);
   const totalNotes = useCollectionNotes(collection.id).length;
-  const isOwner = collection.members[0].role === "OWNER";
+  const isOwner = allOrUncategorizedCollection
+    ? true
+    : collection.members[0].role === "OWNER";
 
   const handleRenameCollection = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -84,7 +98,10 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
   const handleConfirmRename = () => {
     setRenamingCollection(null);
 
-    if (collection.id === null) return;
+    if (allOrUncategorizedCollection) {
+      return;
+    }
+
     if (renameInput.trim() === "") return;
     if (renameInput.trim() === collection.title) return;
 
@@ -141,7 +158,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
             </span>
           </div>
 
-          {collection.id !== null && (
+          {!allOrUncategorizedCollection && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="focus:outline-none text-muted-foreground ml-2"

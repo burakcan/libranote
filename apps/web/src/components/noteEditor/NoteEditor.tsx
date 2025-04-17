@@ -1,110 +1,28 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { Editor, Node } from "@tiptap/core";
-import CharacterCount from "@tiptap/extension-character-count";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
-import { Document } from "@tiptap/extension-document";
-import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
-import Placeholder from "@tiptap/extension-placeholder";
-import TaskItem from "@tiptap/extension-task-item";
-import TaskList from "@tiptap/extension-task-list";
-import {
-  useEditor,
-  EditorContent,
-  EditorOptions,
-  BubbleMenu,
-} from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { useEditor, EditorContent, EditorOptions } from "@tiptap/react";
 import { debounce } from "es-toolkit";
-import TimeAgo from "javascript-time-ago";
-import en from "javascript-time-ago/locale/en";
-import { createLowlight, common } from "lowlight";
-import { Check, Edit, Unlink, X } from "lucide-react";
 import { RefObject, useEffect, useRef, useState } from "react";
-import ReactTimeAgo from "react-time-ago";
 import * as Y from "yjs";
 import { useShallow } from "zustand/react/shallow";
-import { Button } from "@/components/ui/button";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
 import { IndexeddbPersistence } from "@/lib/db/yIndexedDb";
 import { hocuspocusSocket } from "@/lib/hocusPocusSocket";
+import { SearchService } from "@/lib/SearchService";
 import { getUserColors } from "@/lib/utils";
-import { Input } from "../ui/input";
+import { ScrollArea } from "../ui/scroll-area";
+import { baseExtensions } from "./baseExtensions";
+import { EditorStatusBar } from "./EditorStatusBar";
 import EditorToolbar from "./EditorToolbar";
-import { OnBlurHighlight } from "./OnBlurHighlightExtension";
+import { LinkBubbleMenu } from "./LinkBubbleMenu";
 import { ClientNote } from "@/types/Entities";
-
-TimeAgo.addDefaultLocale(en);
 
 interface NoteEditorProps {
   noteId: string;
 }
-
-const lowlight = createLowlight(common);
-
-// Document title rendering a h2
-const NoteTitle = Node.create({
-  name: "noteTitle",
-  content: "text*",
-  parseHTML: () => [{ tag: "h1" }],
-  renderHTML: () => ["h1", { class: "note-title" }, 0],
-});
-
-const extensions = [
-  Document.extend({
-    content: "noteTitle block+",
-  }),
-  NoteTitle,
-  Placeholder.configure({
-    placeholder: ({ node }) => {
-      if (node.type.name === "noteTitle") {
-        return "Untitled note";
-      }
-
-      return "Add some content";
-    },
-    showOnlyCurrent: false,
-  }),
-  CharacterCount,
-  Image.configure({
-    allowBase64: true,
-    HTMLAttributes: {
-      class: "note-image",
-    },
-  }),
-  Link.configure({
-    openOnClick: false,
-  }),
-  OnBlurHighlight,
-  TaskList.configure({
-    HTMLAttributes: {
-      class: "task-list",
-    },
-  }),
-  TaskItem.configure({
-    HTMLAttributes: {
-      class: "task-item",
-    },
-  }),
-  CodeBlockLowlight.configure({
-    lowlight,
-  }),
-  StarterKit.configure({
-    history: false,
-    document: false,
-    codeBlock: false,
-  }),
-];
-
-new HocuspocusProvider({
-  websocketProvider: hocuspocusSocket,
-  document: new Y.Doc(),
-  name: "keep-alive",
-  token: "123",
-});
 
 const debouncedOnUpdate = debounce(
   (
@@ -135,14 +53,14 @@ const debouncedOnUpdate = debounce(
         description: description || "",
       });
     }
+
+    SearchService.updateNoteFromYDoc(note.current.id);
   },
   1000
 );
 
 export function NoteEditor(props: NoteEditorProps) {
   const { noteId } = props;
-  const [linkHref, setLinkHref] = useState("");
-  const [showEditLink, setShowEditLink] = useState(false);
   const { note, updateNote } = useStore(
     useShallow((state) => {
       return {
@@ -157,7 +75,6 @@ export function NoteEditor(props: NoteEditorProps) {
   const [yDoc, setYDoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const sessionData = useSessionQuery();
-  const bubbleMenuRef = useRef<HTMLDivElement>(null);
 
   const editorRef = useRef<Editor | null>(null);
 
@@ -173,7 +90,7 @@ export function NoteEditor(props: NoteEditorProps) {
         debouncedOnUpdate(editorRef, noteRef, updateNoteRef);
       },
       extensions: [
-        ...extensions,
+        ...baseExtensions,
         ...(yDoc ? [Collaboration.configure({ document: yDoc })] : []),
         ...(provider
           ? [
@@ -245,121 +162,24 @@ export function NoteEditor(props: NoteEditorProps) {
   }, [noteId]);
 
   return (
-    <>
-      {/* Toolbar */}
+    <div className="flex flex-col flex-1">
       <EditorToolbar editor={editor} />
 
       {!note || !editor || !provider || !yDoc ? (
         <div className="h-full" />
       ) : (
-        <EditorContent
-          editor={editor}
-          spellCheck={false}
-          className="h-full flex flex-col overflow-x-auto cursor-text"
-          onClick={() => editor?.chain().focus().run()}
-        />
+        <ScrollArea className="h-full min-h-0 flex flex-col cursor-text">
+          <EditorContent
+            editor={editor}
+            spellCheck={false}
+            className="cursor-text"
+            onClick={() => editor?.chain().focus().run()}
+          />
+        </ScrollArea>
       )}
 
-      <div ref={bubbleMenuRef}>
-        {/* Bubble menu for when link is active, shows a "open link" button */}
-        {editor && bubbleMenuRef.current && (
-          <BubbleMenu
-            shouldShow={({ editor }) => editor?.isActive("link") ?? false}
-            updateDelay={0}
-            editor={editor}
-            tippyOptions={{
-              placement: "top",
-              appendTo: bubbleMenuRef.current,
-              onHidden: () => setShowEditLink(false),
-            }}
-          >
-            {showEditLink ? (
-              <div className="flex items-center bg-card border gap-1 p-1 pl-3 rounded-md shadow-md">
-                <Input
-                  value={linkHref}
-                  onChange={(e) => {
-                    setLinkHref(e.target.value);
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    editor
-                      .chain()
-                      .focus()
-                      .extendMarkRange("link")
-                      .setLink({ href: linkHref })
-                      .run();
-
-                    setShowEditLink(false);
-                    setLinkHref("");
-                  }}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setShowEditLink(false);
-                    setLinkHref("");
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center bg-card border gap-1 p-1 pl-3 rounded-md shadow-md">
-                <a
-                  href={editor.getAttributes("link").href}
-                  target="_blank"
-                  className="text-card-foreground whitespace-nowrap max-w-[200px] truncate underline"
-                >
-                  {editor.getAttributes("link").href}
-                </a>
-                <div className="flex items-center gap-1 border-l pl-2 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowEditLink(true);
-                      setLinkHref(editor.getAttributes("link").href);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      console.log("unlinking");
-                      editor.commands.unsetLink();
-                    }}
-                  >
-                    <Unlink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </BubbleMenu>
-        )}
-      </div>
-
-      {/* Status Bar */}
-      <div className="border-t border-border/50 p-2 px-4 flex justify-between items-center text-xs text-muted-foreground">
-        <div>
-          Last edited:{" "}
-          <ReactTimeAgo
-            date={note?.noteYDocState?.updatedAt || new Date()}
-            locale="en-US"
-          />
-        </div>
-        <div>
-          {editor?.storage.characterCount?.words()} words /{" "}
-          {editor?.storage.characterCount?.characters()} characters
-        </div>
-      </div>
-    </>
+      <LinkBubbleMenu editor={editor} />
+      <EditorStatusBar editor={editor} note={note || null} />
+    </div>
   );
 }
