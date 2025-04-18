@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { NoteEditor } from "@/components/noteEditor/NoteEditor";
+import { NoteEditorPanel } from "@/components/noteEditor/NoteEditorPanel";
 import { useStore } from "@/hooks/useStore";
 import { useSyncContext } from "@/hooks/useSyncContext";
 
@@ -23,5 +23,5 @@ function RouteComponent() {
     }
   }, [isSynced, note, navigate]);
 
-  return <NoteEditor key={noteId} noteId={noteId} />;
+  return <NoteEditorPanel key={noteId} noteId={noteId} />;
 }

@@ -26,7 +26,7 @@ export interface SSECollectionCreatedEvent {
 
 export interface SSECollectionUpdatedEvent {
   type: "COLLECTION_UPDATED";
-  collection: ServerCollection;
+  collection: Omit<ServerCollection, "members">;
 }
 
 export interface SSECollectionDeletedEvent {

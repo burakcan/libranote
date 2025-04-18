@@ -114,6 +114,7 @@ model CollectionMember {
   createdAt    DateTime             @default(now())
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   collection   Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  color        String?
 
   @@unique([collectionId, userId])
   @@map("collection_member")

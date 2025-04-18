@@ -1,5 +1,6 @@
 import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
+import { Mutex } from "es-toolkit";
 import { Charset, Document, IndexedDB } from "flexsearch";
 import * as Y from "yjs";
 import { baseExtensions } from "@/components/noteEditor/baseExtensions";
@@ -10,20 +11,21 @@ import {
   NoteSearchResult,
 } from "@/types/FlexSearch";
 
-export class SearchService {
+export class SearchService extends EventTarget {
+  static notesIndexMutex = new Mutex();
+
   static notesIndex = new Document({
+    encoder: Charset.LatinBalance,
     document: {
       store: true,
       index: [
         {
           field: "title",
           tokenize: "forward",
-          encoder: Charset.LatinBalance,
         },
         {
           field: "content",
           tokenize: "forward",
-          encoder: Charset.LatinBalance,
         },
       ],
     },
@@ -37,8 +39,6 @@ export class SearchService {
   static async init() {
     await SearchService.notesDb.mount(SearchService.notesIndex);
   }
-
-  /* Notes */
 
   static async getNoteContentFromYDoc(noteId: string) {
     const yDoc = new Y.Doc();
@@ -71,15 +71,21 @@ export class SearchService {
     title: string;
     content: string;
   }) {
+    await this.notesIndexMutex.acquire();
     console.log("SearchService: Adding note to search index", id, title);
 
-    await this.notesIndex.add({
-      id,
-      title,
-      content,
-    });
-
-    await this.notesIndex.commit();
+    try {
+      await this.notesIndex.add({
+        id,
+        title,
+        content,
+      });
+      await this.notesIndex.commit();
+    } catch (error) {
+      console.error("SearchService: Error adding note to search index", error);
+    } finally {
+      this.notesIndexMutex.release();
+    }
   }
 
   static async addNoteFromYDoc(note: ClientNote) {
@@ -93,10 +99,20 @@ export class SearchService {
   }
 
   static async removeNote(id: string) {
+    await this.notesIndexMutex.acquire();
     console.log("SearchService: Removing note from search index", id);
 
-    await this.notesIndex.remove(id);
-    await this.notesIndex.commit();
+    try {
+      await this.notesIndex.remove(id);
+      await this.notesIndex.commit();
+    } catch (error) {
+      console.error(
+        "SearchService: Error removing note from search index",
+        error
+      );
+    } finally {
+      this.notesIndexMutex.release();
+    }
   }
 
   static async updateNote({
@@ -108,14 +124,23 @@ export class SearchService {
     title: string;
     content: string;
   }) {
+    await this.notesIndexMutex.acquire();
     console.log("SearchService: Updating note in search index", id, title);
 
-    await this.notesIndex.update(id, {
-      title,
-      content,
-    });
-
-    await this.notesIndex.commit();
+    try {
+      await this.notesIndex.update(id, {
+        title,
+        content,
+      });
+      await this.notesIndex.commit();
+    } catch (error) {
+      console.error(
+        "SearchService: Error updating note in search index",
+        error
+      );
+    } finally {
+      this.notesIndexMutex.release();
+    }
   }
 
   static async updateNoteFromYDoc(noteId: string) {
@@ -169,8 +194,8 @@ export class SearchService {
         enrich: true,
         highlight: `<mark>$1</mark>`,
       })) as EnrichedDocumentSearchResults;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.error("SearchService: Error searching notes", error);
       return [];
     }
 
@@ -206,7 +231,7 @@ export class SearchService {
             );
           }
 
-          mergedItem.totalMatches++;
+          mergedItem.totalMatches += item.highlight.split("<mark>").length - 1;
         }
       });
     });
@@ -214,7 +239,9 @@ export class SearchService {
     // Convert map to array and sort by relevance (maintaining original order)
     const mergedResults: NoteSearchResult[] = Array.from(
       mergedResultsMap.values()
-    );
+    ).filter((result) => {
+      return result.totalMatches > 0;
+    });
 
     return mergedResults;
   }

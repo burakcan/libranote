@@ -10,7 +10,7 @@ export function NoteList() {
   const activeCollectionIdNotes = useCollectionNotes(activeCollectionId);
 
   return (
-    <ScrollArea className="p-2 flex-1 min-h-0">
+    <ScrollArea key={activeCollectionId} className="p-2 flex-1 min-h-0">
       {activeCollectionIdNotes.length > 0 ? (
         activeCollectionIdNotes.map((note) => (
           <NoteListItem key={note.id} note={note} />

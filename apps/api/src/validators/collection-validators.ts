@@ -15,10 +15,18 @@ export const createCollectionSchema = z.object({
 
 // Update collection request schema
 export const updateCollectionSchema = z.object({
-  collection: z.object({
-    title: z.string().min(1, "Title is required"),
-    updatedAt: z.string().datetime(),
-  }),
+  collection: z
+    .object({
+      title: z.string().min(1, "Title is required"),
+      updatedAt: z.string().datetime(),
+      members: z.array(
+        z.object({
+          id: z.string().uuid(),
+          color: z.string().optional().nullable(),
+        }),
+      ),
+    })
+    .optional(),
 });
 
 // Collection params schema (for routes with :id)

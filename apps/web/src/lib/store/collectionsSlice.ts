@@ -76,6 +76,7 @@ export const createCollectionsSlice: StateCreator<
             id: crypto.randomUUID(),
             userId: createdById,
             role: "OWNER",
+            color: null,
             createdAt: new Date(),
             collectionId,
           },
@@ -158,8 +159,15 @@ export const createCollectionsSlice: StateCreator<
       }
     },
 
-    updateCollection: async (collection) => {
+    updateCollection: async (update) => {
       const state = get();
+      const index = state.collections.data.findIndex((c) => c.id === update.id);
+      const collection = state.collections.data[index];
+
+      if (index === -1) {
+        console.error(`Collection ${update.id} not found`);
+        return;
+      }
 
       const pendingRelatedActionIndex = state.actionQueue.items.findIndex(
         (action) =>
@@ -169,12 +177,9 @@ export const createCollectionsSlice: StateCreator<
           action.relatedEntityId === collection.id
       );
 
-      const index = state.collections.data.findIndex(
-        (c) => c.id === collection.id
-      );
-
       const updatedCollection = {
         ...collection,
+        ...update,
         updatedAt: new Date(),
       };
 
@@ -184,14 +189,11 @@ export const createCollectionsSlice: StateCreator<
         });
       }
 
-      await CollectionRepository.update(collection.id, updatedCollection);
-
-      console.log("pendingRelatedActionIndex", pendingRelatedActionIndex);
+      await CollectionRepository.update(update.id, update);
 
       // If there is a pending create or update action, we don't need to add an update action to the queue
       // we can just update the collection in the local DB and the updated collection will be synced to the remote DB
       if (pendingRelatedActionIndex === -1) {
-        console.log("adding update action to queue");
         await state.actionQueue.addActionToQueue({
           id: crypto.randomUUID(),
           type: "UPDATE_COLLECTION",
@@ -321,20 +323,24 @@ export const createCollectionsSlice: StateCreator<
       }
     },
 
-    remoteUpdatedCollection: async (collection) => {
+    remoteUpdatedCollection: async (update) => {
+      const state = get();
+      const index = state.collections.data.findIndex((c) => c.id === update.id);
+      const collection = state.collections.data[index];
+
+      if (index === -1) {
+        console.error(`Collection ${update.id} not found`);
+        return;
+      }
+
       P(set, (draft) => {
-        const index = draft.collections.data.findIndex(
-          (c) => c.id === collection.id
-        );
-        if (index !== -1) {
-          draft.collections.data[index] = collection;
-        } else {
-          // If collection not found, add it (could happen due to sync race conditions)
-          draft.collections.data.push(collection);
-        }
+        draft.collections.data[index] = {
+          ...collection,
+          ...update,
+        };
       });
 
-      await CollectionRepository.put(collection);
+      await CollectionRepository.update(update.id, update);
     },
 
     remoteJoinedCollection: async (userId, collection) => {

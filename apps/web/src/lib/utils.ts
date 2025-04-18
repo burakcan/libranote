@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { memoize } from "es-toolkit";
 import { twMerge } from "tailwind-merge";
+import { ClientCollection } from "@/types/Entities";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -50,4 +51,38 @@ export const getUserColors = memoize(
     return [pastel1, pastel2];
   },
   { cache: new Map() }
+);
+
+export const getCollectionColor = memoize(
+  ([collectionId, collections]: [string | null, ClientCollection[]]) => {
+    if (!collectionId) {
+      return "var(--color-transparent)";
+    }
+
+    const collection = collections.find((c) => c.id === collectionId);
+    return collection?.members[0].color || "var(--color-transparent)";
+  },
+  {
+    getCacheKey: ([collectionId, collections]) => {
+      return [
+        collectionId,
+        collections.map((c) => c.members[0].color).join(","),
+      ].join("|");
+    },
+  }
+);
+
+export const getCollectionTitle = memoize(
+  ([collectionId, collections]: [string | null, ClientCollection[]]) => {
+    if (!collectionId) {
+      return "Untitled Collection";
+    }
+
+    const collection = collections.find((c) => c.id === collectionId);
+    return collection?.title || "Untitled Collection";
+  },
+  {
+    getCacheKey: ([collectionId, collections]) =>
+      [collectionId, collections.map((c) => c.id).join(",")].join("|"),
+  }
 );

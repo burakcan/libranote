@@ -1,15 +1,22 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Frown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "../ui/scroll-area";
 import { SearchResultItem } from "./SearchResultItem";
 import { NoteSearchResult } from "@/types/FlexSearch";
 
 interface SearchResultsProps {
+  searchTerm: string;
   results: NoteSearchResult[];
   onClear: () => void;
 }
 
-export function SearchResults({ results, onClear }: SearchResultsProps) {
+export function SearchResults({
+  searchTerm,
+  results,
+  onClear,
+}: SearchResultsProps) {
   const [highlightedResult, setHighlightedResult] =
     useState<NoteSearchResult | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -28,16 +35,18 @@ export function SearchResults({ results, onClear }: SearchResultsProps) {
     if (!isVisible) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
-        const nextIndex =
-          results.findIndex((result) => result.id === highlightedResult?.id) +
-          1;
+        const currentIndex = results.findIndex(
+          (result) => result.id === highlightedResult?.id
+        );
+        const nextIndex = (currentIndex + 1) % results.length;
         setHighlightedResult(results[nextIndex]);
       }
 
       if (e.key === "ArrowUp") {
-        const prevIndex =
-          results.findIndex((result) => result.id === highlightedResult?.id) -
-          1;
+        const currentIndex = results.findIndex(
+          (result) => result.id === highlightedResult?.id
+        );
+        const prevIndex = (currentIndex - 1 + results.length) % results.length;
         setHighlightedResult(results[prevIndex]);
       }
 
@@ -71,28 +80,40 @@ export function SearchResults({ results, onClear }: SearchResultsProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVisible, onClear, results, highlightedResult, navigate]);
 
+  const isEmpty = searchTerm.length > 3 && results.length === 0;
+
   return (
     <div
       className={cn(
-        "absolute top-full w-full bg-background rounded-md border z-20 shadow max-h-[calc(100vh-10rem)] overflow-y-auto",
-        isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+        "absolute top-full w-full flex flex-col bg-background rounded-md border z-20 shadow max-h-[calc(100vh-10rem)] overflow-hidden",
+        isVisible || isEmpty ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
       ref={ref}
     >
-      {results.map((result) => (
-        <SearchResultItem
-          key={result.id}
-          result={result}
-          onSelect={() => {
-            navigate({
-              to: "/notes/$noteId",
-              params: { noteId: result.id },
-            });
-            onClear();
-          }}
-          isHighlighted={highlightedResult?.id === result.id}
-        />
-      ))}
+      {isEmpty && (
+        <div className="flex flex-col gap-2 items-center justify-center p-4">
+          <Frown className="h-8 w-8 text-accent" />
+          <p className="text-md font-semibold text-muted-foreground">
+            No results found
+          </p>
+        </div>
+      )}
+      <ScrollArea className="flex-1 flex flex-col min-h-0">
+        {results.map((result) => (
+          <SearchResultItem
+            key={result.id}
+            result={result}
+            onSelect={() => {
+              navigate({
+                to: "/notes/$noteId",
+                params: { noteId: result.id },
+              });
+              onClear();
+            }}
+            isHighlighted={highlightedResult?.id === result.id}
+          />
+        ))}
+      </ScrollArea>
     </div>
   );
 }

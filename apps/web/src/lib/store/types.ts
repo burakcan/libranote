@@ -58,7 +58,9 @@ export type CollectionsSliceActions = {
     createdById: string
   ) => Promise<ClientCollection>;
   deleteCollection: (collectionId: ClientCollection["id"]) => Promise<void>;
-  updateCollection: (collection: ClientCollection) => Promise<void>;
+  updateCollection: (
+    update: Partial<ClientCollection> & { id: ClientCollection["id"] }
+  ) => Promise<void>;
   swapCollection: (
     localId: ClientCollection["id"],
     remoteCollection: ServerCollection
@@ -68,7 +70,9 @@ export type CollectionsSliceActions = {
   remoteDeletedCollection: (
     collectionId: ClientCollection["id"]
   ) => Promise<void>;
-  remoteUpdatedCollection: (collection: ServerCollection) => Promise<void>;
+  remoteUpdatedCollection: (
+    update: Omit<ServerCollection, "members">
+  ) => Promise<void>;
   remoteJoinedCollection: (
     userId: string,
     collection: ServerCollection
@@ -89,7 +93,10 @@ export type NotesSliceActions = {
     content?: string
   ) => Promise<ClientNote>;
   deleteNote: (noteId: ClientNote["id"], noAction?: boolean) => Promise<void>;
-  updateNote: (note: ClientNote) => Promise<void>;
+  updateNote: (
+    update: Partial<ClientNote> & { id: ClientNote["id"] },
+    noAction?: boolean
+  ) => Promise<void>;
   remoteCreatedNote: (note: ServerNote) => Promise<void>;
   remoteDeletedNote: (noteId: ClientNote["id"]) => Promise<void>;
   remoteUpdatedNote: (note: ServerNote) => Promise<void>;

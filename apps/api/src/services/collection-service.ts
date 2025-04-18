@@ -1,5 +1,10 @@
 import { randomUUID } from "crypto";
-import { CollectionMemberRole, prisma, type Collection } from "../db/prisma.js";
+import {
+  CollectionMemberRole,
+  prisma,
+  type Collection,
+  type CollectionMember,
+} from "../db/prisma.js";
 import { SSEService } from "./sse-service.js";
 import { NotFoundError } from "../utils/errors.js";
 import type {
@@ -152,9 +157,20 @@ export class CollectionService {
   static async updateCollection(
     userId: string,
     collectionId: string,
-    updateData: Pick<Collection, "title" | "updatedAt">,
+    updateData: Pick<Collection, "title" | "updatedAt"> & {
+      members?: (Pick<CollectionMember, "id" | "color"> & { id: string })[];
+    },
     clientId: string,
   ) {
+    if (updateData.members) {
+      await prisma.collectionMember.update({
+        where: { collectionId_userId: { collectionId, userId } },
+        data: {
+          color: updateData.members[0]?.color,
+        },
+      });
+    }
+
     // Update collection
     const updatedCollection = await prisma.collection.update({
       where: {

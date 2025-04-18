@@ -5,9 +5,16 @@ import {
   Pencil,
   UserRoundX,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,11 +59,41 @@ const isSpecialCollection = (
   );
 };
 
+const collectionColorPresets = [
+  {
+    label: "Rose",
+    color: "var(--color-rose-500)",
+  },
+  {
+    label: "Amber",
+    color: "var(--color-amber-500)",
+  },
+  {
+    label: "Yellow",
+    color: "var(--color-yellow-300)",
+  },
+  {
+    label: "Lime",
+    color: "var(--color-lime-400)",
+  },
+  {
+    label: "Emerald",
+    color: "var(--color-emerald-500)",
+  },
+  {
+    label: "Indigo",
+    color: "var(--color-indigo-500)",
+  },
+  {
+    label: "Purple",
+    color: "var(--color-purple-500)",
+  },
+];
+
 export function CollectionListItem({ collection }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
   const [sharingModalOpen, setSharingModalOpen] = useState(false);
   const {
-    isSyncing,
     isRenaming = false,
     isActive = false,
     setActiveCollectionId,
@@ -66,11 +103,6 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
     leaveCollection,
   } = useStore(
     useShallow((state) => ({
-      isSyncing: state.actionQueue.items.some(
-        (action) =>
-          action.relatedEntityId === collection.id &&
-          action.status === "processing"
-      ),
       isRenaming:
         state.collections.renamingCollectionId !== null &&
         state.collections.renamingCollectionId === collection.id,
@@ -124,15 +156,30 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
     }
   };
 
+  const handleColorChange = (color: string | null) => {
+    if (allOrUncategorizedCollection) {
+      return;
+    }
+
+    updateCollection({
+      ...collection,
+      members: [
+        {
+          ...collection.members[0],
+          color,
+        },
+      ],
+    });
+  };
   return (
-    <div
+    <motion.div
+      layout
       role="button"
       key={collection.id}
       className={cn(
         "flex items-center justify-between h-12 px-2 rounded-md cursor-default mb-1",
         isActive ? "bg-accent/50" : "hover:bg-accent/30",
-        isRenaming && "p-0",
-        isSyncing && "opacity-50"
+        isRenaming && "p-0"
       )}
       onMouseDown={() => setActiveCollectionId(collection.id)}
     >
@@ -149,7 +196,16 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       ) : (
         <>
           <div className="flex items-center min-w-0">
-            <div className="w-2 h-2 rounded-full ml-1 mr-3 bg-accent-foreground flex-shrink-0" />
+            <div
+              className="size-3 rounded-full ml-1 mr-3 border-1 border-white/50 flex-shrink-0"
+              style={{
+                backgroundColor: allOrUncategorizedCollection
+                  ? "var(--color-transparent)"
+                  : collection.members[0].color
+                    ? collection.members[0].color
+                    : "var(--color-transparent)",
+              }}
+            />
             <span className="text-sm font-medium truncate flex-shrink min-w-0">
               {collection.title}
             </span>
@@ -162,14 +218,18 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="focus:outline-none text-muted-foreground ml-2"
-                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 asChild
               >
                 <Button variant="ghost" size="icon">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                align="end"
+                className="w-48 -translate-y-2"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 {isOwner && (
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -188,6 +248,64 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
                   </DropdownMenuItem>
                 )}
                 {isOwner && <DropdownMenuSeparator />}
+                {!allOrUncategorizedCollection && (
+                  <>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <div
+                          className={cn(
+                            "size-3 ml-0.5 rounded-full border-1 border-white/50 mr-4.5",
+                            collection.members[0].color
+                              ? "bg-accent-foreground/50"
+                              : ""
+                          )}
+                          style={{
+                            backgroundColor: collection.members[0].color
+                              ? collection.members[0].color
+                              : "var(--color-transparent)",
+                          }}
+                        />
+                        {collection.members[0].color
+                          ? "Change color"
+                          : "No color"}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem
+                            onClick={() => handleColorChange(null)}
+                          >
+                            <div
+                              className={cn(
+                                "size-3 rounded-full border-1 border-accent-foreground/50"
+                              )}
+                              style={{
+                                backgroundColor: `var(--color-transparent)`,
+                              }}
+                            />
+                            No color
+                          </DropdownMenuItem>
+                          {collectionColorPresets.map((color) => (
+                            <DropdownMenuItem
+                              key={color.label}
+                              onClick={() => handleColorChange(color.color)}
+                            >
+                              <div
+                                className={cn(
+                                  "size-3 rounded-full border-1 border-accent-foreground/50"
+                                )}
+                                style={{
+                                  backgroundColor: color.color,
+                                }}
+                              />
+                              {color.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 {isOwner ? (
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -221,6 +339,6 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
           collectionId={collection.id}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

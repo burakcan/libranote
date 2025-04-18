@@ -13,4 +13,7 @@ new HocuspocusProvider({
   document: new Y.Doc(),
   name: "keep-alive",
   token: "keep-alive",
+  onStatus: (status) => {
+    console.log("keep-alive provider status", status);
+  },
 });

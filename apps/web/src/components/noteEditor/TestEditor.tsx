@@ -2,38 +2,17 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
-import { Transaction } from "@tiptap/pm/state";
 import { useEditor, EditorContent, EditorOptions } from "@tiptap/react";
 import { debounce } from "es-toolkit";
-import { RefObject, useMemo, useRef } from "react";
+import { RefObject, useRef } from "react";
 import * as Y from "yjs";
-import { useShallow } from "zustand/react/shallow";
-import { useSessionQuery } from "@/hooks/useSessionQuery";
-import { useStore } from "@/hooks/useStore";
 import { SearchService } from "@/lib/SearchService";
-import { getUserColors } from "@/lib/utils";
-import { ScrollArea } from "../ui/scroll-area";
 import { baseExtensions } from "./baseExtensions";
-import { EditorStatusBar } from "./EditorStatusBar";
-import EditorToolbar from "./EditorToolbar";
-import { LinkBubbleMenu } from "./LinkBubbleMenu";
 import { ClientNote } from "@/types/Entities";
-
-const didTransactionChangeContent = (transaction: Transaction) => {
-  const before = transaction.before;
-  const after = transaction.doc;
-
-  const now = performance.now();
-  const result = before.textContent !== after.textContent;
-  const time = performance.now() - now;
-  console.info("NoteEditor: string comparison took", time, "ms");
-  return result;
-};
 
 const debouncedOnUpdate = debounce(
   (
     editor: RefObject<Editor | null>,
-    transaction: Transaction,
     note: RefObject<ClientNote | null>,
     updateNote: RefObject<
       | ((
@@ -44,10 +23,6 @@ const debouncedOnUpdate = debounce(
     >
   ) => {
     if (!editor.current || !note.current || !updateNote.current) return;
-
-    const didChangeContent = didTransactionChangeContent(transaction);
-
-    if (!didChangeContent) return;
 
     const json = editor.current.getJSON();
     const text = editor.current.getText();
@@ -88,52 +63,42 @@ const debouncedOnUpdate = debounce(
   1000
 );
 
-export function NoteEditor(props: {
+export function TestEditor(props: {
   yDoc: Y.Doc;
   provider: HocuspocusProvider;
-  noteId: string;
+  note: ClientNote;
+  collaborationUser: {
+    name: string;
+    id: string;
+    color: string;
+  };
+  onUpdateNote: (
+    update: Partial<ClientNote> & { id: ClientNote["id"] },
+    noAction?: boolean
+  ) => Promise<void>;
 }) {
-  const { yDoc, provider, noteId } = props;
-
-  const sessionData = useSessionQuery();
-
-  const { note, updateNote } = useStore(
-    useShallow((state) => {
-      return {
-        note: state.notes.data.find((note) => note.id === noteId),
-        updateNote: state.notes.updateNote,
-      };
-    })
-  );
-
+  const { yDoc, provider, note, collaborationUser, onUpdateNote } = props;
   const editorRef = useRef<Editor | null>(null);
   const noteRef = useRef<ClientNote | null>(null);
-  const updateNoteRef = useRef<typeof updateNote | null>(null);
+  const onUpdateNoteRef = useRef<typeof onUpdateNote | null>(null);
 
-  noteRef.current = note || null;
-  updateNoteRef.current = updateNote || null;
-
-  const collaborationUser = useMemo(() => {
-    return {
-      name: sessionData.data?.user.name,
-      id: sessionData.data?.user.id,
-      color: getUserColors(sessionData.data?.user.id)[0],
-    };
-  }, [sessionData.data]);
+  noteRef.current = note;
+  onUpdateNoteRef.current = onUpdateNote;
 
   const editor = useEditor(
     {
       onUpdate: ({ editor, transaction }) => {
+        console.log("transaction", transaction);
         editorRef.current = editor;
-        debouncedOnUpdate(editorRef, transaction, noteRef, updateNoteRef);
+
+        console.log("onUpdate", editor.getJSON());
+
+        debouncedOnUpdate(editorRef, noteRef, onUpdateNoteRef);
       },
       extensions: [
         ...baseExtensions,
         Collaboration.configure({ document: yDoc }),
-        CollaborationCursor.configure({
-          provider,
-          user: collaborationUser,
-        }),
+        CollaborationCursor.configure({ provider, user: collaborationUser }),
       ],
       editorProps: {
         transformPastedHTML(html, view) {
@@ -150,23 +115,16 @@ export function NoteEditor(props: {
         },
       },
     } satisfies Partial<EditorOptions>,
-    [collaborationUser]
+    [yDoc, provider, collaborationUser]
   );
   editorRef.current = editor;
 
   return (
-    <>
-      <EditorToolbar editor={editor} />
-      <ScrollArea className="h-full min-h-0 flex flex-col">
-        <EditorContent
-          editor={editor}
-          spellCheck={false}
-          className="cursor-text"
-          onClick={() => editor?.chain().focus().run()}
-        />
-        <LinkBubbleMenu editor={editor} />
-      </ScrollArea>
-      <EditorStatusBar editor={editor} note={note || null} />
-    </>
+    <EditorContent
+      editor={editor}
+      spellCheck={false}
+      className="cursor-text"
+      onClick={() => editor?.chain().focus().run()}
+    />
   );
 }

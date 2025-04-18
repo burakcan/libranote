@@ -1,5 +1,7 @@
-import { HocuspocusProvider } from "@hocuspocus/provider";
-import { HocuspocusProviderWebsocket } from "@hocuspocus/provider";
+import {
+  HocuspocusProvider,
+  HocuspocusProviderWebsocket,
+} from "@hocuspocus/provider";
 import { debounce } from "es-toolkit";
 import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
@@ -7,12 +9,12 @@ import { ApiService, ApiServiceError } from "@/lib/ApiService";
 import { ActionQueueRepository } from "@/lib/db/ActionQueueRepository";
 import { CollectionRepository } from "@/lib/db/CollectionRepository";
 import { NoteRepository } from "@/lib/db/NoteRepository";
+import { NoteYDocStateRepository } from "@/lib/db/NoteYDocStateRepository";
+import { IndexeddbPersistence } from "@/lib/db/yIndexedDb";
+import { queryClient } from "@/lib/queryClient";
 import { router } from "@/lib/router";
+import { SearchService } from "@/lib/SearchService";
 import { Store } from "@/lib/store";
-import { NoteYDocStateRepository } from "./db/NoteYDocStateRepository";
-import { IndexeddbPersistence } from "./db/yIndexedDb";
-import { queryClient } from "./queryClient";
-import { SearchService } from "./SearchService";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import {
@@ -473,7 +475,7 @@ export class SyncService extends EventTarget {
 
     await this.store
       .getState()
-      .collections.swapCollection(localCollection.id, remoteCollection);
+      .collections.remoteUpdatedCollection(remoteCollection);
 
     return remoteCollection;
   }

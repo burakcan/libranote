@@ -5,6 +5,7 @@
 @import "./ProseMirror.css";
 @import "./CodeBlock.css";
 @import "./SWReloadPrompt.css";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

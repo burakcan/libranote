@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import type { Collection } from "../db/prisma.js";
+import type { Collection, CollectionMember } from "../db/prisma.js";
 import { CollectionService } from "../services/collection-service.js";
 
 /**
@@ -55,7 +55,13 @@ export async function createCollection(
  * Update a collection
  */
 export async function updateCollection(
-  req: Request<{ id: string }, {}, { collection: Pick<Collection, "title" | "updatedAt"> }>,
+  req: Request<{ id: string }, {}, { collection: Pick<Collection, "title" | "updatedAt"> }> & {
+    body: {
+      collection: Pick<Collection, "title" | "updatedAt"> & {
+        members?: (Pick<CollectionMember, "id" | "color"> & { id: string })[];
+      };
+    };
+  },
   res: Response,
   next: NextFunction,
 ) {

@@ -156,18 +156,25 @@ export const createNotesSlice: StateCreator<
       SearchService.removeNote(noteId);
     },
 
-    updateNote: async (note) => {
+    updateNote: async (update, noAction = false) => {
       const state = get();
       const pendingRelatedActionIndex = state.actionQueue.items.findIndex(
         (action) =>
           (action.type === "CREATE_NOTE" || action.type === "UPDATE_NOTE") &&
           action.status === "pending" &&
-          action.relatedEntityId === note.id
+          action.relatedEntityId === update.id
       );
-      const index = state.notes.data.findIndex((n) => n.id === note.id);
+      const index = state.notes.data.findIndex((n) => n.id === update.id);
+      const note = state.notes.data[index];
+
+      if (!note) {
+        console.error(`Note ${update.id} not found`);
+        return;
+      }
 
       const updatedNote = {
         ...note,
+        ...update,
         updatedAt: new Date(),
       };
 
@@ -177,17 +184,17 @@ export const createNotesSlice: StateCreator<
         });
       }
 
-      await NoteRepository.update(note.id, updatedNote);
+      await NoteRepository.update(update.id, updatedNote);
 
       // If there is a pending create or update action, we don't need to add an update action to the queue
       // we can just update the note in the local DB and the updated note will be synced to the remote DB
-      if (pendingRelatedActionIndex === -1) {
+      if (pendingRelatedActionIndex === -1 && !noAction) {
         await state.actionQueue.addActionToQueue({
           id: crypto.randomUUID(),
           type: "UPDATE_NOTE",
           status: "pending",
           createdAt: new Date(),
-          relatedEntityId: note.id,
+          relatedEntityId: update.id,
         });
       }
     },

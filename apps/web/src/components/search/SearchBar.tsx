@@ -10,6 +10,10 @@ export function SearchBar() {
   const [results, setResults] = useState<NoteSearchResult[]>([]);
 
   useEffect(() => {
+    if (query.length === 1) {
+      return;
+    }
+
     SearchService.searchNotes({ query }).then((results) => {
       setResults(results);
     });
@@ -40,7 +44,11 @@ export function SearchBar() {
         <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
-        <SearchResults results={results} onClear={handleClear} />
+        <SearchResults
+          searchTerm={query}
+          results={results}
+          onClear={handleClear}
+        />
       </div>
     </div>
   );

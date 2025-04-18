@@ -53,7 +53,8 @@ export function SearchResultItem({
             </h4>
             <div className="flex items-center gap-1">
               <span className="text-xs px-1.5 py-0.5 bg-muted rounded-full text-muted-foreground whitespace-nowrap">
-                {result.totalMatches}{" "}
+                {Math.min(result.totalMatches, 99)}
+                {result.totalMatches > 99 && "+"}{" "}
                 {result.totalMatches === 1 ? "match" : "matches"}
               </span>
               <ChevronRight
