@@ -4,7 +4,7 @@ import { Mutex } from "es-toolkit";
 import { Charset, Document, IndexedDB } from "flexsearch";
 import * as Y from "yjs";
 import { baseExtensions } from "@/components/noteEditor/baseExtensions";
-import { IndexeddbPersistence as YIndexeddbPersistence } from "./db/yIndexedDb";
+import { IndexeddbPersistence as YIndexeddbPersistence } from "@/services/db/yIndexedDb";
 import { ClientNote } from "@/types/Entities";
 import {
   EnrichedDocumentSearchResults,

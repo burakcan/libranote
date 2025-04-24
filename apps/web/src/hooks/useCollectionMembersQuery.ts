@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ApiService } from "@/lib/ApiService";
+import { ApiService } from "@/services/ApiService";
 
 export const getQueryKey = (collectionId: string) => [
   "collection-members",

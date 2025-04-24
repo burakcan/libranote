@@ -1,8 +1,8 @@
 import type { StateCreator } from "zustand";
-import { NoteRepository } from "@/lib/db/NoteRepository";
-import { TransactionService } from "@/lib/db/TransactionService";
-import { NoteYDocStateRepository } from "../db/NoteYDocStateRepository";
-import { SearchService } from "../SearchService";
+import { NoteRepository } from "@/services/db/NoteRepository";
+import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
+import { TransactionService } from "@/services/db/TransactionService";
+import { SearchService } from "@/services/SearchService";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";

@@ -1,11 +1,33 @@
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
 function ReloadPrompt() {
+  const { getIsOnline, addEventListener: addNetworkEventListener } =
+    useNetworkStatusContext();
+
   const {
-    offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    onRegisteredSW(_, registration) {
+      if (!registration) {
+        return;
+      }
+
+      function checkForUpdates() {
+        if (getIsOnline() && registration && registration.update) {
+          registration.update().catch((err) => {
+            console.error("Error checking for SW update:", err);
+          });
+        }
+      }
+
+      setInterval(checkForUpdates, 60 * 1000);
+      window.addEventListener("visibilitychange", checkForUpdates);
+      addNetworkEventListener("online", checkForUpdates);
+    },
     onRegistered(r) {
       console.log("SW Registered: " + r);
     },
@@ -14,40 +36,27 @@ function ReloadPrompt() {
     },
   });
 
-  const close = () => {
-    setOfflineReady(false);
-    setNeedRefresh(false);
-  };
+  useEffect(() => {
+    if (needRefresh) {
+      toast.info(
+        "New version of the app is available, click on reload button to update.",
+        {
+          dismissible: false,
+          duration: Infinity,
+          action: {
+            label: "Reload",
+            onClick: () => updateServiceWorker(true),
+          },
+          cancel: {
+            label: "Later",
+            onClick: () => setNeedRefresh(false),
+          },
+        }
+      );
+    }
+  }, [needRefresh, updateServiceWorker, setNeedRefresh]);
 
-  return (
-    <div className="ReloadPrompt-container">
-      {(offlineReady || needRefresh) && (
-        <div className="ReloadPrompt-toast">
-          <div className="ReloadPrompt-message">
-            {offlineReady ? (
-              <span>App ready to work offline</span>
-            ) : (
-              <span>
-                New version of the app is available, click on reload button to
-                update.
-              </span>
-            )}
-          </div>
-          {needRefresh && (
-            <button
-              className="ReloadPrompt-toast-button"
-              onClick={() => updateServiceWorker(true)}
-            >
-              Reload
-            </button>
-          )}
-          <button className="ReloadPrompt-toast-button" onClick={() => close()}>
-            Close
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return null;
 }
 
 export default ReloadPrompt;

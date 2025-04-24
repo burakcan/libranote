@@ -1,10 +1,17 @@
-export const ONLINE_EVENT = "networkStatusChange:online";
-export const OFFLINE_EVENT = "networkStatusChange:offline";
+import { WebSocketStatus } from "@hocuspocus/provider";
+import { keepAliveProvider } from "@/hooks/useColllaborativeNoteYDoc";
+
+export const ONLINE_EVENT = "online";
+export const OFFLINE_EVENT = "offline";
+
+export type NetworkStatusServiceEvent =
+  | typeof ONLINE_EVENT
+  | typeof OFFLINE_EVENT;
 
 let instance: NetworkStatusService | null = null;
 
 export class NetworkStatusService extends EventTarget {
-  private static isOnline = false;
+  private isOnline = false;
 
   constructor() {
     super();
@@ -28,6 +35,10 @@ export class NetworkStatusService extends EventTarget {
     window.addEventListener("offline", () => {
       this.triggerUpdate();
     });
+
+    keepAliveProvider.on("status", () => {
+      this.triggerUpdate();
+    });
   }
 
   private async checkNetworkStatus(): Promise<void> {
@@ -36,6 +47,11 @@ export class NetworkStatusService extends EventTarget {
     // So we need to check the network status by fetching a public API.
 
     if (navigator.onLine === false) {
+      this.triggerOffline();
+      return;
+    }
+
+    if (keepAliveProvider.status !== WebSocketStatus.Connected) {
       this.triggerOffline();
       return;
     }
@@ -63,23 +79,32 @@ export class NetworkStatusService extends EventTarget {
   }
 
   private triggerOnline(): void {
-    if (NetworkStatusService.isOnline) {
+    if (this.isOnline) {
       return;
     }
 
     console.debug("NetworkStatusService: Online");
-    NetworkStatusService.isOnline = true;
+
+    if (keepAliveProvider.status !== WebSocketStatus.Connected) {
+      keepAliveProvider.connect();
+    }
+
+    this.isOnline = true;
     this.dispatchEvent(new Event(ONLINE_EVENT, { bubbles: true }));
   }
 
   private triggerOffline(): void {
-    if (!NetworkStatusService.isOnline) {
+    if (!this.isOnline) {
       return;
     }
 
     console.debug("NetworkStatusService: Offline");
-    NetworkStatusService.isOnline = false;
+    this.isOnline = false;
     this.dispatchEvent(new Event(OFFLINE_EVENT, { bubbles: true }));
+
+    setTimeout(() => {
+      this.checkNetworkStatus();
+    }, 5000);
   }
 
   public triggerUpdate(): void {
@@ -87,14 +112,20 @@ export class NetworkStatusService extends EventTarget {
   }
 
   public getIsOnline(): boolean {
-    return NetworkStatusService.isOnline;
+    return this.isOnline;
   }
 
-  public addEventListener(event: string, callback: () => void): void {
+  public addEventListener(
+    event: NetworkStatusServiceEvent,
+    callback: () => void
+  ): void {
     super.addEventListener(event, callback);
   }
 
-  public removeEventListener(event: string, callback: () => void): void {
+  public removeEventListener(
+    event: NetworkStatusServiceEvent,
+    callback: () => void
+  ): void {
     super.removeEventListener(event, callback);
   }
 }

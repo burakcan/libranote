@@ -1,10 +1,10 @@
 import { useIgnoreQuickChange } from "@/hooks/useIgnoreQuickChange";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
 import { useSyncContext } from "@/hooks/useSyncContext";
 import { cn } from "@/lib/utils";
 
 export function SyncStatus() {
-  const { isOnline } = useOnlineStatus();
+  const { isOnline } = useNetworkStatusContext();
   const { isSyncing } = useSyncContext();
   const deferredSyncStatus = useIgnoreQuickChange(100, isSyncing);
 
@@ -15,7 +15,7 @@ export function SyncStatus() {
         <div
           className={cn(
             "size-2 rounded-full",
-            isOnline ? "bg-green-500" : "bg-red-500"
+            isOnline ? "bg-emerald-500" : "bg-rose-500"
           )}
         />
       </div>
@@ -23,7 +23,7 @@ export function SyncStatus() {
         {isOnline ? (
           <>{deferredSyncStatus ? "Syncing..." : "All up to date"}</>
         ) : (
-          "Will sync when online"
+          "Will sync when connected"
         )}
       </div>
     </div>

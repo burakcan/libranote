@@ -48,6 +48,7 @@ type CollectionListItemProps = {
     | ClientCollection
     | ALL_NOTES_COLLECTION
     | UNCATEGORIZED_COLLECTION;
+  onSelectCollection?: (collectionId: string) => void;
 };
 
 const isSpecialCollection = (
@@ -90,7 +91,10 @@ const collectionColorPresets = [
   },
 ];
 
-export function CollectionListItem({ collection }: CollectionListItemProps) {
+export function CollectionListItem({
+  collection,
+  onSelectCollection,
+}: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
   const [sharingModalOpen, setSharingModalOpen] = useState(false);
   const {
@@ -171,17 +175,26 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
       ],
     });
   };
+
+  const handleSelectCollection = () => {
+    if (onSelectCollection) {
+      onSelectCollection(collection.id);
+    }
+
+    setActiveCollectionId(collection.id);
+  };
+
   return (
     <motion.div
       layout
       role="button"
       key={collection.id}
       className={cn(
-        "flex items-center justify-between h-12 px-2 rounded-md cursor-default mb-1",
-        isActive ? "bg-accent/50" : "hover:bg-accent/30",
+        "flex relative items-center justify-between h-12 px-2 rounded-md cursor-default mb-1",
+        isActive && "bg-accent/50",
         isRenaming && "p-0"
       )}
-      onMouseDown={() => setActiveCollectionId(collection.id)}
+      onMouseDown={handleSelectCollection}
     >
       {isRenaming && collection.id !== null ? (
         <Input
@@ -217,8 +230,9 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
           {!allOrUncategorizedCollection && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="focus:outline-none text-muted-foreground ml-2"
+                className="focus:outline-none text-muted-foreground ml-2 z-10"
                 onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 asChild
               >
                 <Button variant="ghost" size="icon">
@@ -311,6 +325,7 @@ export function CollectionListItem({ collection }: CollectionListItemProps) {
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteCollection(collection.id);
+                      navigator.vibrate(10);
                     }}
                   >
                     <Trash className="text-destructive h-4 w-4 mr-2" />

@@ -86,3 +86,69 @@ export const getCollectionTitle = memoize(
       [collectionId, collections.map((c) => c.id).join(",")].join("|"),
   }
 );
+
+interface NavigatorUAData {
+  platform: string;
+  // Add other properties if needed
+}
+
+export const getDeviceOS = ():
+  | "ios"
+  | "android"
+  | "windows"
+  | "macos"
+  | "linux"
+  | "unknown" => {
+  if (typeof window === "undefined" || !navigator) {
+    return "unknown";
+  }
+
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  // Try using modern userAgentData API first (only available in modern browsers)
+  if ("userAgentData" in navigator) {
+    const uaData = (navigator as { userAgentData?: NavigatorUAData })
+      .userAgentData;
+    const platform = uaData?.platform.toLowerCase();
+
+    if (platform) {
+      if (platform.includes("mac")) return "macos";
+      if (platform.includes("windows")) return "windows";
+      if (platform.includes("linux")) return "linux";
+      if (platform.includes("android")) return "android";
+      if (platform.includes("ios")) return "ios";
+    }
+  }
+
+  // iOS detection - check for iPhone, iPad, iPod
+  if (/iphone|ipad|ipod/.test(userAgent)) {
+    return "ios";
+  }
+
+  // Android detection - check for Android and not Chrome OS
+  if (/android/.test(userAgent) && !/cros/.test(userAgent)) {
+    return "android";
+  }
+
+  // Windows detection - check for Windows NT or Win64
+  if (/windows nt|win64/.test(userAgent)) {
+    return "windows";
+  }
+
+  // macOS detection - check for Mac OS X or Macintosh
+  if (/macintosh|mac os x/.test(userAgent)) {
+    return "macos";
+  }
+
+  // Linux detection - check for Linux, X11, and exclude Android/Chrome OS
+  if (
+    (/linux|x11/.test(userAgent) && !/android|cros/.test(userAgent)) ||
+    userAgent.includes("ubuntu") ||
+    userAgent.includes("fedora") ||
+    userAgent.includes("arch")
+  ) {
+    return "linux";
+  }
+
+  return "unknown";
+};

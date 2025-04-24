@@ -5,16 +5,21 @@ import {
 import { debounce } from "es-toolkit";
 import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
-import { ApiService, ApiServiceError } from "@/lib/ApiService";
-import { ActionQueueRepository } from "@/lib/db/ActionQueueRepository";
-import { CollectionRepository } from "@/lib/db/CollectionRepository";
-import { NoteRepository } from "@/lib/db/NoteRepository";
-import { NoteYDocStateRepository } from "@/lib/db/NoteYDocStateRepository";
-import { IndexeddbPersistence } from "@/lib/db/yIndexedDb";
+import { ApiService, ApiServiceError } from "@/services/ApiService";
+import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
+import { CollectionRepository } from "@/services/db/CollectionRepository";
+import { NoteRepository } from "@/services/db/NoteRepository";
+import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
+import { IndexeddbPersistence } from "@/services/db/yIndexedDb";
+import { SearchService } from "@/services/SearchService";
 import { queryClient } from "@/lib/queryClient";
 import { router } from "@/lib/router";
-import { SearchService } from "@/lib/SearchService";
 import { Store } from "@/lib/store";
+import {
+  NetworkStatusService,
+  ONLINE_EVENT,
+  OFFLINE_EVENT,
+} from "./NetworkStatusService";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import {
@@ -28,13 +33,6 @@ const syncSocket = new HocuspocusProviderWebsocket({
   url: import.meta.env.VITE_HOCUSPOCUS_URL || "",
 });
 
-new HocuspocusProvider({
-  websocketProvider: syncSocket,
-  document: new Y.Doc(),
-  name: "keep-alive",
-  token: "123",
-});
-
 export const SYNCING_EVENT = "syncing";
 export const SYNCED_EVENT = "synced";
 
@@ -46,7 +44,10 @@ export class SyncService extends EventTarget {
   eventSource: EventSource | null = null;
   unsubscribeQueue: (() => void) | null = null;
 
-  constructor(private readonly store: UseBoundStore<StoreApi<Store>>) {
+  constructor(
+    private readonly store: UseBoundStore<StoreApi<Store>>,
+    private readonly networkService: NetworkStatusService
+  ) {
     super();
 
     if (instance) {
@@ -66,11 +67,12 @@ export class SyncService extends EventTarget {
   }
 
   watchOnlineStatus() {
-    window.addEventListener("online", () => {
+    this.networkService.addEventListener(ONLINE_EVENT, () => {
       this.syncAll();
+      this.listenSSE();
     });
 
-    window.addEventListener("offline", () => {
+    this.networkService.addEventListener(OFFLINE_EVENT, () => {
       this.stopSync();
     });
   }

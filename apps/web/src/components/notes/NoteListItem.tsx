@@ -39,6 +39,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
     }
 
     deleteNote(note.id);
+    navigator.vibrate(10);
   };
 
   return (
@@ -47,7 +48,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
         to="/notes/$noteId"
         params={{ noteId: note.id }}
         className={cn(
-          "flex items-center justify-between p-4 rounded-md cursor-default mb-1"
+          "flex items-center justify-between p-4 rounded-md cursor-default mb-1 first-of-type:mt-2 last-of-type:mb-2"
         )}
         activeProps={{ className: "bg-accent/50" }}
         inactiveProps={{ className: "hover:bg-accent/30" }}
@@ -72,7 +73,8 @@ export function NoteListItem({ note }: NoteListItemProps) {
         <DropdownMenu>
           <DropdownMenuTrigger
             className="focus:outline-none text-muted-foreground flex-shrink-0 ml-2"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             asChild
           >
             <Button variant="ghost" size="icon">

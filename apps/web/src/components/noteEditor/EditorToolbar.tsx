@@ -1,5 +1,4 @@
 import { Editor } from "@tiptap/react";
-import Avatar from "boring-avatars";
 import {
   Undo,
   Redo,
@@ -21,7 +20,9 @@ import {
   Pilcrow,
   Strikethrough,
   Underline,
+  ChevronRight,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,52 +31,31 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn, getUserColors } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
+import { CollaboratorHeads } from "./CollaboratorHeads";
+import { ToolbarButton } from "./ToolbarButton";
 
 interface EditorToolbarProps {
   editor: Editor | null;
+  isMobile?: boolean;
 }
 
-interface ToolbarButtonProps {
-  icon: React.ReactNode;
-  onClick: () => void;
-  active?: boolean;
-  disabled?: boolean;
-  tooltip?: string;
-}
+const textStyleIcons = {
+  p: <Pilcrow className="size-4" />,
+  h1: <Heading1 className="size-4" />,
+  h2: <Heading2 className="size-4" />,
+  h3: <Heading3 className="size-4" />,
+};
 
-function ToolbarButton({
-  icon,
-  onClick,
-  disabled,
-  tooltip,
-  active,
-}: ToolbarButtonProps) {
-  return (
-    <Tooltip delayDuration={500}>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn("h-8 w-8", active && "bg-accent")}
-          disabled={disabled}
-          onClick={onClick}
-        >
-          {icon}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
+export default function EditorToolbar({
+  editor,
+  isMobile,
+}: EditorToolbarProps) {
+  const [textStyleMenuOpen, setTextStyleMenuOpen] = useState(false);
+  const [listStyleMenuOpen, setListStyleMenuOpen] = useState(false);
+  const [textFormattingMenuOpen, setTextFormattingMenuOpen] = useState(false);
 
-export default function EditorToolbar({ editor }: EditorToolbarProps) {
   const isNoteTitle = editor?.isActive("noteTitle");
   const isLink = editor?.isActive("link");
   const isTaskList = editor?.isActive("taskList");
@@ -84,111 +64,272 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
   const [showImage, setShowImage] = useState(false);
   const [imageSrc, setImageSrc] = useState("");
 
+  const currentTextStyle = (() => {
+    if (editor?.isActive("heading", { level: 1 })) return "h1";
+    if (editor?.isActive("heading", { level: 2 })) return "h2";
+    if (editor?.isActive("heading", { level: 3 })) return "h3";
+    return "p";
+  })();
+
+  const currentTextStyleIcon = textStyleIcons[currentTextStyle];
+
   return (
-    <div className="border-b border-border/50 p-2 pr-5 flex items-center gap-1">
+    <div className="border-b border-border/50 p-2 h-14 pr-5 flex items-center gap-1">
       <div className="flex items-center gap-1">
         <ToolbarButton
-          icon={<Undo className="h-4 w-4" />}
+          icon={<Undo className="size-4" />}
           onClick={() => editor?.chain().focus().undo().run()}
           disabled={!editor?.can().undo?.()}
           tooltip="Undo"
         />
         <ToolbarButton
-          icon={<Redo className="h-4 w-4" />}
+          icon={<Redo className="size-4" />}
           onClick={() => editor?.chain().focus().redo().run()}
           disabled={!editor?.can().redo?.()}
           tooltip="Redo"
         />
       </div>
-
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <div className="flex items-center gap-1">
-        <ToolbarButton
-          icon={<Pilcrow className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().setParagraph().run()}
-          tooltip="Paragraph"
-          active={editor?.isActive("paragraph")}
-          disabled={isNoteTitle || isTaskList}
-        />
-        <ToolbarButton
-          icon={<Heading1 className="h-4 w-4" />}
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-          tooltip="Heading 1"
-          active={editor?.isActive("heading", { level: 1 })}
-          disabled={isNoteTitle || isTaskList}
-        />
-        <ToolbarButton
-          icon={<Heading2 className="h-4 w-4" />}
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          tooltip="Heading 2"
-          active={editor?.isActive("heading", { level: 2 })}
-          disabled={isNoteTitle || isTaskList}
-        />
-        <ToolbarButton
-          icon={<Heading3 className="h-4 w-4" />}
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 3 }).run()
-          }
-          tooltip="Heading 3"
-          active={editor?.isActive("heading", { level: 3 })}
-          disabled={isNoteTitle || isTaskList}
-        />
+      <div className="flex sm:hidden items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-12"
+          onClick={(e) => {
+            e.preventDefault();
+            editor?.chain().focus().run();
+            setTextStyleMenuOpen(!textStyleMenuOpen);
+          }}
+        >
+          {currentTextStyleIcon}
+          <ChevronRight
+            className={cn(
+              "size-4 text-muted-foreground transition-transform duration-200",
+              textStyleMenuOpen && "rotate-180"
+            )}
+          />
+        </Button>
       </div>
 
+      <AnimatePresence>
+        {(!isMobile || textStyleMenuOpen) && (
+          <motion.div
+            className="flex items-center gap-1"
+            initial={{
+              opacity: 0,
+              x: 10,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            exit={{
+              opacity: 0,
+              x: 10,
+            }}
+            transition={{
+              duration: 0.2,
+              ease: "easeInOut",
+            }}
+          >
+            <ToolbarButton
+              icon={<Pilcrow className="size-4" />}
+              onClick={() => {
+                editor?.chain().focus().setParagraph().run();
+                setTextStyleMenuOpen(false);
+              }}
+              tooltip="Paragraph"
+              active={editor?.isActive("paragraph")}
+              disabled={isNoteTitle || isTaskList}
+            />
+            <ToolbarButton
+              icon={<Heading1 className="size-4" />}
+              onClick={() => {
+                editor?.chain().focus().toggleHeading({ level: 1 }).run();
+                setTextStyleMenuOpen(false);
+              }}
+              tooltip="Heading 1"
+              active={editor?.isActive("heading", { level: 1 })}
+              disabled={isNoteTitle || isTaskList}
+            />
+            <ToolbarButton
+              icon={<Heading2 className="size-4" />}
+              onClick={() => {
+                editor?.chain().focus().toggleHeading({ level: 2 }).run();
+                setTextStyleMenuOpen(false);
+              }}
+              tooltip="Heading 2"
+              active={editor?.isActive("heading", { level: 2 })}
+              disabled={isNoteTitle || isTaskList}
+            />
+            <ToolbarButton
+              icon={<Heading3 className="size-4" />}
+              onClick={() => {
+                editor?.chain().focus().toggleHeading({ level: 3 }).run();
+                setTextStyleMenuOpen(false);
+              }}
+              tooltip="Heading 3"
+              active={editor?.isActive("heading", { level: 3 })}
+              disabled={isNoteTitle || isTaskList}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Separator orientation="vertical" className="mx-1 h-6" />
 
+      <div className="flex sm:hidden items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-12"
+          onClick={(e) => {
+            e.preventDefault();
+            editor?.chain().focus().run();
+            setListStyleMenuOpen(!listStyleMenuOpen);
+          }}
+        >
+          <List className="size-4" />
+          <ChevronRight
+            className={cn(
+              "size-4 text-muted-foreground transition-transform duration-200",
+              listStyleMenuOpen && "rotate-180"
+            )}
+          />
+        </Button>
+      </div>
+
+      <AnimatePresence>
+        {(!isMobile || listStyleMenuOpen) && (
+          <motion.div
+            className="flex items-center gap-1"
+            initial={{
+              opacity: 0,
+              x: 10,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            exit={{
+              opacity: 0,
+              x: 10,
+            }}
+            transition={{
+              duration: 0.2,
+              ease: "easeInOut",
+            }}
+          >
+            <ToolbarButton
+              icon={<List className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              tooltip="Bullet List"
+              active={editor?.isActive("bulletList")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<ListOrdered className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              tooltip="Ordered List"
+              active={editor?.isActive("orderedList")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<ListChecks className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleTaskList().run()}
+              tooltip="Task List"
+              active={editor?.isActive("taskList")}
+              disabled={isNoteTitle}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      <div className="flex sm:hidden items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-12"
+          onClick={(e) => {
+            e.preventDefault();
+            editor?.chain().focus().run();
+            setTextFormattingMenuOpen(!textFormattingMenuOpen);
+          }}
+        >
+          <Bold className="size-4" />
+          <ChevronRight
+            className={cn(
+              "size-4 text-muted-foreground transition-transform duration-200",
+              textFormattingMenuOpen && "rotate-180"
+            )}
+          />
+        </Button>
+      </div>
+
+      <AnimatePresence>
+        {(!isMobile || textFormattingMenuOpen) && (
+          <motion.div className="flex items-center gap-1">
+            <ToolbarButton
+              icon={<Bold className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              tooltip="Bold"
+              active={editor?.isActive("bold")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<Italic className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              tooltip="Italic"
+              active={editor?.isActive("italic")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<Strikethrough className="size-4" />}
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              tooltip="Strikethrough"
+              active={editor?.isActive("strike")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<Underline className="size-4" />}
+              onClick={() =>
+                editor?.chain().focus().toggleMark("underline").run()
+              }
+              tooltip="Underline"
+              active={editor?.isActive("underline")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<Code className="size-4" />}
+              onClick={() => {
+                editor
+                  ?.chain()
+                  .focus()
+                  .extendMarkRange("code")
+                  .toggleCode()
+                  .run();
+              }}
+              tooltip="Code"
+              active={editor?.isActive("code")}
+              disabled={isNoteTitle}
+            />
+            <ToolbarButton
+              icon={<CodeSquare className="size-4" />}
+              onClick={() => {
+                editor?.commands.toggleCodeBlock();
+                editor?.chain().focus().run();
+              }}
+              tooltip="Code Block"
+              active={editor?.isActive("codeBlock")}
+              disabled={isNoteTitle}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="flex items-center gap-1">
-        <ToolbarButton
-          icon={<Bold className="h-4 w-4" />}
-          onClick={() => editor?.commands.toggleBold()}
-          tooltip="Bold"
-          active={editor?.isActive("bold")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<Italic className="h-4 w-4" />}
-          onClick={() => editor?.commands.toggleItalic()}
-          tooltip="Italic"
-          active={editor?.isActive("italic")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<Strikethrough className="h-4 w-4" />}
-          onClick={() => editor?.commands.toggleStrike()}
-          tooltip="Strikethrough"
-          active={editor?.isActive("strike")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<Underline className="h-4 w-4" />}
-          onClick={() => editor?.commands.toggleMark("underline")}
-          tooltip="Underline"
-          active={editor?.isActive("underline")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<Code className="h-4 w-4" />}
-          onClick={() => {
-            editor?.chain().focus().extendMarkRange("code").toggleCode().run();
-          }}
-          tooltip="Code"
-          active={editor?.isActive("code")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<CodeSquare className="h-4 w-4" />}
-          onClick={() => {
-            editor?.commands.toggleCodeBlock();
-          }}
-          tooltip="Code Block"
-          active={editor?.isActive("codeBlock")}
-          disabled={isNoteTitle}
-        />
         <Popover open={showImage} onOpenChange={setShowImage}>
           <PopoverTrigger asChild>
             <Button
@@ -198,7 +339,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
               onClick={() => setShowImage(true)}
               disabled={isNoteTitle}
             >
-              <ImagePlus className="h-4 w-4" />
+              <ImagePlus className="size-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent>
@@ -218,7 +359,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                   setImageSrc("");
                 }}
               >
-                <Check className="h-4 w-4" />
+                <Check className="size-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -228,15 +369,15 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                   setImageSrc("");
                 }}
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
             </div>
           </PopoverContent>
         </Popover>
         {isLink && (
           <ToolbarButton
-            icon={<Unlink className="h-4 w-4" />}
-            onClick={() => editor?.commands.unsetLink()}
+            icon={<Unlink className="size-4" />}
+            onClick={() => editor?.chain().focus().unsetLink().run()}
             tooltip="Unlink"
             disabled={isNoteTitle || !isLink}
           />
@@ -258,7 +399,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                   setLinkHref(editor?.getAttributes("link").href ?? "");
                 }}
               >
-                <Link className="h-4 w-4" />
+                <Link className="size-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent>
@@ -307,7 +448,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                     setLinkHref("");
                   }}
                 >
-                  <Check className="h-4 w-4" />
+                  <Check className="size-4" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -317,7 +458,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                     setLinkHref("");
                   }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="size-4" />
                 </Button>
               </div>
             </PopoverContent>
@@ -327,59 +468,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <div className="flex items-center gap-1">
-        <ToolbarButton
-          icon={<List className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          tooltip="Bullet List"
-          active={editor?.isActive("bulletList")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<ListOrdered className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          tooltip="Ordered List"
-          active={editor?.isActive("orderedList")}
-          disabled={isNoteTitle}
-        />
-        <ToolbarButton
-          icon={<ListChecks className="h-4 w-4" />}
-          onClick={() => editor?.chain().focus().toggleTaskList().run()}
-          tooltip="Task List"
-          active={editor?.isActive("taskList")}
-          disabled={isNoteTitle}
-        />
-      </div>
-
-      <Separator orientation="vertical" className="mx-1 h-6" />
-
-      <div className="flex flex-auto items-center justify-end gap-2">
-        {editor?.storage.collaborationCursor?.users.map(
-          (user: {
-            clientId: string;
-            name: string;
-            id: string;
-            color: string;
-          }) => (
-            <Tooltip key={user.clientId}>
-              <TooltipTrigger asChild>
-                <Avatar
-                  name={user.id}
-                  key={user.clientId}
-                  size={28}
-                  className="outline-1 outline-offset-1 rounded-full"
-                  style={{ outlineColor: user.color }}
-                  variant="beam"
-                  colors={[...getUserColors(user.id)]}
-                />
-              </TooltipTrigger>
-              <TooltipContent className="font-semibold">
-                {user.name}
-              </TooltipContent>
-            </Tooltip>
-          )
-        )}
-      </div>
+      {!isMobile && <CollaboratorHeads editor={editor} />}
     </div>
   );
 }

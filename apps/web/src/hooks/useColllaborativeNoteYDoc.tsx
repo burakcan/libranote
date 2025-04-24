@@ -1,8 +1,19 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
+import { HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import { useEffect, useState } from "react";
 import * as Y from "yjs";
-import { IndexeddbPersistence } from "@/lib/db/yIndexedDb";
-import { hocuspocusSocket } from "@/lib/hocusPocusSocket";
+import { IndexeddbPersistence } from "@/services/db/yIndexedDb";
+
+export const hocuspocusSocket = new HocuspocusProviderWebsocket({
+  url: import.meta.env.VITE_HOCUSPOCUS_URL || "",
+});
+
+export const keepAliveProvider = new HocuspocusProvider({
+  websocketProvider: hocuspocusSocket,
+  document: new Y.Doc(),
+  name: "keep-alive",
+  token: "keep-alive",
+});
 
 export function useColllaborativeNoteYDoc(noteId: string) {
   const [yDoc, setYDoc] = useState<Y.Doc | null>(null);

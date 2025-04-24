@@ -18,8 +18,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "prompt",
-      devOptions: {
-        enabled: true,
+      manifest: {
+        name: "LibraNote",
+        short_name: "LibraNote",
+        description: "A note-taking app",
+        display: "standalone",
       },
       workbox: {
         runtimeCaching: [

@@ -5,15 +5,17 @@ import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import { Transaction } from "@tiptap/pm/state";
 import { useEditor, EditorContent, EditorOptions } from "@tiptap/react";
 import { debounce } from "es-toolkit";
-import { RefObject, useMemo, useRef } from "react";
+import { RefObject, useEffect, useMemo, useRef } from "react";
 import * as Y from "yjs";
 import { useShallow } from "zustand/react/shallow";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
-import { SearchService } from "@/lib/SearchService";
+import { SearchService } from "@/services/SearchService";
 import { getUserColors } from "@/lib/utils";
-import { ScrollArea } from "../ui/scroll-area";
 import { baseExtensions } from "./baseExtensions";
+import { EditorMobileHeader } from "./EditorMobileHeader";
 import { EditorStatusBar } from "./EditorStatusBar";
 import EditorToolbar from "./EditorToolbar";
 import { LinkBubbleMenu } from "./LinkBubbleMenu";
@@ -22,6 +24,10 @@ import { ClientNote } from "@/types/Entities";
 const didTransactionChangeContent = (transaction: Transaction) => {
   const before = transaction.before;
   const after = transaction.doc;
+
+  if (before.nodeSize !== after.nodeSize) {
+    return true;
+  }
 
   const now = performance.now();
   const result = before.textContent !== after.textContent;
@@ -53,7 +59,15 @@ const debouncedOnUpdate = debounce(
     const text = editor.current.getText();
 
     const title = json?.content?.[0]?.content?.[0]?.text || "";
-    const description =
+
+    let description = "";
+
+    if (json?.content?.[1]?.type === "image") {
+      console.log("image");
+      description = "[Image] ";
+    }
+
+    description +=
       text
         .replace(title, "")
         .split("\n")
@@ -62,7 +76,7 @@ const debouncedOnUpdate = debounce(
 
     if (
       title !== note.current.title ||
-      description !== (note.current.description || "")
+      description !== note.current.description
     ) {
       updateNote.current({
         ...note.current,
@@ -92,9 +106,10 @@ export function NoteEditor(props: {
   yDoc: Y.Doc;
   provider: HocuspocusProvider;
   noteId: string;
+  setEditorReady: (ready: boolean) => void;
 }) {
-  const { yDoc, provider, noteId } = props;
-
+  const isMobile = useBreakpointSM();
+  const { yDoc, provider, noteId, setEditorReady } = props;
   const sessionData = useSessionQuery();
 
   const { note, updateNote } = useStore(
@@ -123,6 +138,9 @@ export function NoteEditor(props: {
 
   const editor = useEditor(
     {
+      onCreate: () => {
+        setEditorReady(true);
+      },
       onUpdate: ({ editor, transaction }) => {
         editorRef.current = editor;
         debouncedOnUpdate(editorRef, transaction, noteRef, updateNoteRef);
@@ -136,6 +154,8 @@ export function NoteEditor(props: {
         }),
       ],
       editorProps: {
+        scrollThreshold: 80,
+        scrollMargin: 80,
         transformPastedHTML(html, view) {
           const { $head } = view.state.selection;
 
@@ -154,10 +174,27 @@ export function NoteEditor(props: {
   );
   editorRef.current = editor;
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current?.isFocused) {
+        editorRef.current.commands.scrollIntoView();
+      }
+    };
+
+    window.visualViewport?.addEventListener("resize", handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <>
-      <EditorToolbar editor={editor} />
-      <ScrollArea className="h-full min-h-0 flex flex-col">
+      {isMobile && <EditorMobileHeader editor={editor} />}
+
+      {!isMobile && <EditorToolbar editor={editor} />}
+
+      <ScrollArea className="flex-1 min-h-0 flex flex-col">
         <EditorContent
           editor={editor}
           spellCheck={false}
@@ -166,7 +203,14 @@ export function NoteEditor(props: {
         />
         <LinkBubbleMenu editor={editor} />
       </ScrollArea>
-      <EditorStatusBar editor={editor} note={note || null} />
+
+      {isMobile && (
+        <div className="w-screen block sm:hidden overflow-y-hidden overflow-x-auto border-t border-border/50 bg-accent/10">
+          <EditorToolbar editor={editor} isMobile />
+        </div>
+      )}
+
+      {!isMobile && <EditorStatusBar editor={editor} note={note || null} />}
     </>
   );
 }

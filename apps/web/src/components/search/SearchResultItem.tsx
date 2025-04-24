@@ -18,7 +18,7 @@ export function SearchResultItem({
     <div
       onClick={onSelect}
       className={cn(
-        "p-3 hover:bg-muted/50 cursor-default transition-colors rounded-md border border-transparent hover:border-border/50 group",
+        "p-3 hover:bg-muted/50 cursor-default transition-colors sm:rounded-md border border-transparent hover:border-border/50 group",
         isHighlighted && "bg-muted/50 border-border/50"
       )}
     >

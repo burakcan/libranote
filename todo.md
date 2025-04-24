@@ -3,3 +3,5 @@
 - Collection color
 - ID generation other than UUID
 - Keep active collection in session storage
+- Floating create buttons for collections and notes
+- Menu instead of create button on mobile

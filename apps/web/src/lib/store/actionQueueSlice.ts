@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import { ActionQueueRepository } from "@/lib/db/ActionQueueRepository";
+import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 

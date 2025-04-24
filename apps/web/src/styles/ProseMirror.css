@@ -1,8 +1,10 @@
 .ProseMirror {
   @apply prose dark:prose-invert;
   @apply flex-auto;
-  @apply p-16;
+  @apply p-4 pt-8 sm:p-16;
   @apply max-w-[100ch];
+  @apply min-h-screen;
+
 
   :first-child {
     @apply mt-0 pt-0;
@@ -151,7 +153,13 @@
     @apply opacity-0;
   }
 
-  .code {
+  p code,
+  h1 code,
+  h2 code,
+  h3 code,
+  h4 code,
+  h5 code,
+  h6 code {
     @apply bg-muted px-2 py-1 rounded-md;
 
     &::before {
@@ -161,10 +169,6 @@
     &::after {
       @apply hidden;
     }
-  }
-
-  code.hljs {
-    @apply bg-muted px-2 py-1 rounded-md;
   }
 }
 

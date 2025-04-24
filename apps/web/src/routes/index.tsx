@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Index,
+
+  loader: async () => {
+    return redirect({ to: "/notes" });
+  },
 });
 
 function Index() {

@@ -3,18 +3,27 @@ import {
   NetworkStatusService,
   ONLINE_EVENT,
   OFFLINE_EVENT,
-} from "@/lib/NetworkStatusService";
+  NetworkStatusServiceEvent,
+} from "@/services/NetworkStatusService";
 
 export interface NetworkStatusContextType {
+  networkService: NetworkStatusService | null;
   isOnline: boolean;
   getIsOnline: () => boolean;
   triggerUpdate: () => void;
-  addEventListener: (event: string, callback: () => void) => void;
-  removeEventListener: (event: string, callback: () => void) => void;
+  addEventListener: (
+    event: NetworkStatusServiceEvent,
+    callback: () => void
+  ) => void;
+  removeEventListener: (
+    event: NetworkStatusServiceEvent,
+    callback: () => void
+  ) => void;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const NetworkStatusContext = createContext<NetworkStatusContextType>({
+  networkService: null,
   isOnline: true,
   getIsOnline: () => true,
   triggerUpdate: () => {},
@@ -45,6 +54,7 @@ export const NetworkStatusProvider = ({
 
   const contextValue = useMemo(
     () => ({
+      networkService,
       isOnline,
       getIsOnline: networkService.getIsOnline.bind(networkService),
       triggerUpdate: networkService.triggerUpdate.bind(networkService),

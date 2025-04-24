@@ -1,4 +1,4 @@
-import { CLIENT_ID } from "./clientId";
+import { CLIENT_ID } from "../lib/clientId";
 import {
   ClientCollection,
   ClientCollectionMember,

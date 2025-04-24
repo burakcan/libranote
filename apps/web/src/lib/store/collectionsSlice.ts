@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
-import { CollectionRepository } from "@/lib/db/CollectionRepository";
-import { TransactionService } from "@/lib/db/TransactionService";
+import { CollectionRepository } from "@/services/db/CollectionRepository";
+import { TransactionService } from "@/services/db/TransactionService";
 import type { Store, InitialStoreState } from "./types";
 import { ALL_NOTES_COLLECTION_ID } from "./useCollectionNotes";
 import { P } from "./utils";

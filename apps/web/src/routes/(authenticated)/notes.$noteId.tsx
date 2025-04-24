@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NoteEditorPanel } from "@/components/noteEditor/NoteEditorPanel";
+import { EditorSkeleton } from "@/components/noteEditor/NoteEditorPanelSkeleton";
 import { useStore } from "@/hooks/useStore";
 import { useSyncContext } from "@/hooks/useSyncContext";
 
@@ -17,11 +18,39 @@ function RouteComponent() {
     state.notes.data.find((note) => note.id === noteId)
   );
 
+  const [editorReady, setEditorReady] = useState(false);
+  const [renderEditor, setRenderEditor] = useState(false);
+
   useEffect(() => {
     if (isSynced && !note) {
       navigate({ to: "/notes" });
     }
   }, [isSynced, note, navigate]);
 
-  return <NoteEditorPanel key={noteId} noteId={noteId} />;
+  useEffect(() => {
+    setRenderEditor(false);
+    setEditorReady(false);
+
+    const animationFrame = requestAnimationFrame(() => {
+      setRenderEditor(true);
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [noteId]);
+
+  return (
+    <div className="flex flex-col flex-1 h-full max-h-full relative">
+      {renderEditor && (
+        <NoteEditorPanel
+          key={noteId}
+          noteId={noteId}
+          setEditorReady={setEditorReady}
+        />
+      )}
+
+      {!editorReady && <EditorSkeleton />}
+    </div>
+  );
 }

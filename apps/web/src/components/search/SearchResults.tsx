@@ -85,7 +85,7 @@ export function SearchResults({
   return (
     <div
       className={cn(
-        "absolute top-full w-full flex flex-col bg-background rounded-md border z-20 shadow max-h-[calc(100vh-10rem)] overflow-hidden",
+        "fixed sm:absolute top-14 left-0 sm:left-auto sm:top-full w-full flex flex-col bg-background sm:rounded-md border z-20 shadow max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-10rem)] overflow-hidden",
         isVisible || isEmpty ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
       ref={ref}

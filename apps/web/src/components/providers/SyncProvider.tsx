@@ -1,6 +1,11 @@
 import { createContext, useEffect, useRef, useState } from "react";
-import { useStoreInstance, useStore } from "@/hooks/useStore";
-import { SYNCED_EVENT, SYNCING_EVENT, SyncService } from "@/lib/SyncService";
+import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
+import { useStoreInstance } from "@/hooks/useStore";
+import {
+  SYNCED_EVENT,
+  SYNCING_EVENT,
+  SyncService,
+} from "@/services/SyncService";
 
 interface SyncContextType {
   syncService: SyncService | null;
@@ -17,10 +22,11 @@ export const SyncContext = createContext<SyncContextType>({
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
-  const userId = useStore((state) => state.userId);
   const store = useStoreInstance();
+  const { networkService } = useNetworkStatusContext();
   const syncServiceRef = useRef<SyncService | null>(null);
   const [isSynced, setIsSynced] = useState(false);
+
   useEffect(() => {
     const handleSyncing = () => {
       setIsSyncing(true);
@@ -32,11 +38,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     };
 
     async function initializeServices() {
-      if (syncServiceRef.current) {
+      if (syncServiceRef.current || !networkService) {
         return;
       }
 
-      const syncService = new SyncService(store);
+      const syncService = new SyncService(store, networkService);
       syncServiceRef.current = syncService;
 
       syncService.addEventListener(SYNCING_EVENT, handleSyncing);
@@ -50,7 +56,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       syncServiceRef.current?.removeEventListener(SYNCED_EVENT, handleSynced);
       syncServiceRef.current = null;
     };
-  }, [store, userId]);
+  }, [store, networkService]);
 
   return (
     <SyncContext.Provider
