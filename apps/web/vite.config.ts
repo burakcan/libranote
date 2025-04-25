@@ -9,43 +9,46 @@ import tailwindcss from "@tailwindcss/vite";
 dotenv.config();
 
 export default defineConfig({
+  define: {
+    "import.meta.env.BUILD_DATE": JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     TanStackRouterVite({
       target: "react",
-      autoCodeSplitting: true,
+      autoCodeSplitting: false,
     }) as PluginOption,
     tailwindcss(),
     react(),
-    VitePWA({
-      registerType: "prompt",
-      manifest: {
-        name: "LibraNote",
-        short_name: "LibraNote",
-        description: "A note-taking app",
-        display: "standalone",
-      },
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: `${process.env.VITE_API_URL}/api/auth/get-session`,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "session",
-            },
-          },
-          {
-            urlPattern: ({ request }) => request.destination === "image",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "images-cache",
-              expiration: {
-                maxEntries: 50,
-              },
-            },
-          },
-        ],
-      },
-    }),
+    // VitePWA({
+    //   registerType: "prompt",
+    //   manifest: {
+    //     name: "LibraNote",
+    //     short_name: "LibraNote",
+    //     description: "A note-taking app",
+    //     display: "standalone",
+    //   },
+    //   workbox: {
+    //     runtimeCaching: [
+    //       {
+    //         urlPattern: `${process.env.VITE_API_URL}/api/auth/get-session`,
+    //         handler: "NetworkFirst",
+    //         options: {
+    //           cacheName: "session",
+    //         },
+    //       },
+    //       {
+    //         urlPattern: ({ request }) => request.destination === "image",
+    //         handler: "NetworkFirst",
+    //         options: {
+    //           cacheName: "images-cache",
+    //           expiration: {
+    //             maxEntries: 50,
+    //           },
+    //         },
+    //       },
+    //     ],
+    //   },
+    // }),
   ],
   resolve: {
     alias: {

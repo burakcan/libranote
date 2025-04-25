@@ -12,7 +12,7 @@ export function NoteList() {
   const activeCollectionIdNotes = useCollectionNotes(activeCollectionId);
 
   return (
-    <ScrollArea key={activeCollectionId} className="px-2 flex-1 min-h-0">
+    <ScrollArea key={activeCollectionId} className="px-2 flex-1 min-h-0 ">
       <AnimatePresence>
         {activeCollectionIdNotes.length > 0 ? (
           <>

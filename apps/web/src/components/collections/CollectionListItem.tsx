@@ -23,14 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import SharingModal from "@/components/collections/CollectionSharingModal";
+import { useCollectionListContext } from "@/hooks/useCollectionListContext";
 import { useStore } from "@/hooks/useStore";
 import {
   useCollectionNotes,
   UNCATEGORIZED_COLLECTION_ID,
   ALL_NOTES_COLLECTION_ID,
 } from "@/lib/store/useCollectionNotes";
-import { cn } from "@/lib/utils";
+import { cn, vibrate } from "@/lib/utils";
 import { ClientCollection } from "@/types/Entities";
 
 type ALL_NOTES_COLLECTION = {
@@ -96,7 +96,7 @@ export function CollectionListItem({
   onSelectCollection,
 }: CollectionListItemProps) {
   const [renameInput, setRenameInput] = useState(collection.title);
-  const [sharingModalOpen, setSharingModalOpen] = useState(false);
+  const { showShareModal } = useCollectionListContext();
   const {
     isRenaming = false,
     isActive = false,
@@ -248,7 +248,7 @@ export function CollectionListItem({
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSharingModalOpen(true);
+                      showShareModal(collection.id);
                     }}
                   >
                     <Share2 className="h-4 w-4 mr-2" />
@@ -325,7 +325,7 @@ export function CollectionListItem({
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteCollection(collection.id);
-                      navigator.vibrate(10);
+                      vibrate(10);
                     }}
                   >
                     <Trash className="text-destructive h-4 w-4 mr-2" />
@@ -346,13 +346,6 @@ export function CollectionListItem({
             </DropdownMenu>
           )}
         </>
-      )}
-      {collection.id !== null && (
-        <SharingModal
-          setOpen={setSharingModalOpen}
-          open={sharingModalOpen}
-          collectionId={collection.id}
-        />
       )}
     </motion.div>
   );

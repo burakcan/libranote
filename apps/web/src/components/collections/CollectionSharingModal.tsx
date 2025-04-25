@@ -13,8 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useCollectionMembersQuery } from "@/hooks/useCollectionMembersQuery";
 import { useInviteCollectionMemberMutation } from "@/hooks/useInviteCollectionMemberMutation";
 import { useRemoveCollectionMemberMutation } from "@/hooks/useRemoveCollectionMemberMutation";
@@ -28,6 +37,7 @@ interface SharingModalProps {
 }
 
 export default function CollectionSharingModal(props: SharingModalProps) {
+  const isMobile = useBreakpointSM();
   const { setOpen, open, collectionId } = props;
   const [newEmail, setNewEmail] = useState("");
   const [newRole] = useState<ClientCollectionMember["role"]>("EDITOR");
@@ -58,18 +68,41 @@ export default function CollectionSharingModal(props: SharingModalProps) {
       email: newEmail,
       role: newRole,
     });
+
+    setNewEmail("");
   };
 
+  const Components = {
+    desktop: {
+      Dialog: Dialog,
+      DialogContent: DialogContent,
+      DialogDescription: DialogDescription,
+      DialogFooter: DialogFooter,
+      DialogHeader: DialogHeader,
+      DialogTitle: DialogTitle,
+    },
+    mobile: {
+      Dialog: Drawer,
+      DialogContent: DrawerContent,
+      DialogDescription: DrawerDescription,
+      DialogFooter: DrawerFooter,
+      DialogHeader: DrawerHeader,
+      DialogTitle: DrawerTitle,
+    },
+  }[isMobile ? "mobile" : "desktop"];
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md md:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Share this collection</DialogTitle>
-          <DialogDescription>Invite people to collaborate</DialogDescription>
-        </DialogHeader>
+    <Components.Dialog open={open} onOpenChange={setOpen}>
+      <Components.DialogContent className="sm:max-w-md md:max-w-lg">
+        <Components.DialogHeader>
+          <Components.DialogTitle>Share this collection</Components.DialogTitle>
+          <Components.DialogDescription>
+            Invite people to collaborate
+          </Components.DialogDescription>
+        </Components.DialogHeader>
 
         {sortedMembers.length > 0 && (
-          <div className="py-4">
+          <div className="py-4 px-4 sm:px-0">
             <h4 className="text-sm font-medium mb-3">People with access</h4>
             <div className="space-y-3 max-h-[240px] overflow-y-auto pr-2">
               {sortedMembers.map((member) => (
@@ -126,7 +159,7 @@ export default function CollectionSharingModal(props: SharingModalProps) {
 
         <form
           onSubmit={handleAddCollaborator}
-          className="flex items-end gap-2 py-2"
+          className="flex items-end gap-2 py-2 px-4 sm:px-0"
         >
           <div className="grid gap-2 flex-1">
             <Label htmlFor="email" className="text-sm">
@@ -153,12 +186,12 @@ export default function CollectionSharingModal(props: SharingModalProps) {
           </Button>
         </form>
 
-        <DialogFooter className="sm:justify-start">
+        <Components.DialogFooter className="sm:justify-start">
           <div className="text-xs text-muted-foreground">
             People you invite will receive an email notification.
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Components.DialogFooter>
+      </Components.DialogContent>
+    </Components.Dialog>
   );
 }

@@ -2,6 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { Editor } from "@tiptap/core";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getDeviceOS } from "@/lib/utils";
 import { CollaboratorHeads } from "./CollaboratorHeads";
 
 interface EditorMobileHeaderProps {
@@ -16,7 +17,19 @@ export function EditorMobileHeader({ editor }: EditorMobileHeaderProps) {
       <Button
         variant="outline"
         className="h-10"
-        onClick={() => router.history.back()}
+        onClick={() => {
+          if (getDeviceOS() === "ios") {
+            document.startViewTransition({
+              // @ts-expect-error - dom type definitions are not up to date
+              update: () => {
+                router.history.back();
+              },
+              types: ["navigate-backward"],
+            });
+          } else {
+            router.history.back();
+          }
+        }}
       >
         <ChevronLeft className="h-4 w-4" />
         Back

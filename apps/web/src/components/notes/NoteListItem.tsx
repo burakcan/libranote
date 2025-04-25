@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useStore } from "@/hooks/useStore";
-import { cn, getCollectionColor } from "@/lib/utils";
+import { cn, getCollectionColor, vibrate } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { ClientNote } from "@/types/Entities";
 
@@ -29,6 +29,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
       ]),
     }))
   );
+
   const navigate = useNavigate();
 
   const handleDelete = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -39,7 +40,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
     }
 
     deleteNote(note.id);
-    navigator.vibrate(10);
+    vibrate(10);
   };
 
   return (
@@ -52,6 +53,9 @@ export function NoteListItem({ note }: NoteListItemProps) {
         )}
         activeProps={{ className: "bg-accent/50" }}
         inactiveProps={{ className: "hover:bg-accent/30" }}
+        viewTransition={{
+          types: ["navigate-forward"],
+        }}
       >
         <div className="flex flex-shrink-0 flex-grow-0 mr-3 h-9">
           <div

@@ -9,6 +9,7 @@ import {
   ALL_NOTES_COLLECTION_ID,
   UNCATEGORIZED_COLLECTION_ID,
 } from "@/lib/store/useCollectionNotes";
+import { vibrate } from "@/lib/utils";
 
 const MotionButton = motion(Button);
 
@@ -34,7 +35,7 @@ export function CreateNoteButton({ floating }: { floating?: boolean }) {
     if (userId) {
       const note = await createNote(collectionId, userId, "Untitled Note");
 
-      navigator.vibrate(10);
+      vibrate(10);
 
       navigate({
         to: "/notes/$noteId",

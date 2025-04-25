@@ -11,7 +11,7 @@ export function NoteEditorPanel(props: NoteEditorPanelProps) {
   const { yDoc, provider } = useColllaborativeNoteYDoc(noteId);
 
   return (
-    <div className="flex flex-col flex-1 h-full max-h-full">
+    <div className="flex flex-col flex-1 h-full max-h-full bg-background">
       {yDoc && provider && (
         <NoteEditor
           key={noteId}

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
 import { queryOptions as sessionQueryOptions } from "@/hooks/useSessionQuery";
@@ -34,7 +35,9 @@ function RouteComponent() {
   return (
     <StoreProvider userId={userId}>
       <SyncProvider>
-        <Outlet />
+        <CollectionListContextProvider>
+          <Outlet />
+        </CollectionListContextProvider>
       </SyncProvider>
     </StoreProvider>
   );

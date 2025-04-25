@@ -1,4 +1,5 @@
 import { LogOut, Notebook, Settings, User } from "lucide-react";
+import { toast } from "sonner";
 import { SearchBar } from "@/components/search/SearchBar";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { Button } from "../ui/button";
@@ -29,7 +30,15 @@ export function Header() {
           <SyncStatus />
           <div className="w-[1px] bg-accent h-4" />
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                toast.info("Build Date", {
+                  description: import.meta.env.BUILD_DATE,
+                });
+              }}
+            >
               <Settings className="size-4" />
             </Button>
             <DropdownMenu>
