@@ -46,7 +46,13 @@ export class SyncService extends EventTarget {
 
   constructor(
     private readonly store: UseBoundStore<StoreApi<Store>>,
-    private readonly networkService: NetworkStatusService
+    private readonly networkService: NetworkStatusService,
+    private readonly repositories: {
+      collection: CollectionRepository;
+      note: NoteRepository;
+      noteYDocState: NoteYDocStateRepository;
+      actionQueue: ActionQueueRepository;
+    }
   ) {
     super();
 

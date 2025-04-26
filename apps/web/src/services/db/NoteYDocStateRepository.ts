@@ -26,11 +26,4 @@ export class NoteYDocStateRepository {
     const db = userDatabaseService.getDatabase();
     return db.table<ClientNoteYDocState>("noteYDocState").delete(id);
   }
-
-  static async updateNeedsSync(id: string, needsSync: boolean) {
-    const db = userDatabaseService.getDatabase();
-    return db
-      .table<ClientNoteYDocState>("noteYDocState")
-      .update(id, { needsSync });
-  }
 }
