@@ -5,24 +5,27 @@ import { INoteRepository } from "@/types/Repositories";
 
 export const NoteRepository = new (class implements INoteRepository {
   async getAll(): Promise<ClientNote[]> {
-    throw new Error("Method not implemented.");
+    return wrapDbOperation(async () => {
+      const db = userDatabaseService.getDatabase();
+      return await db.table<ClientNote>("notes").toArray();
+    }, "Failed to fetch all notes");
   }
 
-  async getAllByCollectionId(collectionId?: string): Promise<ClientNote[]> {
-    return wrapDbOperation(
-      async () => {
-        const db = userDatabaseService.getDatabase();
-        if (collectionId) {
-          return await db
-            .table<ClientNote>("notes")
-            .where({ collectionId })
-            .toArray();
-        }
-        return await db.table<ClientNote>("notes").toArray();
-      },
-      `Failed to fetch all notes${collectionId ? ` for collection ${collectionId}` : ""}`
-    );
-  }
+  // async getAllByCollectionId(collectionId?: string): Promise<ClientNote[]> {
+  //   return wrapDbOperation(
+  //     async () => {
+  //       const db = userDatabaseService.getDatabase();
+  //       if (collectionId) {
+  //         return await db
+  //           .table<ClientNote>("notes")
+  //           .where({ collectionId })
+  //           .toArray();
+  //       }
+  //       return await db.table<ClientNote>("notes").toArray();
+  //     },
+  //     `Failed to fetch all notes${collectionId ? ` for collection ${collectionId}` : ""}`
+  //   );
+  // }
 
   async getById(id: string): Promise<ClientNote | undefined> {
     return wrapDbOperation(() => {

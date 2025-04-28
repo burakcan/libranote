@@ -6,10 +6,6 @@ import { debounce } from "es-toolkit";
 import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
 import { ApiService, ApiServiceError } from "@/services/ApiService";
-import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
-import { CollectionRepository } from "@/services/db/CollectionRepository";
-import { NoteRepository } from "@/services/db/NoteRepository";
-import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
 import { IndexeddbPersistence } from "@/services/db/yIndexedDb";
 import { SearchService } from "@/services/SearchService";
 import { queryClient } from "@/lib/queryClient";
@@ -27,6 +23,12 @@ import {
   ServerNote,
   ServerNoteYDocState,
 } from "@/types/Entities";
+import {
+  ICollectionRepository,
+  INoteRepository,
+  INoteYDocStateRepository,
+  IActionQueueRepository,
+} from "@/types/Repositories";
 import { SSEEvent } from "@/types/SSE";
 
 const syncSocket = new HocuspocusProviderWebsocket({
@@ -48,10 +50,10 @@ export class SyncService extends EventTarget {
     private readonly store: UseBoundStore<StoreApi<Store>>,
     private readonly networkService: NetworkStatusService,
     private readonly repositories: {
-      collection: CollectionRepository;
-      note: NoteRepository;
-      noteYDocState: NoteYDocStateRepository;
-      actionQueue: ActionQueueRepository;
+      collection: ICollectionRepository;
+      note: INoteRepository;
+      noteYDocState: INoteYDocStateRepository;
+      actionQueue: IActionQueueRepository;
     }
   ) {
     super();
@@ -297,7 +299,7 @@ export class SyncService extends EventTarget {
   }
 
   async syncNoteYDocState(remoteYDocState: ServerNoteYDocState) {
-    const localYDocState = await NoteYDocStateRepository.getById(
+    const localYDocState = await this.repositories.noteYDocState.getById(
       remoteYDocState.id
     );
 
@@ -306,7 +308,7 @@ export class SyncService extends EventTarget {
         "SyncService: YDoc state not found, creating",
         remoteYDocState.id
       );
-      await NoteYDocStateRepository.put(remoteYDocState);
+      await this.repositories.noteYDocState.put(remoteYDocState);
     }
 
     if (localYDocState?.updatedAt === remoteYDocState.updatedAt) {
@@ -314,7 +316,10 @@ export class SyncService extends EventTarget {
     }
 
     if (remoteYDocState.noteId === this.getCurrentNoteId()) {
-      NoteYDocStateRepository.update(remoteYDocState.id, remoteYDocState);
+      await this.repositories.noteYDocState.update(
+        remoteYDocState.id,
+        remoteYDocState
+      );
       return;
     }
 
@@ -335,7 +340,10 @@ export class SyncService extends EventTarget {
         provider.on("synced", () => {
           console.debug("SyncService: YDoc synced", remoteYDocState.id);
 
-          NoteYDocStateRepository.update(remoteYDocState.id, remoteYDocState);
+          this.repositories.noteYDocState.update(
+            remoteYDocState.id,
+            remoteYDocState
+          );
 
           provider.destroy();
           persistence.destroy();
@@ -351,9 +359,9 @@ export class SyncService extends EventTarget {
 
   async loadLocalDataToStore() {
     const [localCollections, localNotes, localQueueItems] = await Promise.all([
-      CollectionRepository.getAll(),
-      NoteRepository.getAllByCollectionId(),
-      ActionQueueRepository.getAll(),
+      this.repositories.collection.getAll(),
+      this.repositories.note.getAll(),
+      this.repositories.actionQueue.getAll(),
     ]);
 
     const { collections, notes, actionQueue } = this.store.getState();
@@ -453,7 +461,8 @@ export class SyncService extends EventTarget {
   async syncCreateCollection(
     collectionId: string
   ): Promise<ServerCollection | undefined> {
-    const localCollection = await CollectionRepository.getById(collectionId);
+    const localCollection =
+      await this.repositories.collection.getById(collectionId);
 
     if (!localCollection) {
       console.error(`SyncService: Collection ${collectionId} not found`);
@@ -472,7 +481,8 @@ export class SyncService extends EventTarget {
   async syncUpdateCollection(
     collectionId: string
   ): Promise<ServerCollection | undefined> {
-    const localCollection = await CollectionRepository.getById(collectionId);
+    const localCollection =
+      await this.repositories.collection.getById(collectionId);
 
     if (!localCollection) {
       console.error(`SyncService: Collection ${collectionId} not found`);
@@ -489,7 +499,7 @@ export class SyncService extends EventTarget {
   }
 
   async syncCreateNote(noteId: string): Promise<ServerNote | undefined> {
-    const localNote = await NoteRepository.getById(noteId);
+    const localNote = await this.repositories.note.getById(noteId);
 
     if (!localNote) {
       console.error(`SyncService: Note ${noteId} not found`);
@@ -506,7 +516,7 @@ export class SyncService extends EventTarget {
   syncUpdateNoteDebounced = debounce(this.syncUpdateNote.bind(this), 1000);
 
   async syncUpdateNote(noteId: string): Promise<ServerNote | undefined> {
-    const localNote = await NoteRepository.getById(noteId);
+    const localNote = await this.repositories.note.getById(noteId);
 
     if (!localNote) {
       console.error(`SyncService: Note ${noteId} not found`);

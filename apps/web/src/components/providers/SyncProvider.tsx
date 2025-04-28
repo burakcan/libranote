@@ -1,6 +1,10 @@
 import { createContext, useEffect, useRef, useState } from "react";
 import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
 import { useStoreInstance } from "@/hooks/useStore";
+import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
+import { CollectionRepository } from "@/services/db/CollectionRepository";
+import { NoteRepository } from "@/services/db/NoteRepository";
+import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
 import {
   SYNCED_EVENT,
   SYNCING_EVENT,
@@ -42,7 +46,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const syncService = new SyncService(store, networkService);
+      const syncService = new SyncService(store, networkService, {
+        collection: CollectionRepository,
+        note: NoteRepository,
+        noteYDocState: NoteYDocStateRepository,
+        actionQueue: ActionQueueRepository,
+      });
       syncServiceRef.current = syncService;
 
       syncService.addEventListener(SYNCING_EVENT, handleSyncing);

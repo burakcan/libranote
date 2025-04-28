@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import dotenv from "dotenv";
 import path from "path";
 import { defineConfig, PluginOption } from "vite";
-import { VitePWA } from "vite-plugin-pwa";
+// import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
 
 dotenv.config();
@@ -15,7 +15,7 @@ export default defineConfig({
   plugins: [
     TanStackRouterVite({
       target: "react",
-      autoCodeSplitting: false,
+      autoCodeSplitting: true,
     }) as PluginOption,
     tailwindcss(),
     react(),
