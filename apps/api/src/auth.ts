@@ -29,7 +29,7 @@ export const auth = betterAuth({
       partitioned: true, // New browser standards will mandate this for foreign cookies
     },
   },
-  trustedOrigins: [env.AUTH_TRUSTED_ORIGINS],
+  trustedOrigins: env.AUTH_TRUSTED_ORIGINS.split(","),
   // hooks: {
   //   after: createAuthMiddleware(async (ctx) => {
   //     const path = ctx.path;

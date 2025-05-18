@@ -14,6 +14,8 @@ import { errorHandler } from "./middleware/error-handler.js";
 
 const app = express();
 
+console.log(env.AUTH_TRUSTED_ORIGINS.split(","));
+
 // CORS configuration
 app.use(
   cors({

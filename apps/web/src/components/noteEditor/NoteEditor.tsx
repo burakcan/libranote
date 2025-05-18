@@ -13,7 +13,7 @@ import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
 import { SearchService } from "@/services/SearchService";
-import { getDeviceOS, getUserColors } from "@/lib/utils";
+import { getUserColors } from "@/lib/utils";
 import { baseExtensions } from "./baseExtensions";
 import { EditorMobileHeader } from "./EditorMobileHeader";
 import { EditorStatusBar } from "./EditorStatusBar";
@@ -101,9 +101,6 @@ const debouncedOnUpdate = debounce(
   },
   1000
 );
-
-const EditorWrapperComponent = getDeviceOS() === "ios" ? "div" : ScrollArea;
-const isIos = getDeviceOS() === "ios";
 
 export function NoteEditor(props: {
   yDoc: Y.Doc;
@@ -200,13 +197,8 @@ export function NoteEditor(props: {
       )}
 
       {!isMobile && <EditorToolbar editor={editor} />}
-      {isMobile && isIos && (
-        <div className="sticky top-14 z-10 w-screen block sm:hidden overflow-y-hidden overflow-x-auto border-t border-border/50 bg-background">
-          <EditorToolbar editor={editor} isMobile />
-        </div>
-      )}
 
-      <EditorWrapperComponent className="flex-1 min-h-0 flex flex-col">
+      <ScrollArea className="flex-1 min-h-0 flex flex-col">
         <EditorContent
           editor={editor}
           spellCheck={false}
@@ -214,9 +206,9 @@ export function NoteEditor(props: {
           onClick={() => editor?.chain().focus().run()}
         />
         <LinkBubbleMenu editor={editor} />
-      </EditorWrapperComponent>
+      </ScrollArea>
 
-      {isMobile && !isIos && (
+      {isMobile && (
         <div className="w-screen block sm:hidden overflow-y-hidden overflow-x-auto border-t border-border/50 bg-background">
           <EditorToolbar editor={editor} isMobile />
         </div>

@@ -31,7 +31,7 @@ export function EditorSkeleton() {
   }, []);
 
   return (
-    <div className="absolute flex flex-col left-0 top-0 w-full h-full bg-background">
+    <div className="absolute flex flex-col left-0 top-0 w-full h-dvh bg-background">
       {isMobile && (
         <EditorMobileHeader editor={fakeEditor as unknown as Editor} />
       )}

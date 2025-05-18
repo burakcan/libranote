@@ -122,7 +122,7 @@
   }
   html,
   body {
-    @apply h-dvh w-full;
     @apply bg-background text-foreground;
+    @apply fixed top-0 left-0 w-screen overflow-hidden;
   }
 }

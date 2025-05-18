@@ -6,7 +6,7 @@ import {
   UserRoundX,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import {
@@ -119,6 +119,7 @@ export function CollectionListItem({
     }))
   );
 
+  const elementRef = useRef<HTMLDivElement>(null);
   const allOrUncategorizedCollection = isSpecialCollection(collection);
   const totalNotes = useCollectionNotes(collection.id).length;
   const isOwner = allOrUncategorizedCollection
@@ -129,6 +130,13 @@ export function CollectionListItem({
     e.stopPropagation();
     setRenamingCollection(collection.id);
     setRenameInput(collection.title);
+
+    setTimeout(() => {
+      elementRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 500);
   };
 
   const handleConfirmRename = () => {
@@ -188,6 +196,7 @@ export function CollectionListItem({
     <motion.div
       layout
       role="button"
+      ref={elementRef}
       key={collection.id}
       className={cn(
         "flex relative items-center justify-between h-12 px-2 rounded-md cursor-default mb-1",

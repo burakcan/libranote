@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { SyncStatus } from "@/components/header/SyncStatus";
+import { useViewportSize } from "@/hooks/useViewportSize";
 import { CollectionList } from "./CollectionList";
 import { CreateCollectionButton } from "./CreateCollectionButton";
 
@@ -19,10 +20,17 @@ interface CollectionsSideSheetProps {
 
 export function CollectionsSideSheet(props: CollectionsSideSheetProps) {
   const { open, onOpenChange } = props;
+  const viewportSize = useViewportSize();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="gap-0 w-10/12">
+      <SheetContent
+        side="left"
+        className="gap-0 w-10/12"
+        style={{
+          height: viewportSize?.[1],
+        }}
+      >
         <SheetHeader>
           <SheetTitle>Collections</SheetTitle>
           <SheetDescription className="hidden">

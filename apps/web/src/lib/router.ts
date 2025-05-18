@@ -14,7 +14,7 @@ export const router = createRouter({
   scrollRestoration: true,
   defaultViewTransition:
     getDeviceOS() === "ios"
-      ? true
+      ? false
       : {
           types(locationChangeInfo) {
             if (!locationChangeInfo.pathChanged) return [];
