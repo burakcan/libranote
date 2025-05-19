@@ -1,25 +1,42 @@
-import { useEffect, useRef } from "react";
-import { getDeviceOS } from "@/lib/utils";
-import { useIsOnScreenKeyboardOpen } from "./useIsOnScreenKeyboardOpen";
+import { useEffect } from "react";
 
-const isIos = getDeviceOS() === "ios";
+let isPaused = false;
 
 export const useIosScrollHack = () => {
-  const isKeyboardOpen = useIsOnScreenKeyboardOpen();
-  const isKeyboardOpenRef = useRef(isKeyboardOpen);
-  isKeyboardOpenRef.current = isKeyboardOpen;
+  const pause = () => {
+    isPaused = true;
+  };
+
+  const resume = () => {
+    isPaused = false;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
-      if (isKeyboardOpenRef.current && isIos) {
-        window.scrollTo(0, 0);
-      }
+      if (isPaused) return;
+
+      window.scrollTo(0, 0);
+      document.body.scrollTo(0, 0);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    const effectTwice = () => {
+      handleScroll();
+
+      setTimeout(handleScroll, 1000);
+    };
+
+    window.addEventListener("scroll", effectTwice);
+    window.addEventListener("resize", effectTwice);
+    window.addEventListener("orientationchange", effectTwice);
+    window.visualViewport?.addEventListener("resize", effectTwice);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", effectTwice);
+      window.removeEventListener("resize", effectTwice);
+      window.removeEventListener("orientationchange", effectTwice);
+      window.visualViewport?.removeEventListener("resize", effectTwice);
     };
-  }, [isKeyboardOpen]);
+  }, []);
+
+  return { pause, resume };
 };

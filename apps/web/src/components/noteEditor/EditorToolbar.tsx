@@ -74,7 +74,7 @@ export default function EditorToolbar({
   const currentTextStyleIcon = textStyleIcons[currentTextStyle];
 
   return (
-    <div className="border-b border-border/50 p-2 h-14 pr-5 flex items-center gap-1">
+    <div className="border-b border-border/50 p-2 h-14 pr-5 flex items-center gap-1 z-10">
       <div className="flex items-center gap-1">
         <ToolbarButton
           icon={<Undo className="size-4" />}

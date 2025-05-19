@@ -3,7 +3,7 @@
 import Avatar from "boring-avatars";
 import { Loader2, Mail, Send, X } from "lucide-react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,8 +26,10 @@ import { Label } from "@/components/ui/label";
 import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useCollectionMembersQuery } from "@/hooks/useCollectionMembersQuery";
 import { useInviteCollectionMemberMutation } from "@/hooks/useInviteCollectionMemberMutation";
+import { useIosScrollHack } from "@/hooks/useIosScrollHack";
 import { useRemoveCollectionMemberMutation } from "@/hooks/useRemoveCollectionMemberMutation";
 import { getUserColors } from "@/lib/utils";
+import { ScrollArea } from "../ui/scroll-area";
 import { ClientCollectionMember } from "@/types/Entities";
 
 interface SharingModalProps {
@@ -41,11 +43,21 @@ export default function CollectionSharingModal(props: SharingModalProps) {
   const { setOpen, open, collectionId } = props;
   const [newEmail, setNewEmail] = useState("");
   const [newRole] = useState<ClientCollectionMember["role"]>("EDITOR");
+  const { pause: pauseScrollHack, resume: resumeScrollHack } =
+    useIosScrollHack();
 
   const { data: members, isLoading } = useCollectionMembersQuery(
     collectionId,
     open ?? false
   );
+
+  useEffect(() => {
+    if (open) {
+      pauseScrollHack();
+    } else {
+      resumeScrollHack();
+    }
+  }, [open, pauseScrollHack, resumeScrollHack]);
 
   const sortedMembers = useMemo(() => {
     return members?.sort((a, b) => {
@@ -102,53 +114,55 @@ export default function CollectionSharingModal(props: SharingModalProps) {
         </Components.DialogHeader>
 
         {sortedMembers.length > 0 && (
-          <div className="py-4 px-4 sm:px-0">
-            <h4 className="text-sm font-medium mb-3">People with access</h4>
-            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-2">
-              {sortedMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      name={member.userId}
-                      key={member.userId}
-                      size={28}
-                      className="outline-1 outline-offset-1 outline-primary rounded-full ml-1"
-                      variant="beam"
-                      colors={[...getUserColors(member.userId)]}
-                    />
-                    <div>
-                      <p className="text-sm font-medium">{member.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {member.email}
-                      </p>
+          <ScrollArea className="min-h-0">
+            <div className="py-4 px-4 sm:px-0">
+              <h4 className="text-sm font-medium mb-3">People with access</h4>
+              <div className="space-y-3 pr-2">
+                {sortedMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={member.userId}
+                        key={member.userId}
+                        size={28}
+                        className="outline-1 outline-offset-1 outline-primary rounded-full ml-1"
+                        variant="beam"
+                        colors={[...getUserColors(member.userId)]}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.email}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {member.role !== "OWNER" ? (
+                        <p className="text-xs text-muted-foreground">
+                          Collaborator
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Owner</p>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removeCollaborator(member.userId)}
+                        disabled={member.role === "OWNER"}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove</span>
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {member.role !== "OWNER" ? (
-                      <p className="text-xs text-muted-foreground">
-                        Collaborator
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Owner</p>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => removeCollaborator(member.userId)}
-                      disabled={member.role === "OWNER"}
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         )}
 
         {isLoading && (

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections/CollectionsPanel";
 import { Header } from "@/components/header/Header";
 import { NotesPanel } from "@/components/notes/NotesPanel";
@@ -15,12 +16,16 @@ function RouteComponent() {
   const isMobile = useBreakpointSM();
   const viewportSize = useViewportSize();
 
+  useEffect(() => {
+    document.body.style.height = `${viewportSize?.[1]}px`;
+  }, [viewportSize]);
+
   useIosScrollHack();
 
   return (
     <main
       className={
-        "flex flex-col [view-transition-name:main-content] fixed top-0 left-0 w-screen transition-[height] duration-200"
+        "flex flex-col [view-transition-name:main-content] fixed top-0 inset-x-0 transition-[height] ease-in-out duration-200 bg-background"
       }
       style={{
         height: viewportSize?.[1],
