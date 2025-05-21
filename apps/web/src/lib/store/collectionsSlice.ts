@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import type { StateCreator } from "zustand";
 import { CollectionRepository } from "@/services/db/CollectionRepository";
 import { TransactionService } from "@/services/db/TransactionService";
@@ -64,7 +65,7 @@ export const createCollectionsSlice: StateCreator<
     },
 
     createCollection: async (title, createdById) => {
-      const collectionId = crypto.randomUUID();
+      const collectionId = nanoid(10);
       const collection: ClientCollection = {
         id: collectionId,
         title,
@@ -73,7 +74,7 @@ export const createCollectionsSlice: StateCreator<
         updatedAt: new Date(),
         members: [
           {
-            id: crypto.randomUUID(),
+            id: nanoid(10),
             userId: createdById,
             role: "OWNER",
             color: null,
@@ -92,7 +93,7 @@ export const createCollectionsSlice: StateCreator<
       await CollectionRepository.put(collection);
 
       await get().actionQueue.addActionToQueue({
-        id: crypto.randomUUID(),
+        id: nanoid(10),
         type: "CREATE_COLLECTION",
         status: "pending",
         createdAt: new Date(),
@@ -150,7 +151,7 @@ export const createCollectionsSlice: StateCreator<
       // If the collection was created remotely, we need to add a delete action to the queue
       if (collectionToDelete.serverCreatedAt) {
         await state.actionQueue.addActionToQueue({
-          id: crypto.randomUUID(),
+          id: nanoid(10),
           type: "DELETE_COLLECTION",
           status: "pending",
           createdAt: new Date(),
@@ -195,7 +196,7 @@ export const createCollectionsSlice: StateCreator<
       // we can just update the collection in the local DB and the updated collection will be synced to the remote DB
       if (pendingRelatedActionIndex === -1) {
         await state.actionQueue.addActionToQueue({
-          id: crypto.randomUUID(),
+          id: nanoid(10),
           type: "UPDATE_COLLECTION",
           status: "pending",
           createdAt: new Date(),
@@ -281,7 +282,7 @@ export const createCollectionsSlice: StateCreator<
       }
 
       await state.actionQueue.addActionToQueue({
-        id: crypto.randomUUID(),
+        id: nanoid(10),
         type: "LEAVE_COLLECTION",
         status: "pending",
         createdAt: new Date(),

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Basic collection schema
 export const collectionSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().optional(),
   title: z.string().min(1, "Title is required"),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -21,7 +21,7 @@ export const updateCollectionSchema = z.object({
       updatedAt: z.string().datetime(),
       members: z.array(
         z.object({
-          id: z.string().uuid(),
+          id: z.string(),
           color: z.string().optional().nullable(),
         }),
       ),
@@ -31,10 +31,10 @@ export const updateCollectionSchema = z.object({
 
 // Collection params schema (for routes with :id)
 export const collectionParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 });
 
 export const collectionMemberParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   userId: z.string(),
 });

@@ -1,1 +1,3 @@
-export const CLIENT_ID = crypto.randomUUID();
+import { nanoid } from "nanoid";
+
+export const CLIENT_ID = nanoid(4);

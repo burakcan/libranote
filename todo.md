@@ -1,6 +1,4 @@
 - Initial login first example notes
-- User collaboration color
-- Collection color
 - ID generation other than UUID
 - Keep active collection in session storage
 - Floating create buttons for collections and notes

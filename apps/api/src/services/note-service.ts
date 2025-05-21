@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 import {
   CollectionMemberRole,
   NoteCollaboratorRole,
@@ -200,7 +200,7 @@ export class NoteService {
         create: {
           userId: collectionOwner?.userId || userId,
           role: NoteCollaboratorRole.OWNER,
-          id: randomUUID(),
+          id: nanoid(10),
         },
       },
       noteYDocState: {
@@ -221,7 +221,7 @@ export class NoteService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         // if the note id already exists, create a new one
-        const newId = randomUUID();
+        const newId = nanoid(10);
         note = await prisma.note.create({
           data: {
             ...createData,

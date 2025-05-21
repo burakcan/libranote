@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import type { StateCreator } from "zustand";
 import { NoteRepository } from "@/services/db/NoteRepository";
 import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
@@ -6,7 +7,6 @@ import { SearchService } from "@/services/SearchService";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";
-
 // Initial state for this slice
 const initialNotesState: InitialStoreState["notes"] = {
   data: [],
@@ -68,7 +68,7 @@ export const createNotesSlice: StateCreator<
     },
 
     createNote: async (collectionId, createdById, title, content = "") => {
-      const noteId = crypto.randomUUID();
+      const noteId = nanoid(10);
       const note: ClientNote = {
         id: noteId,
         title,
@@ -92,7 +92,7 @@ export const createNotesSlice: StateCreator<
       await NoteRepository.put(note);
 
       get().actionQueue.addActionToQueue({
-        id: crypto.randomUUID(),
+        id: nanoid(10),
         type: "CREATE_NOTE",
         status: "pending",
         createdAt: new Date(),
@@ -145,7 +145,7 @@ export const createNotesSlice: StateCreator<
       // so we don't need to add a delete action to the queue
       if (noteToDelete.serverCreatedAt && !noAction) {
         await state.actionQueue.addActionToQueue({
-          id: crypto.randomUUID(),
+          id: nanoid(10),
           type: "DELETE_NOTE",
           status: "pending",
           createdAt: new Date(),
@@ -190,7 +190,7 @@ export const createNotesSlice: StateCreator<
       // we can just update the note in the local DB and the updated note will be synced to the remote DB
       if (pendingRelatedActionIndex === -1 && !noAction) {
         await state.actionQueue.addActionToQueue({
-          id: crypto.randomUUID(),
+          id: nanoid(10),
           type: "UPDATE_NOTE",
           status: "pending",
           createdAt: new Date(),
@@ -296,7 +296,7 @@ export const createNotesSlice: StateCreator<
 
       if (pendingRelatedActionIndex === -1) {
         await state.actionQueue.addActionToQueue({
-          id: crypto.randomUUID(),
+          id: nanoid(10),
           type: "UPDATE_NOTE",
           status: "pending",
           createdAt: new Date(),

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 import {
   CollectionMemberRole,
   prisma,
@@ -124,14 +124,14 @@ export class CollectionService {
   ) {
     const newCollection = await prisma.collection.create({
       data: {
-        id: randomUUID(),
+        id: nanoid(10),
         title: collectionData.title,
         createdById: userId,
         createdAt: new Date(collectionData.createdAt),
         updatedAt: new Date(collectionData.updatedAt),
         members: {
           create: {
-            id: randomUUID(),
+            id: nanoid(10),
             userId,
             role: CollectionMemberRole.OWNER,
           },
@@ -305,7 +305,7 @@ export class CollectionService {
 
     const newMember = await prisma.collectionMember.create({
       data: {
-        id: randomUUID(),
+        id: nanoid(10),
         collectionId,
         userId: userToInvite.id,
         role,

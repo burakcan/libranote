@@ -1,14 +1,15 @@
 import { LogOut, Notebook, Settings, User } from "lucide-react";
 import { toast } from "sonner";
-import { SearchBar } from "@/components/search/SearchBar";
-import { useSessionQuery } from "@/hooks/useSessionQuery";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
+import { SearchBar } from "@/components/search/SearchBar";
+import { SettingsModal } from "@/components/settings/Settings";
+import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { SyncStatus } from "./SyncStatus";
 
 export function Header() {
@@ -41,6 +42,7 @@ export function Header() {
             >
               <Settings className="size-4" />
             </Button>
+            <SettingsModal open onOpenChange={() => {}} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
