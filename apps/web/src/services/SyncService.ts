@@ -30,7 +30,7 @@ import {
   IActionQueueRepository,
   ISettingRepository,
 } from "@/types/Repositories";
-import { ServerUserSetting } from "@/types/Settings";
+import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 import { SSEEvent } from "@/types/SSE";
 
 const syncSocket = new HocuspocusProviderWebsocket({
@@ -122,9 +122,9 @@ export class SyncService extends EventTarget {
 
     try {
       await Promise.all([
+        this.syncRemoteSettingsToLocal(),
         this.syncRemoteCollectionsToLocal(),
         this.syncRemoteNotesToLocal(),
-        this.syncRemoteSettingsToLocal(),
       ]);
     } catch (error) {
       console.error("SyncService: Error syncing", error);
@@ -280,6 +280,17 @@ export class SyncService extends EventTarget {
         }
         case "COLLECTION_MEMBER_ROLE_UPDATED":
           break;
+        case "SETTING_UPDATED": {
+          if (!this.isSyncSettingsEnabled()) {
+            return;
+          }
+
+          await store.settings.swapSetting(
+            event.payload.key as ClientUserSetting["key"],
+            event.payload
+          );
+          break;
+        }
         default:
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           (function (_: never) {})(event);
@@ -289,6 +300,16 @@ export class SyncService extends EventTarget {
       console.error("SyncService: Error processing SSE event:", error);
       throw error;
     }
+  }
+
+  isSyncSettingsEnabled() {
+    const syncSettingsEnabled =
+      this.store
+        .getState()
+        .settings.data.find((s) => s.key === "sync.syncSettingsEnabled")
+        ?.value ?? true;
+
+    return syncSettingsEnabled;
   }
 
   async syncNoteYDocStates(remoteYDocState?: ServerNoteYDocState) {
@@ -365,6 +386,7 @@ export class SyncService extends EventTarget {
   async loadLocalSettingsToStore() {
     const localSettings = await this.repositories.setting.getAll();
     this.store.getState().settings.setSettingsData(localSettings);
+    this.store.getState().settings.setInitialDataLoaded(true);
   }
 
   async loadLocalDataToStore() {
@@ -455,9 +477,18 @@ export class SyncService extends EventTarget {
         case "UPDATE_NOTE":
           await this.syncUpdateNoteDebounced(item.relatedEntityId);
           break;
-        case "UPDATE_SETTING":
+        case "UPDATE_SETTING": {
+          if (!this.isSyncSettingsEnabled()) {
+            break;
+          }
+
           await this.syncUpdateSetting(item.relatedEntityId);
           break;
+        }
+        case "SYNC_SETTINGS": {
+          await this.syncRemoteSettingsToLocal();
+          break;
+        }
         default:
           console.error(`SyncService: Unknown queue item type: ${item.type}`);
       }
@@ -597,6 +628,10 @@ export class SyncService extends EventTarget {
   }
 
   async syncRemoteSettingsToLocal(): Promise<ServerUserSetting[]> {
+    if (!this.isSyncSettingsEnabled()) {
+      return [];
+    }
+
     const remoteSettings = await ApiService.fetchAllSettings();
 
     await this.store

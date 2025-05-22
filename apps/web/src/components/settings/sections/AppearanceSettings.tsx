@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -35,28 +32,46 @@ export function AppearanceSettings() {
   const { value: darkTheme, setValue: setDarkTheme } = useSetting(
     "appearance.darkTheme"
   );
-  const [headingFont, setHeadingFont] = useState("inter");
-  const [contentFont, setContentFont] = useState("inter");
-  const [codeFont, setCodeFont] = useState("monospace");
-  const [lineHeight, setLineHeight] = useState(1.6);
-  const [fontSize, setFontSize] = useState("medium");
+  const { value: headingFont, setValue: setHeadingFont } = useSetting(
+    "appearance.headingFontFamily"
+  );
+  const { value: contentFont, setValue: setContentFont } = useSetting(
+    "appearance.contentFontFamily"
+  );
+  const { value: codeFont, setValue: setCodeFont } = useSetting(
+    "appearance.codeFontFamily"
+  );
+  const { value: lineHeight, setValue: setLineHeight } = useSetting(
+    "appearance.lineHeight"
+  );
+  const { value: fontSize, setValue: setFontSize } = useSetting(
+    "appearance.fontSize"
+  );
 
-  const availableFonts = [
-    { value: "inter", label: "Inter" },
-    { value: "roboto", label: "Roboto" },
-    { value: "lato", label: "Lato" },
-    { value: "merriweather", label: "Merriweather" },
-    { value: "monospace", label: "Monospace" },
+  const availableContentFonts = [
+    { value: "system", label: "System" },
+    { value: "Inter", label: "Inter" },
+    { value: "Roboto", label: "Roboto" },
+    { value: "Open_Sans", label: "Open Sans" },
+    { value: "Lora", label: "Lora" },
+    { value: "Playfair_Display", label: "Playfair Display" },
+  ];
+
+  const availableCodeFonts = [
+    { value: "system", label: "System" },
+    { value: "Source_Code_Pro", label: "Source Code Pro" },
+    { value: "Fira_Code", label: "Fira Code" },
+    { value: "IBM_Plex_Mono", label: "IBM Plex Mono" },
   ];
 
   // Shared text preview component for both font family and font size sections
   const textPreview = (
     <TextPreview
-      fontSize={fontSize}
-      headingFont={headingFont}
-      contentFont={contentFont}
-      codeFont={codeFont}
-      lineHeight={lineHeight}
+      fontSize={fontSize as string}
+      headingFont={headingFont as string}
+      contentFont={contentFont as string}
+      codeFont={codeFont as string}
+      lineHeight={lineHeight as number}
     />
   );
 
@@ -153,12 +168,15 @@ export function AppearanceSettings() {
         <div className="grid grid-cols-2 gap-2 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="heading-font">Headings Font</Label>
-            <Select value={headingFont} onValueChange={setHeadingFont}>
+            <Select
+              value={headingFont as string}
+              onValueChange={setHeadingFont}
+            >
               <SelectTrigger id="heading-font" className="w-full">
                 <SelectValue placeholder="Select a font" />
               </SelectTrigger>
               <SelectContent>
-                {availableFonts.map((font) => (
+                {availableContentFonts.map((font) => (
                   <SelectItem key={font.value} value={font.value}>
                     {font.label}
                   </SelectItem>
@@ -169,12 +187,15 @@ export function AppearanceSettings() {
 
           <div className="space-y-2">
             <Label htmlFor="content-font">Content Font</Label>
-            <Select value={contentFont} onValueChange={setContentFont}>
+            <Select
+              value={contentFont as string}
+              onValueChange={setContentFont}
+            >
               <SelectTrigger id="content-font" className="w-full">
                 <SelectValue placeholder="Select a font" />
               </SelectTrigger>
               <SelectContent>
-                {availableFonts.map((font) => (
+                {availableContentFonts.map((font) => (
                   <SelectItem key={font.value} value={font.value}>
                     {font.label}
                   </SelectItem>
@@ -185,18 +206,16 @@ export function AppearanceSettings() {
 
           <div className="space-y-2">
             <Label htmlFor="code-font">Code Font</Label>
-            <Select value={codeFont} onValueChange={setCodeFont}>
+            <Select value={codeFont as string} onValueChange={setCodeFont}>
               <SelectTrigger id="code-font" className="w-full">
                 <SelectValue placeholder="Select a font" />
               </SelectTrigger>
               <SelectContent>
-                {availableFonts
-                  .filter((f) => f.value === "monospace")
-                  .map((font) => (
-                    <SelectItem key={font.value} value={font.value}>
-                      {font.label}
-                    </SelectItem>
-                  ))}
+                {availableCodeFonts.map((font) => (
+                  <SelectItem key={font.value} value={font.value}>
+                    {font.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -206,7 +225,7 @@ export function AppearanceSettings() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="line-height">
-                Line Height: {lineHeight.toFixed(1)}
+                Line Height: {(lineHeight as number).toFixed(1)}
               </Label>
             </div>
             <Slider
@@ -214,7 +233,7 @@ export function AppearanceSettings() {
               min={1.2}
               max={2.0}
               step={0.1}
-              value={[lineHeight]}
+              value={[lineHeight as number]}
               onValueChange={(value) => setLineHeight(value[0])}
               className="py-2"
             />
@@ -223,7 +242,7 @@ export function AppearanceSettings() {
           <div className="space-y-2">
             <Label htmlFor="font-size">Font Size</Label>
             <RadioGroup
-              value={fontSize}
+              value={fontSize as string}
               onValueChange={setFontSize}
               className="flex flex-wrap gap-4"
             >

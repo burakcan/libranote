@@ -93,7 +93,7 @@ export const createCollectionsSlice: StateCreator<
       await CollectionRepository.put(collection);
 
       await get().actionQueue.addActionToQueue({
-        id: nanoid(10),
+        id: nanoid(3),
         type: "CREATE_COLLECTION",
         status: "pending",
         createdAt: new Date(),
@@ -151,7 +151,7 @@ export const createCollectionsSlice: StateCreator<
       // If the collection was created remotely, we need to add a delete action to the queue
       if (collectionToDelete.serverCreatedAt) {
         await state.actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "DELETE_COLLECTION",
           status: "pending",
           createdAt: new Date(),
@@ -196,7 +196,7 @@ export const createCollectionsSlice: StateCreator<
       // we can just update the collection in the local DB and the updated collection will be synced to the remote DB
       if (pendingRelatedActionIndex === -1) {
         await state.actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "UPDATE_COLLECTION",
           status: "pending",
           createdAt: new Date(),
@@ -282,7 +282,7 @@ export const createCollectionsSlice: StateCreator<
       }
 
       await state.actionQueue.addActionToQueue({
-        id: nanoid(10),
+        id: nanoid(3),
         type: "LEAVE_COLLECTION",
         status: "pending",
         createdAt: new Date(),

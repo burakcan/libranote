@@ -3,6 +3,7 @@ import type {
   CollectionMember,
   Note,
   NoteYDocState,
+  UserSetting,
 } from "@repo/db";
 
 export interface SSEInitEvent {
@@ -37,7 +38,7 @@ export interface SSENoteCreatedEvent {
 export interface SSENoteUpdatedEvent {
   type: "NOTE_UPDATED";
   note: Note & {
-    noteYDocState: Omit<NoteYDocState, "encodedDoc">;
+    noteYDocState: Omit<NoteYDocState, "encodedDoc"> | null;
   };
 }
 
@@ -75,11 +76,7 @@ export interface SSECollectionMemberRoleUpdatedEvent {
 
 export interface SSESettingUpdatedEvent {
   type: "SETTING_UPDATED";
-  payload: {
-    key: string;
-    value: any; // Matches Prisma Json type, can be string, number, boolean, object, array
-    updatedAt: Date;
-  };
+  payload: UserSetting;
 }
 
 export type SSEEvent =
@@ -93,4 +90,5 @@ export type SSEEvent =
   | SSEyDocUpdatedEvent
   | SSECollectionMemberJoinedEvent
   | SSECollectionMemberLeftEvent
-  | SSECollectionMemberRoleUpdatedEvent;
+  | SSECollectionMemberRoleUpdatedEvent
+  | SSESettingUpdatedEvent;

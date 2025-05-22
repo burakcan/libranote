@@ -1,9 +1,13 @@
 .ProseMirror {
-  @apply prose dark:prose-invert;
+  @apply outline-none;
+}
+
+.prose {
+  /* @apply prose dark:prose-invert;
   @apply flex-auto;
   @apply p-4 pt-8 sm:p-16;
   @apply max-w-[100ch];
-  @apply min-h-screen;
+  @apply min-h-screen; */
 
 
   :first-child {
@@ -25,6 +29,7 @@
   }
 
   .collaboration-cursor__label {
+    @apply font-sans;
     border-radius: 3px 3px 3px 0;
     color: #0d0d0d;
     font-size: 12px;
@@ -183,3 +188,78 @@
     opacity: 1;
   }
 }
+
+.prose-p_font-Inter p {
+  font-family: var(--font-family-inter);
+}
+
+.prose-headings_font-Inter {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-inter);
+  }
+}
+
+.prose-p_font-Lora p {
+  font-family: var(--font-family-lora);
+}
+
+.prose-headings_font-Lora {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-lora);
+  }
+}
+
+.prose-p_font-Playfair_Display p {
+  font-family: var(--font-family-playfair-display);
+}
+
+.prose-headings_font-Playfair_Display {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-playfair-display);
+  }
+}
+
+.prose-p_font-Roboto p {
+  font-family: var(--font-family-roboto);
+}
+
+.prose-headings_font-Roboto {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-roboto);
+  }
+}
+
+.prose-p_font-Open_Sans p {
+  font-family: var(--font-family-open-sans);
+}
+
+.prose-headings_font-Open_Sans {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-open-sans);
+  }
+}
+
+.prose-code_font-Source_Code_Pro {
+  pre, code {
+    font-family: var(--font-family-source-code-pro);
+  }
+}
+
+.prose-code_font-Fira_Code {
+  pre, code {
+    font-family: var(--font-family-fira-code);
+  }
+}
+
+.prose-code_font-IBM_Plex_Mono {
+  pre, code {
+    font-family: var(--font-family-ibm-plex-mono);
+  }
+}
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 import { Settings } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { SyncStatus } from "@/components/header/SyncStatus";
 import { useViewportSize } from "@/hooks/useViewportSize";
+import { SettingsModal } from "../settings/Settings";
 import { CollectionList } from "./CollectionList";
 import { CreateCollectionButton } from "./CreateCollectionButton";
 
@@ -20,6 +21,7 @@ interface CollectionsSideSheetProps {
 
 export function CollectionsSideSheet(props: CollectionsSideSheetProps) {
   const { open, onOpenChange } = props;
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const viewportSize = useViewportSize();
 
   return (
@@ -44,13 +46,12 @@ export function CollectionsSideSheet(props: CollectionsSideSheetProps) {
             variant="outline"
             size="icon"
             onClick={() => {
-              toast.info("Build Date", {
-                description: import.meta.env.BUILD_DATE,
-              });
+              setSettingsOpen(true);
             }}
           >
             <Settings className="size-4" />
           </Button>
+          <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
           <SyncStatus />
         </div>
       </SheetContent>

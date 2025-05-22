@@ -37,7 +37,7 @@ export class SearchService extends EventTarget {
   });
 
   static async init() {
-    await SearchService.notesDb.mount(SearchService.notesIndex);
+    await SearchService.notesIndex.mount(SearchService.notesDb);
   }
 
   static async getNoteContentFromYDoc(noteId: string) {
@@ -244,6 +244,23 @@ export class SearchService extends EventTarget {
     });
 
     return mergedResults;
+  }
+
+  static async rebuildSearchIndex(notes: ClientNote[]) {
+    await this.notesIndexMutex.acquire();
+    await this.notesDb.destroy();
+    this.notesDb = new IndexedDB({
+      name: "libranote-search-notes",
+    });
+    await this.init();
+    this.notesIndexMutex.release();
+
+    console.log("HELLO: Add notes to search index", notes.length);
+
+    for (const note of notes) {
+      await this.addNoteFromYDoc(note);
+      console.log("HELLO: Added note to search index", note.id);
+    }
   }
 }
 

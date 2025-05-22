@@ -7,6 +7,7 @@ import { P } from "./utils";
 import { ClientUserSetting } from "@/types/Settings";
 
 const initialSettingsState: InitialStoreState["settings"] = {
+  initialDataLoaded: false,
   data: [],
 };
 
@@ -18,6 +19,12 @@ export const createSettingsSlice: StateCreator<
 > = (set, get) => ({
   settings: {
     ...initialSettingsState,
+
+    setInitialDataLoaded: (initialDataLoaded: boolean) => {
+      P(set, (draft) => {
+        draft.settings.initialDataLoaded = initialDataLoaded;
+      });
+    },
 
     setSettingsData: (settings) => {
       P(set, (draft) => {
@@ -54,13 +61,27 @@ export const createSettingsSlice: StateCreator<
 
       await SettingRepository.put(updatedSetting);
 
-      if (pendingRelatedActionIndex === -1) {
+      const syncSettingsEnabled = get().settings.data.find(
+        (s) => s.key === "sync.syncSettingsEnabled"
+      )?.value;
+
+      if (syncSettingsEnabled && pendingRelatedActionIndex === -1) {
         await get().actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "UPDATE_SETTING",
           status: "pending",
           createdAt: new Date(),
           relatedEntityId: key,
+        });
+      }
+
+      if (key === "sync.syncSettingsEnabled" && value === true) {
+        await get().actionQueue.addActionToQueue({
+          id: nanoid(3),
+          type: "SYNC_SETTINGS",
+          status: "pending",
+          createdAt: new Date(),
+          relatedEntityId: "",
         });
       }
     },

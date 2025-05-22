@@ -30,6 +30,7 @@ export interface StoreState {
     items: ActionQueueItem[];
   };
   settings: {
+    initialDataLoaded: boolean;
     data: ClientUserSetting[];
   };
 }
@@ -114,6 +115,7 @@ export type NotesSliceActions = {
 };
 
 export type SettingsSliceActions = {
+  setInitialDataLoaded: (initialDataLoaded: boolean) => void;
   setSettingsData: (settings: ClientUserSetting[]) => void;
   setSetting: (
     key: ClientUserSetting["key"],

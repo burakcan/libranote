@@ -1,5 +1,5 @@
 import { LogOut, Notebook, Settings, User } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { SyncStatus } from "./SyncStatus";
 
 export function Header() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { data: session } = useSessionQuery();
 
   return (
@@ -35,14 +36,12 @@ export function Header() {
               variant="outline"
               size="icon"
               onClick={() => {
-                toast.info("Build Date", {
-                  description: import.meta.env.BUILD_DATE,
-                });
+                setSettingsOpen(true);
               }}
             >
               <Settings className="size-4" />
             </Button>
-            <SettingsModal open onOpenChange={() => {}} />
+            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">

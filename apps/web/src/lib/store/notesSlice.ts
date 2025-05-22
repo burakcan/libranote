@@ -93,7 +93,7 @@ export const createNotesSlice: StateCreator<
       await NoteRepository.put(note);
 
       get().actionQueue.addActionToQueue({
-        id: nanoid(10),
+        id: nanoid(3),
         type: "CREATE_NOTE",
         status: "pending",
         createdAt: new Date(),
@@ -146,7 +146,7 @@ export const createNotesSlice: StateCreator<
       // so we don't need to add a delete action to the queue
       if (noteToDelete.serverCreatedAt && !noAction) {
         await state.actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "DELETE_NOTE",
           status: "pending",
           createdAt: new Date(),
@@ -191,7 +191,7 @@ export const createNotesSlice: StateCreator<
       // we can just update the note in the local DB and the updated note will be synced to the remote DB
       if (pendingRelatedActionIndex === -1 && !noAction) {
         await state.actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "UPDATE_NOTE",
           status: "pending",
           createdAt: new Date(),
@@ -297,7 +297,7 @@ export const createNotesSlice: StateCreator<
 
       if (pendingRelatedActionIndex === -1) {
         await state.actionQueue.addActionToQueue({
-          id: nanoid(10),
+          id: nanoid(3),
           type: "UPDATE_NOTE",
           status: "pending",
           createdAt: new Date(),

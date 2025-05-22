@@ -44,11 +44,7 @@ export class SettingsService {
       userId,
       {
         type: "SETTING_UPDATED",
-        payload: {
-          key: setting.key,
-          value: setting.value,
-          updatedAt: setting.updatedAt,
-        },
+        payload: setting,
       },
       clientIdToExclude,
     );
@@ -82,11 +78,7 @@ export class SettingsService {
         userId,
         {
           type: "SETTING_UPDATED",
-          payload: {
-            key: setting.key,
-            value: setting.value,
-            updatedAt: setting.updatedAt,
-          },
+          payload: setting,
         },
         clientIdToExclude,
       );

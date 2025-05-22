@@ -1,7 +1,8 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { use, useState } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,25 +14,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { SettingsSection } from "@/components/settings/SettingsSection";
-
-const storageEstimatePromise = navigator.storage.estimate();
-
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-};
+import { useSetting } from "@/hooks/useSetting";
+import { useStore } from "@/hooks/useStore";
+import { SearchService } from "@/services/SearchService";
 
 export function SyncSettings() {
+  const notes = useStore((state) => state.notes.data);
   const [syncStatus, setSyncStatus] = useState("synced"); // synced, syncing, offline
   const [lastSynced, setLastSynced] = useState("2023-05-19 10:45 AM");
   const [clearCacheDialogOpen, setClearCacheDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-
-  const storageEstimate = use(storageEstimatePromise);
+  const { value: syncSettingsEnabled, setValue: setSyncSettingsEnabled } =
+    useSetting("sync.syncSettingsEnabled");
 
   const handleSync = () => {
     setIsSyncing(true);
@@ -43,6 +40,18 @@ export function SyncSettings() {
       setSyncStatus("synced");
       setLastSynced(new Date().toLocaleString());
     }, 2000);
+  };
+
+  const handleRebuildSearchIndex = () => {
+    const promise = SearchService.rebuildSearchIndex(notes);
+
+    toast.promise(promise, {
+      loading:
+        "Rebuilding search index... This may take a while depending on the size of your notes.",
+      success: "Search index rebuilt successfully",
+      error: "Failed to rebuild search index",
+      richColors: true,
+    });
   };
 
   return (
@@ -95,30 +104,34 @@ export function SyncSettings() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Offline Data Management">
+      <SettingsSection title="Sync Settings">
         <div className="space-y-4">
           <p className="text-sm">
-            Local storage used:{" "}
-            <span className="font-medium">
-              {formatBytes(storageEstimate.usage ?? 0)} /{" "}
-              {formatBytes(storageEstimate.quota ?? 0)}
-            </span>
+            Sync your settings between devices. This only affects the syncing of
+            settings, not the syncing of notes or collections.
           </p>
-
           <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => setClearCacheDialogOpen(true)}
-            >
-              Clear Local Cache
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setClearCacheDialogOpen(true)}
-            >
-              Rebuild Search Index
-            </Button>
+            <Switch
+              id="sync-settings"
+              checked={syncSettingsEnabled as boolean}
+              onCheckedChange={setSyncSettingsEnabled}
+            />
+            <Label htmlFor="sync-settings">Sync Settings</Label>
           </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Offline Data Management">
+        <div className="flex gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => setClearCacheDialogOpen(true)}
+          >
+            Clear Local Cache
+          </Button>
+          <Button variant="outline" onClick={handleRebuildSearchIndex}>
+            Rebuild Search Index
+          </Button>
         </div>
       </SettingsSection>
 

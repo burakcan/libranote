@@ -1,5 +1,4 @@
-import { Loader } from "lucide-react";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,20 +40,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <div className="flex h-full overflow-hidden">
           <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
           <ScrollArea className="flex-1 h-[90vh] max-h-[600px] min-h-0">
-            <Suspense
-              fallback={
-                <div className="flex p-6 w-full">
-                  <Loader className="h-8 w-8 animate-spin" />
-                </div>
-              }
-            >
-              <div className="p-6 pt-8">
-                {activeTab === "account" && <AccountSettings />}
-                {activeTab === "appearance" && <AppearanceSettings />}
-                {activeTab === "sync" && <SyncSettings />}
-                {activeTab === "security" && <SecuritySettings />}
-              </div>
-            </Suspense>
+            <div className="p-6 pt-8">
+              {activeTab === "account" && <AccountSettings />}
+              {activeTab === "appearance" && <AppearanceSettings />}
+              {activeTab === "sync" && <SyncSettings />}
+              {activeTab === "security" && <SecuritySettings />}
+            </div>
           </ScrollArea>
         </div>
       </DialogContent>
