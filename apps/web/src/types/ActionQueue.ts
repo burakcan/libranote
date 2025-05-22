@@ -5,7 +5,8 @@ export type ActionQueueItemType =
   | "LEAVE_COLLECTION"
   | "CREATE_NOTE"
   | "DELETE_NOTE"
-  | "UPDATE_NOTE";
+  | "UPDATE_NOTE"
+  | "UPDATE_SETTING";
 
 export type ActionQueueItemStatus =
   | "pending"

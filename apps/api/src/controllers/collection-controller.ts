@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { Collection, CollectionMember } from "../db/prisma.js";
 import { CollectionService } from "../services/collection-service.js";
+import { BadRequestError } from "../utils/errors.js";
 
 /**
  * Get all collections for the current user (owned + member of)
@@ -21,7 +22,7 @@ export async function getCollection(req: Request, res: Response, next: NextFunct
   try {
     const { id } = req.params;
     if (!id) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
 
     const collection = await CollectionService.getCollection(req.userId, id);
@@ -116,7 +117,7 @@ export async function getMembers(req: Request, res: Response, next: NextFunction
     const { userId } = req;
     const { id } = req.params;
     if (!id) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
 
     const members = await CollectionService.getMembers(userId, id);
@@ -135,7 +136,7 @@ export async function inviteToCollection(req: Request, res: Response, next: Next
     const { id } = req.params;
 
     if (!id) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
 
     const { email, role } = req.body;
@@ -157,11 +158,11 @@ export async function removeMember(req: Request, res: Response, next: NextFuncti
     const { id, userId: userIdToRemove } = req.params;
 
     if (!id) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
 
     if (!userIdToRemove) {
-      throw new Error("Member ID is required");
+      throw new BadRequestError("Member ID is required");
     }
 
     const clientId = (req.headers["x-client-id"] as string) || "";
@@ -182,11 +183,11 @@ export async function updateMemberRole(req: Request, res: Response, next: NextFu
     const { id, userId: userIdToUpdate } = req.params;
 
     if (!id) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
 
     if (!userIdToUpdate) {
-      throw new Error("Member ID is required");
+      throw new BadRequestError("Member ID is required");
     }
 
     const { role } = req.body;

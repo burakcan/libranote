@@ -21,13 +21,14 @@ export class UserDatabaseService implements DatabaseService {
     const dbName = `libra-db-${userId}`;
     this.db = new Dexie(dbName);
 
-    this.db.version(1).stores({
+    this.db.version(2).stores({
       collections:
         "id, title, ownerId, createdAt, member, updatedAt, serverCreatedAt, serverUpdatedAt",
       notes:
         "id, title, description, createdById, collectionId, createdAt, updatedAt, serverCreatedAt, serverUpdatedAt, noteYDocState",
       actionQueue: "id, relatedEntityId, type, status, createdAt",
       noteYDocState: "id, noteId, updatedAt",
+      settings: "key, value, updatedAt",
     });
 
     await this.db.open();

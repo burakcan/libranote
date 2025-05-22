@@ -7,6 +7,7 @@ import {
   ServerNote,
   ServerNoteYDocState,
 } from "@/types/Entities";
+import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -193,5 +194,26 @@ export class ApiService {
     const data: { member: ClientCollectionMember } = await response.json();
 
     return data.member;
+  }
+
+  static async fetchAllSettings(): Promise<ServerUserSetting[]> {
+    const response = await this.fetch("/api/settings");
+
+    const data: { settings: ServerUserSetting[] } = await response.json();
+
+    return data.settings;
+  }
+
+  static async updateSetting(
+    setting: ClientUserSetting
+  ): Promise<ServerUserSetting> {
+    const response = await this.fetch(`/api/settings/${setting.key}`, {
+      method: "PUT",
+      body: JSON.stringify({ setting }),
+    });
+
+    const data: { setting: ServerUserSetting } = await response.json();
+
+    return data.setting;
   }
 }

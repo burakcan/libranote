@@ -28,7 +28,9 @@ import {
   INoteRepository,
   INoteYDocStateRepository,
   IActionQueueRepository,
+  ISettingRepository,
 } from "@/types/Repositories";
+import { ServerUserSetting } from "@/types/Settings";
 import { SSEEvent } from "@/types/SSE";
 
 const syncSocket = new HocuspocusProviderWebsocket({
@@ -54,6 +56,7 @@ export class SyncService extends EventTarget {
       note: INoteRepository;
       noteYDocState: INoteYDocStateRepository;
       actionQueue: IActionQueueRepository;
+      setting: ISettingRepository;
     }
   ) {
     super();
@@ -111,6 +114,7 @@ export class SyncService extends EventTarget {
 
     console.debug("SyncService: Syncing");
 
+    this.loadLocalSettingsToStore();
     this.syncNoteYDocStates();
 
     await this.loadLocalDataToStore();
@@ -120,6 +124,7 @@ export class SyncService extends EventTarget {
       await Promise.all([
         this.syncRemoteCollectionsToLocal(),
         this.syncRemoteNotesToLocal(),
+        this.syncRemoteSettingsToLocal(),
       ]);
     } catch (error) {
       console.error("SyncService: Error syncing", error);
@@ -357,18 +362,33 @@ export class SyncService extends EventTarget {
     });
   }
 
+  async loadLocalSettingsToStore() {
+    const localSettings = await this.repositories.setting.getAll();
+    this.store.getState().settings.setSettingsData(localSettings);
+  }
+
   async loadLocalDataToStore() {
     const [localCollections, localNotes, localQueueItems] = await Promise.all([
-      this.repositories.collection.getAll(),
-      this.repositories.note.getAll(),
-      this.repositories.actionQueue.getAll(),
+      (async () => {
+        const localCollections = await this.repositories.collection.getAll();
+        await this.store
+          .getState()
+          .collections.setCollectionsData(localCollections);
+        return localCollections;
+      })(),
+      (async () => {
+        const localNotes = await this.repositories.note.getAll();
+        await this.store.getState().notes.setNotesData(localNotes);
+        return localNotes;
+      })(),
+      (async () => {
+        const localQueueItems = await this.repositories.actionQueue.getAll();
+        await this.store
+          .getState()
+          .actionQueue.setActionQueueItems(localQueueItems);
+        return localQueueItems;
+      })(),
     ]);
-
-    const { collections, notes, actionQueue } = this.store.getState();
-
-    collections.setCollectionsData(localCollections);
-    notes.setNotesData(localNotes);
-    actionQueue.setActionQueueItems(localQueueItems);
 
     console.debug(
       "SyncService: Loaded local data to store",
@@ -434,6 +454,9 @@ export class SyncService extends EventTarget {
           break;
         case "UPDATE_NOTE":
           await this.syncUpdateNoteDebounced(item.relatedEntityId);
+          break;
+        case "UPDATE_SETTING":
+          await this.syncUpdateSetting(item.relatedEntityId);
           break;
         default:
           console.error(`SyncService: Unknown queue item type: ${item.type}`);
@@ -530,6 +553,23 @@ export class SyncService extends EventTarget {
     return remoteNote;
   }
 
+  async syncUpdateSetting(key: string): Promise<ServerUserSetting | undefined> {
+    const localSetting = await this.repositories.setting.getByKey(key);
+
+    if (!localSetting) {
+      console.error(`SyncService: Setting ${key} not found`);
+      return;
+    }
+
+    const remoteSetting = await ApiService.updateSetting(localSetting);
+
+    await this.store
+      .getState()
+      .settings.swapSetting(localSetting.key, remoteSetting);
+
+    return remoteSetting;
+  }
+
   // Sync remote data to local
   async syncRemoteCollectionsToLocal(): Promise<ServerCollection[]> {
     const remoteCollections = await ApiService.fetchAllCollections();
@@ -554,6 +594,21 @@ export class SyncService extends EventTarget {
     console.debug("SyncService: Synced remote notes to local", remoteNotes);
 
     return remoteNotes;
+  }
+
+  async syncRemoteSettingsToLocal(): Promise<ServerUserSetting[]> {
+    const remoteSettings = await ApiService.fetchAllSettings();
+
+    await this.store
+      .getState()
+      .settings.syncRemoteSettingsToLocal(remoteSettings);
+
+    console.debug(
+      "SyncService: Synced remote settings to local",
+      remoteSettings
+    );
+
+    return remoteSettings;
   }
 
   stopSync() {

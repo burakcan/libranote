@@ -6,6 +6,7 @@ import {
   ServerCollection,
   ServerNote,
 } from "./Entities";
+import { ClientUserSetting } from "./Settings";
 
 interface IRepository<T> {
   getAll(): Promise<T[]>;
@@ -28,3 +29,7 @@ export interface INoteRepository extends IRepository<ClientNote> {
 }
 
 export type INoteYDocStateRepository = IRepository<ClientNoteYDocState>;
+
+export type ISettingRepository = IRepository<ClientUserSetting> & {
+  getByKey(key: string): Promise<ClientUserSetting | undefined>;
+};

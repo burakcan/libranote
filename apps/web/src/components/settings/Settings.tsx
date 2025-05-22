@@ -25,7 +25,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   // Reset to first tab when opening on mobile for better UX
   useEffect(() => {
     if (open) {
-      setActiveTab("account");
+      setActiveTab("appearance");
     }
   }, [open]);
 

@@ -66,6 +66,30 @@ export class SSEService {
   }
 
   /**
+   * Broadcast an event to all clients of a specific user, optionally excluding one client.
+   */
+  static broadcastSSEToUser(userId: UserId, event: SSEEvent, excludedClientId?: ClientId) {
+    if (!userId) return;
+
+    const userClients = SSEService.clients.get(userId);
+    if (!userClients) return;
+
+    console.info(
+      `Broadcasting event ${event.type} to user ${userId}, excluding client ${
+        excludedClientId || "none"
+      }`,
+    );
+
+    userClients.forEach((controller, clientId) => {
+      if (excludedClientId && clientId === excludedClientId) {
+        console.info(`Skipping excluded client ${excludedClientId} for user ${userId}`);
+        return;
+      }
+      controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
+    });
+  }
+
+  /**
    * Send initialization event to a specific client
    */
   static sendInitEvent(userId: UserId, clientId: ClientId) {

@@ -5,6 +5,7 @@ import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
 import { CollectionRepository } from "@/services/db/CollectionRepository";
 import { NoteRepository } from "@/services/db/NoteRepository";
 import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
+import { SettingRepository } from "@/services/db/SettingRepository";
 import {
   SYNCED_EVENT,
   SYNCING_EVENT,
@@ -51,6 +52,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         note: NoteRepository,
         noteYDocState: NoteYDocStateRepository,
         actionQueue: ActionQueueRepository,
+        setting: SettingRepository,
       });
       syncServiceRef.current = syncService;
 

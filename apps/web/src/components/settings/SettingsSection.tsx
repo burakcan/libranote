@@ -1,5 +1,4 @@
 import type React from "react";
-import { cn } from "@/lib/utils";
 
 interface SettingsSectionProps {
   title: string;
@@ -15,7 +14,7 @@ export function SettingsSection({
   className,
 }: SettingsSectionProps) {
   return (
-    <div className={cn("mb-6", className)}>
+    <div className={className}>
       <div className="mb-3 sm:mb-4">
         <h3 className="text-base sm:text-lg font-medium">{title}</h3>
         {description && (

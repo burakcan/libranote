@@ -4,6 +4,7 @@ import { createActionQueueSlice } from "./actionQueueSlice";
 import { createCollectionsSlice } from "./collectionsSlice";
 import { createNotesSlice } from "./notesSlice";
 import { createRootSlice } from "./rootSlice";
+import { createSettingsSlice } from "./settingsSlice";
 import type { Store } from "./types";
 
 export interface StoreInitialData {
@@ -18,6 +19,7 @@ export const createStore = (initialData: StoreInitialData) => {
       ...createCollectionsSlice(...a),
       ...createNotesSlice(...a),
       ...createActionQueueSlice(...a),
+      ...createSettingsSlice(...a),
     }))
   );
 };

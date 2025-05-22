@@ -9,6 +9,7 @@ import collectionRoutes from "./routes/collection-routes.js";
 import noteRoutes from "./routes/note-routes.js";
 import sseRoutes from "./routes/sse-routes.js";
 import ydocStateRoutes from "./routes/ydocstate-routes.js";
+import settingsRoutes from "./routes/settings-routes.js";
 import { handleWebhook } from "./controllers/sse-controller.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -41,6 +42,7 @@ app.use("/api/collections", collectionRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/sse", sseRoutes);
 app.use("/api/ydocstates", ydocStateRoutes);
+app.use("/api/settings", settingsRoutes);
 app.post("/api/webhook/sse", handleWebhook);
 
 // Error handling middleware

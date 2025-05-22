@@ -5,6 +5,7 @@ import { Header } from "@/components/header/Header";
 import { NotesPanel } from "@/components/notes/NotesPanel";
 import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useIosScrollHack } from "@/hooks/useIosScrollHack";
+import { useManageThemes } from "@/hooks/useManageThemes";
 import { useViewportSize } from "@/hooks/useViewportSize";
 
 export const Route = createFileRoute("/(authenticated)/notes")({
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/(authenticated)/notes")({
 });
 
 function RouteComponent() {
+  useManageThemes();
+
   const isMobile = useBreakpointSM();
   const viewportSize = useViewportSize();
 

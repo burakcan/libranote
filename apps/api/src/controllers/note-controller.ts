@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { Note } from "../db/prisma.js";
 import { NoteService } from "../services/note-service.js";
+import { BadRequestError } from "../utils/errors.js";
 
 /**
  * Get all notes for the current user (owned + collaborator + in member collections)
@@ -21,7 +22,7 @@ export async function getNotesByCollection(req: Request, res: Response, next: Ne
   try {
     const { collectionId } = req.params;
     if (!collectionId) {
-      throw new Error("Collection ID is required");
+      throw new BadRequestError("Collection ID is required");
     }
     const notes = await NoteService.getNotesByCollection(req.userId, collectionId);
     res.status(200).json({ notes });
@@ -37,7 +38,7 @@ export async function getNote(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     if (!id) {
-      throw new Error("Note ID is required");
+      throw new BadRequestError("Note ID is required");
     }
     const note = await NoteService.getNote(req.userId, id);
     res.status(200).json({ note });
@@ -91,7 +92,7 @@ export async function updateNote(
     const { userId } = req;
     const { id } = req.params;
     if (!id) {
-      throw new Error("Note ID is required");
+      throw new BadRequestError("Note ID is required");
     }
     const { note } = req.body;
     const clientId = (req.headers["x-client-id"] as string) || "";
@@ -111,7 +112,7 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
     const { userId } = req;
     const { id } = req.params;
     if (!id) {
-      throw new Error("Note ID is required");
+      throw new BadRequestError("Note ID is required");
     }
     const clientId = (req.headers["x-client-id"] as string) || "";
 

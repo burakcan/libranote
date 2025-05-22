@@ -9,7 +9,7 @@ import {
   ServerCollection,
   ServerNote,
 } from "@/types/Entities";
-
+import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 // --- Base State Interface (Defines the shape of the state) ---
 export interface StoreState {
   clientId: string;
@@ -28,6 +28,9 @@ export interface StoreState {
   // Action Queue state is now an object containing the items array
   actionQueue: {
     items: ActionQueueItem[];
+  };
+  settings: {
+    data: ClientUserSetting[];
   };
 }
 
@@ -110,6 +113,21 @@ export type NotesSliceActions = {
   ) => Promise<void>;
 };
 
+export type SettingsSliceActions = {
+  setSettingsData: (settings: ClientUserSetting[]) => void;
+  setSetting: (
+    key: ClientUserSetting["key"],
+    value: ClientUserSetting["value"]
+  ) => Promise<void>;
+  swapSetting: (
+    key: ClientUserSetting["key"],
+    remoteSetting: ServerUserSetting
+  ) => Promise<void>;
+  syncRemoteSettingsToLocal: (
+    remoteSettings: ServerUserSetting[]
+  ) => Promise<void>;
+};
+
 export type ActionQueueSliceActions = {
   addActionToQueue: (action: ActionQueueItem) => Promise<void>;
   removeActionFromQueue: (actionId: ActionQueueItem["id"]) => Promise<void>;
@@ -126,5 +144,6 @@ export type Store = Pick<StoreState, "clientId" | "userId"> &
   RootSliceActions & {
     collections: StoreState["collections"] & CollectionsSliceActions;
     notes: StoreState["notes"] & NotesSliceActions;
+    settings: StoreState["settings"] & SettingsSliceActions;
     actionQueue: StoreState["actionQueue"] & ActionQueueSliceActions;
   };

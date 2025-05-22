@@ -26,6 +26,7 @@ model User {
   collectionMembers CollectionMember[]
   ownedCollections  Collection[]       @relation("OwnedCollections")
   createdNotes      Note[]             @relation("CreatedNotes")
+  UserSetting       UserSetting[]
 
   @@map("user")
 }
@@ -166,4 +167,17 @@ model NoteYDocState {
   note       Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@map("note_y_doc_state")
+}
+
+// User specific settings
+model UserSetting {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@map("user_setting")
 }

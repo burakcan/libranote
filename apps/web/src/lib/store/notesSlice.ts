@@ -7,6 +7,7 @@ import { SearchService } from "@/services/SearchService";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";
+
 // Initial state for this slice
 const initialNotesState: InitialStoreState["notes"] = {
   data: [],

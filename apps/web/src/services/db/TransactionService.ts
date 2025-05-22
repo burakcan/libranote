@@ -6,6 +6,7 @@ import {
   ServerCollection,
   ServerNote,
 } from "@/types/Entities";
+import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 
 export class TransactionService {
   static async swapCollectionWithRemote(
@@ -107,5 +108,31 @@ export class TransactionService {
           .delete();
       });
     }, "Failed to sync remote notes to local");
+  }
+
+  static async syncRemoteSettingsToLocal(
+    remoteSettings: ServerUserSetting[]
+  ): Promise<void> {
+    return wrapDbOperation(async () => {
+      const db = userDatabaseService.getDatabase();
+      await db.transaction("rw", [db.table("settings")], async (tx) => {
+        for (const remoteSetting of remoteSettings) {
+          const localSetting = {
+            key: remoteSetting.key as ClientUserSetting["key"],
+            value: remoteSetting.value as ClientUserSetting["value"],
+            updatedAt: remoteSetting.updatedAt,
+          } as ClientUserSetting;
+
+          await tx.table<ClientUserSetting>("settings").put(localSetting);
+        }
+
+        // Delete settings that are no longer in the remote data
+        await tx
+          .table<ClientUserSetting>("settings")
+          .where("key")
+          .noneOf(remoteSettings.map((setting) => setting.key))
+          .delete();
+      });
+    }, "Failed to sync remote settings to local");
   }
 }
