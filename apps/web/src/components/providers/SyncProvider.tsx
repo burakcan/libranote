@@ -10,7 +10,7 @@ import {
   SYNCED_EVENT,
   SYNCING_EVENT,
   SyncService,
-} from "@/services/SyncService";
+} from "@/services/sync/SyncService";
 
 interface SyncContextType {
   syncService: SyncService | null;
@@ -55,6 +55,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         setting: SettingRepository,
       });
       syncServiceRef.current = syncService;
+
+      // Add to window for debugging
+      (window as unknown as { syncService: SyncService }).syncService =
+        syncService;
 
       syncService.addEventListener(SYNCING_EVENT, handleSyncing);
       syncService.addEventListener(SYNCED_EVENT, handleSynced);

@@ -17,7 +17,7 @@ export function TextPreview({
 }: TextPreviewProps) {
   return (
     <div
-      className={cn("p-4 border rounded-md space-y-3 prose", {
+      className={cn("p-4 border rounded-md space-y-3 prose dark:prose-invert", {
         "prose-sm": fontSize === "small",
         "prose-base": fontSize === "medium",
         "prose-lg": fontSize === "large",
