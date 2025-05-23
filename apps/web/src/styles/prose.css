@@ -1,47 +1,12 @@
-.ProseMirror {
-  @apply outline-none;
-}
-
 .prose {
-  /* @apply prose dark:prose-invert;
-  @apply flex-auto;
-  @apply p-4 pt-8 sm:p-16;
-  @apply max-w-[100ch];
-  @apply min-h-screen; */
-
+  @apply dark:prose-invert;
 
   :first-child {
     @apply mt-0 pt-0;
   }
 
-  &:focus {
+  .ProseMirror-focused {
     @apply outline-none;
-  }
-
-  .collaboration-cursor__caret {
-    border-left: 1px solid #0d0d0d;
-    border-right: 1px solid #0d0d0d;
-    margin-left: -1px;
-    margin-right: -1px;
-    pointer-events: none;
-    position: relative;
-    word-break: normal;
-  }
-
-  .collaboration-cursor__label {
-    @apply font-sans;
-    border-radius: 3px 3px 3px 0;
-    color: #0d0d0d;
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 600;
-    left: -1px;
-    line-height: normal;
-    padding: 0.1rem 0.3rem;
-    position: absolute;
-    top: -1.4em;
-    user-select: none;
-    white-space: nowrap;
   }
 
   h1.note-title.is-empty::before {
@@ -194,7 +159,12 @@
 }
 
 .prose-headings_font-Inter {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-family-inter);
   }
 }
@@ -204,7 +174,12 @@
 }
 
 .prose-headings_font-Lora {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-family-lora);
   }
 }
@@ -214,7 +189,12 @@
 }
 
 .prose-headings_font-Playfair_Display {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-family-playfair-display);
   }
 }
@@ -224,7 +204,12 @@
 }
 
 .prose-headings_font-Roboto {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-family-roboto);
   }
 }
@@ -234,32 +219,33 @@
 }
 
 .prose-headings_font-Open_Sans {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-family-open-sans);
   }
 }
 
 .prose-code_font-Source_Code_Pro {
-  pre, code {
+  pre,
+  code {
     font-family: var(--font-family-source-code-pro);
   }
 }
 
 .prose-code_font-Fira_Code {
-  pre, code {
+  pre,
+  code {
     font-family: var(--font-family-fira-code);
   }
 }
 
 .prose-code_font-IBM_Plex_Mono {
-  pre, code {
+  pre,
+  code {
     font-family: var(--font-family-ibm-plex-mono);
   }
 }
-
-
-
-
-
-
-

@@ -1,5 +1,2 @@
 - Initial login first example notes
-- ID generation other than UUID
-- Keep active collection in session storage
-- Floating create buttons for collections and notes
-- Menu instead of create button on mobile
+- Initial sync should be one by one and not all at once

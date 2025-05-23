@@ -51,6 +51,7 @@ export function SyncSettings() {
       success: "Search index rebuilt successfully",
       error: "Failed to rebuild search index",
       richColors: true,
+      position: "bottom-center",
     });
   };
 

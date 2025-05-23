@@ -49,6 +49,14 @@ export class UserDatabaseService implements DatabaseService {
       this.userId = null;
     }
   }
+
+  async destroy(): Promise<void> {
+    if (this.db) {
+      await this.db.delete();
+      this.db = null;
+      this.userId = null;
+    }
+  }
 }
 
 // Create a singleton instance

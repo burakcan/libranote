@@ -10,6 +10,7 @@ import * as Y from "yjs";
 import { useShallow } from "zustand/react/shallow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBreakpointSM } from "@/hooks/useBreakpointSM";
+import { useCustomizedProseClasses } from "@/hooks/useCustomizedProseClasses";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSetting } from "@/hooks/useSetting";
 import { useStore } from "@/hooks/useStore";
@@ -109,11 +110,8 @@ export function NoteEditor(props: {
   noteId: string;
   setEditorReady: (ready: boolean) => void;
 }) {
-  const { value: fontSize } = useSetting("appearance.fontSize");
-  const { value: headingFont } = useSetting("appearance.headingFontFamily");
-  const { value: contentFont } = useSetting("appearance.contentFontFamily");
-  const { value: codeFont } = useSetting("appearance.codeFontFamily");
-  const { value: lineHeight } = useSetting("appearance.lineHeight");
+  const lineHeight = useSetting("appearance.lineHeight").value;
+  const proseClasses = useCustomizedProseClasses();
   const isMobile = useBreakpointSM();
   const { yDoc, provider, noteId, setEditorReady } = props;
   const sessionData = useSessionQuery();
@@ -209,20 +207,10 @@ export function NoteEditor(props: {
           editor={editor}
           spellCheck={false}
           className={cn(
-            "cursor-text prose dark:prose-invert flex-auto p-4 pt-8 sm:p-16 max-w-[100ch] min-h-screen",
-            {
-              ["prose-base"]: fontSize === "small",
-              ["prose-lg"]: fontSize === "medium",
-              ["prose-xl"]: fontSize === "large",
-              [`prose-headings_font-${headingFont}`]: headingFont !== "system",
-              [`prose-p_font-${contentFont}`]: contentFont !== "system",
-              [`prose-code_font-${codeFont}`]: codeFont !== "system",
-              [`prose-pre_font-${codeFont}`]: codeFont !== "system",
-            }
+            "cursor-text prose flex-auto p-4 pt-8 sm:p-16 max-w-[100ch] min-h-screen",
+            proseClasses
           )}
-          style={{
-            lineHeight: `${lineHeight}em`,
-          }}
+          style={{ lineHeight: `${lineHeight}em` }}
           onClick={() => editor?.chain().focus().run()}
         />
         <LinkBubbleMenu editor={editor} />

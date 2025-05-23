@@ -61,7 +61,7 @@ export function SettingsSidebar({
   onTabChange,
 }: SettingsSidebarProps) {
   return (
-    <div className="w-[200px] border-r shrink-0 bg-muted/40">
+    <div className="w-[200px] border-r shrink-0 bg-muted/40 rounded-l-md">
       <nav className="flex flex-col gap-1 p-2">
         {items.map((item) => (
           <SidebarItem

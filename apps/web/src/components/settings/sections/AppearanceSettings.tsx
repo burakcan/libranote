@@ -64,17 +64,6 @@ export function AppearanceSettings() {
     { value: "IBM_Plex_Mono", label: "IBM Plex Mono" },
   ];
 
-  // Shared text preview component for both font family and font size sections
-  const textPreview = (
-    <TextPreview
-      fontSize={fontSize as string}
-      headingFont={headingFont as string}
-      contentFont={contentFont as string}
-      codeFont={codeFont as string}
-      lineHeight={lineHeight as number}
-    />
-  );
-
   return (
     <div className="flex flex-col gap-8">
       <SettingsSection title="Theme">
@@ -262,7 +251,9 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        <div className="mt-4">{textPreview}</div>
+        <div className="mt-4">
+          <TextPreview />
+        </div>
       </SettingsSection>
     </div>
   );

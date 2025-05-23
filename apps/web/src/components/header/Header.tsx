@@ -1,4 +1,4 @@
-import { LogOut, Notebook, Settings, User } from "lucide-react";
+import { Loader2, LogOut, Notebook, Settings, User } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,12 +9,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SearchBar } from "@/components/search/SearchBar";
 import { SettingsModal } from "@/components/settings/Settings";
+import { useLogout } from "@/hooks/useLogout";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { SyncStatus } from "./SyncStatus";
 
 export function Header() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { data: session } = useSessionQuery();
+  const { mutate: logout, isPending } = useLogout();
 
   return (
     <header className="h-14 px-4 flex-shrink-0 border-b border-sidebar-border/70 bg-sidebar">
@@ -50,8 +52,17 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <LogOut className="size-4" />
+                <DropdownMenuItem
+                  onClick={() => {
+                    logout();
+                  }}
+                  disabled={isPending}
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <LogOut className="size-4" />
+                  )}
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

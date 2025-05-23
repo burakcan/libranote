@@ -1,8 +1,9 @@
 "use client";
 
 import Avatar from "boring-avatars";
-import { Github, Mail } from "lucide-react";
-import { useState } from "react";
+import { Github, Loader2, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,14 +19,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
 import { getUserColors } from "@/lib/utils";
 
 export function AccountSettings() {
-  const [name, setName] = useState("John Doe");
-  const [email] = useState("john.doe@example.com");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const sessionData = useSessionQuery();
   const user = sessionData.data?.user;
+  const { mutate: updateUser, isPending } = useUpdateUserMutation();
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+    }
+  }, [user]);
+
+  const nameValueChanged = name !== user?.name;
 
   return (
     <div className="space-y-6">
@@ -46,20 +58,59 @@ export function AccountSettings() {
           <div className="space-y-4 flex-1">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                {nameValueChanged && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        updateUser(
+                          {
+                            name: name,
+                          },
+                          {
+                            onSuccess: () => {
+                              toast.success("Name updated successfully!");
+                            },
+                            onError: () => {
+                              toast.error("Failed to update name!");
+                            },
+                          }
+                        );
+                      }}
+                      disabled={isPending}
+                    >
+                      {isPending ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        "Save"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setName(user.name);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="flex items-center gap-2">
-                <Input id="email" value={email} disabled />
-                <Button variant="outline" size="sm">
-                  Change
-                </Button>
+                <Input id="email" type="email" value={email} disabled />
               </div>
             </div>
           </div>

@@ -139,6 +139,30 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource-variable/fira-code':
+        specifier: ^5.2.6
+        version: 5.2.6
+      '@fontsource-variable/inter':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource-variable/lora':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource-variable/open-sans':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource-variable/playfair-display':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource-variable/roboto':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource-variable/source-code-pro':
+        specifier: ^5.2.5
+        version: 5.2.5
+      '@fontsource/ibm-plex-mono':
+        specifier: ^5.2.5
+        version: 5.2.5
       '@hocuspocus/provider':
         specifier: ^2.15.2
         version: 2.15.2(y-protocols@1.0.6(yjs@13.6.24))(yjs@13.6.24)
@@ -1340,6 +1364,30 @@ packages:
 
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
+
+  '@fontsource-variable/fira-code@5.2.6':
+    resolution: {integrity: sha512-TZe+3xOB0JofZOTNeITYVsD1y/OiFucwTmcmhC19mj+GOgCnNkbp7bb1Jobfg+HjlAHr11HdptENKu0B+VkWLg==}
+
+  '@fontsource-variable/inter@5.2.5':
+    resolution: {integrity: sha512-TrWffUAFOnT8zroE9YmGybagoOgM/HjRqMQ8k9R0vVgXlnUh/vnpbGPAS/Caz1KIlOPnPGh6fvJbb7DHbFCncA==}
+
+  '@fontsource-variable/lora@5.2.5':
+    resolution: {integrity: sha512-eupTrzQnDFr3i9pci0efxfT0mCjGmWJNmDyvsl9Wq11JCyNr5ZN7bTjhIT6/q9daq5CshTsowg0/BH2gERbtXQ==}
+
+  '@fontsource-variable/open-sans@5.2.5':
+    resolution: {integrity: sha512-++xRfkZAxNP4e1Spm5W11iVcoYfXcNVTV5MDit60t7grRk10hy9C7XQd/jv+0TDFIfHbK9EzyBp3M3CHPesroA==}
+
+  '@fontsource-variable/playfair-display@5.2.5':
+    resolution: {integrity: sha512-nzSCC5pbWHjkJBqjPe81cPIC7fqJ6U5DwJ6tec7vF1bQ2DJnaKRBZluRQJuseFpACZLTN8LeN/1gBQEA7PnKOw==}
+
+  '@fontsource-variable/roboto@5.2.5':
+    resolution: {integrity: sha512-csqBSOWXv0h5IbPhEqYJua6/nxl7dSNZbBOMeXSO9aqzgPw3GpfgC9kL5M6ULFLRaoDoBD4U9QctoDLKMaTyMg==}
+
+  '@fontsource-variable/source-code-pro@5.2.5':
+    resolution: {integrity: sha512-Mi0+uddn7+wE2hytXVG4RN7TJ8aLU6SU/4GVxBRgkaGsI/WQ3ir3uSzbUGBmG7EnEGQkenr21eVmDHdba2RBKA==}
+
+  '@fontsource/ibm-plex-mono@5.2.5':
+    resolution: {integrity: sha512-G09N3GfuT9qj3Ax2FDZvKqZttzM3v+cco2l8uXamhKyXLdmlaUDH5o88/C3vtTHj2oT7yRKsvxz9F+BXbWKMYA==}
 
   '@hexagon/base64@1.1.28':
     resolution: {integrity: sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==}
@@ -6632,6 +6680,22 @@ snapshots:
       react-dom: 19.0.0(react@19.0.0)
 
   '@floating-ui/utils@0.2.9': {}
+
+  '@fontsource-variable/fira-code@5.2.6': {}
+
+  '@fontsource-variable/inter@5.2.5': {}
+
+  '@fontsource-variable/lora@5.2.5': {}
+
+  '@fontsource-variable/open-sans@5.2.5': {}
+
+  '@fontsource-variable/playfair-display@5.2.5': {}
+
+  '@fontsource-variable/roboto@5.2.5': {}
+
+  '@fontsource-variable/source-code-pro@5.2.5': {}
+
+  '@fontsource/ibm-plex-mono@5.2.5': {}
 
   '@hexagon/base64@1.1.28': {}
 
