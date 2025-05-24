@@ -38,22 +38,29 @@ export const createCollectionsSlice: StateCreator<
       }),
 
     syncRemoteCollectionsToLocal: async (remoteCollections) => {
-      P(set, (draft) => {
-        for (const remoteCollection of remoteCollections) {
-          const existingCollectionIndex = draft.collections.data.findIndex(
-            (collection) => collection.id === remoteCollection.id
-          );
+      for (const remoteCollection of remoteCollections) {
+        const existingCollectionIndex = get().collections.data.findIndex(
+          (collection) => collection.id === remoteCollection.id
+        );
 
-          if (existingCollectionIndex !== -1) {
-            // If the collection already exists, update it
+        if (existingCollectionIndex !== -1) {
+          // If the collection already exists, update it
+          P(set, (draft) => {
             draft.collections.data[existingCollectionIndex] = remoteCollection;
-          } else {
-            // If the collection does not exist, add it
+          });
+        } else {
+          // If the collection does not exist, add it
+          P(set, (draft) => {
             draft.collections.data.push(remoteCollection);
-          }
+          });
         }
 
-        // Delete collections that are no longer in the remote data
+        // Defer so the ui can update and not block the main thread
+        await Promise.resolve();
+      }
+
+      // Delete collections that are no longer in the remote data
+      P(set, (draft) => {
         draft.collections.data = draft.collections.data.filter((collection) =>
           remoteCollections.some(
             (remoteCollection) => remoteCollection.id === collection.id

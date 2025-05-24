@@ -30,39 +30,38 @@ export const createNotesSlice: StateCreator<
       }),
 
     syncRemoteNotesToLocal: async (remoteNotes) => {
-      P(set, (draft) => {
-        for (const remoteNote of remoteNotes) {
-          const existingNoteIndex = draft.notes.data.findIndex(
-            (note) => note.id === remoteNote.id
-          );
+      for (const remoteNote of remoteNotes) {
+        const existingNoteIndex = get().notes.data.findIndex(
+          (note) => note.id === remoteNote.id
+        );
 
-          if (existingNoteIndex !== -1) {
-            // If the note already exists, update it
+        if (existingNoteIndex !== -1) {
+          // If the note already exists, update it
+          P(set, (draft) => {
             draft.notes.data[existingNoteIndex] = remoteNote;
-          } else {
-            // If the note does not exist, add it
+          });
+        } else {
+          // If the note does not exist, add it
+          P(set, (draft) => {
             draft.notes.data.push(remoteNote);
+          });
 
-            SearchService.addNote({
-              id: remoteNote.id,
-              title: remoteNote.title,
-              content: remoteNote.description || "",
-            });
-          }
+          SearchService.addNote({
+            id: remoteNote.id,
+            title: remoteNote.title,
+            content: remoteNote.description || "",
+          });
         }
 
-        // Delete notes that are no longer in the remote data
-        draft.notes.data = draft.notes.data.filter((note) => {
-          const shouldBeDeleted = !remoteNotes.some(
-            (remoteNote) => remoteNote.id === note.id
-          );
+        // Defer so the ui can update and not block the main thread
+        await Promise.resolve();
+      }
 
-          if (shouldBeDeleted) {
-            SearchService.removeNote(note.id);
-          }
-
-          return !shouldBeDeleted;
-        });
+      // Delete notes that are no longer in the remote data
+      P(set, (draft) => {
+        draft.notes.data = draft.notes.data.filter((note) =>
+          remoteNotes.some((remoteNote) => remoteNote.id === note.id)
+        );
       });
 
       await TransactionService.syncRemoteNotesToLocal(remoteNotes);

@@ -270,7 +270,6 @@ export class SyncService extends EventTarget {
         this.noteSyncService.loadLocalNotesToStore(),
         this.collectionSyncService.loadLocalCollectionsToStore(),
         this.queueService.loadLocalActionQueueToStore(),
-        this.noteSyncService.syncNoteYDocStates(), // Non-blocking background sync
       ];
 
       await Promise.all(localDataPromises);
@@ -285,6 +284,8 @@ export class SyncService extends EventTarget {
         this.collectionSyncService.syncAllCollectionsToLocal(),
         this.noteSyncService.syncAllNotesToLocal(),
       ]);
+
+      this.noteSyncService.syncNoteYDocStates(); // Non-blocking background sync
 
       console.debug("SyncService: Initial sync completed successfully");
 
