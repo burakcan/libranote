@@ -3,31 +3,16 @@ import { ApiService } from "@/services/ApiService";
 import { ErrorService, SyncError } from "@/lib/errors";
 import { Store } from "@/lib/store";
 import { ActionQueueItem } from "@/types/ActionQueue";
-import {
-  IActionQueueRepository,
-  ISettingRepository,
-} from "@/types/Repositories";
+import { ISettingRepository } from "@/types/Repositories";
 import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 import { SSEEvent } from "@/types/SSE";
-
-export const SETTING_SYNCING_EVENT = "setting:syncing";
-export const SETTING_SYNCED_EVENT = "setting:synced";
-export const SETTING_SYNC_ERROR_EVENT = "setting:sync-error";
 
 export class SettingsSyncService extends EventTarget {
   constructor(
     private settingRepository: ISettingRepository,
-    private queueRepository: IActionQueueRepository,
     private store: UseBoundStore<StoreApi<Store>>
   ) {
     super();
-    console.debug("SettingsSyncService: Constructor called", {
-      hasLoadMethod: typeof this.loadLocalSettingsToStore === "function",
-      allMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(this)),
-      settingRepository: !!settingRepository,
-      queueRepository: !!queueRepository,
-      store: !!store,
-    });
   }
 
   async loadLocalSettingsToStore(): Promise<void> {

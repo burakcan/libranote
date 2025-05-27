@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
+  DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,14 +30,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="sr-only">
-        <DialogTitle>Settings</DialogTitle>
-        <DialogDescription>
+      <DialogContent className="p-0 max-w-screen! h-screen sm:h-[90vh] max-h-screen sm:max-h-[600px] sm:w-3xl">
+        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogDescription className="sr-only">
           Manage your account settings and preferences.
         </DialogDescription>
-      </div>
-      <DialogContent className="p-0 max-w-screen! h-[90vh] max-h-[600px] w-3xl">
-        <div className="flex h-full overflow-hidden">
+        <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
           <ScrollArea className="flex-1 h-[90vh] max-h-[600px] min-h-0">
             <div className="p-6 pt-8">

@@ -7,11 +7,6 @@ import { SettingsSyncService } from "./SettingsSyncService";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import { IActionQueueRepository } from "@/types/Repositories";
 
-export const QUEUE_PROCESSING_STARTED_EVENT = "queue:processing-started";
-export const QUEUE_PROCESSING_COMPLETED_EVENT = "queue:processing-completed";
-export const QUEUE_PROCESSING_ERROR_EVENT = "queue:processing-error";
-export const QUEUE_ITEM_PROCESSED_EVENT = "queue:item-processed";
-
 export class QueueService extends EventTarget {
   private isProcessing = false;
 
@@ -43,7 +38,6 @@ export class QueueService extends EventTarget {
     }
 
     this.isProcessing = true;
-    this.dispatchEvent(new CustomEvent(QUEUE_PROCESSING_STARTED_EVENT));
 
     try {
       const items = await this.actionQueueRepository.getAll();
@@ -59,9 +53,6 @@ export class QueueService extends EventTarget {
       for (const item of sortedItems) {
         try {
           await this.processItem(item);
-          this.dispatchEvent(
-            new CustomEvent(QUEUE_ITEM_PROCESSED_EVENT, { detail: { item } })
-          );
         } catch (error) {
           console.error(
             `QueueService: Failed to process item ${item.id}:`,
@@ -70,16 +61,9 @@ export class QueueService extends EventTarget {
           await this.markItemAsError(item, error);
         }
       }
-
-      this.dispatchEvent(new CustomEvent(QUEUE_PROCESSING_COMPLETED_EVENT));
     } catch (error) {
       const appError = ErrorService.handle(error);
       const queueError = new SyncError("Failed to process queue", appError);
-
-      this.dispatchEvent(
-        new CustomEvent(QUEUE_PROCESSING_ERROR_EVENT, { detail: queueError })
-      );
-
       throw queueError;
     } finally {
       this.isProcessing = false;

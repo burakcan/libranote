@@ -17,16 +17,22 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSetting } from "@/hooks/useSetting";
 import { useStore } from "@/hooks/useStore";
-import { SearchService } from "@/services/SearchService";
+import { useSyncContext } from "@/hooks/useSyncContext";
+import { userDatabaseService } from "@/services/db/userDatabaseService";
+import { yjsDB } from "@/services/db/yIndexedDb";
+import { searchService } from "@/services/SearchService";
 
 export function SyncSettings() {
   const notes = useStore((state) => state.notes.data);
+  const { syncService } = useSyncContext();
   const [syncStatus, setSyncStatus] = useState("synced"); // synced, syncing, offline
   const [lastSynced, setLastSynced] = useState("2023-05-19 10:45 AM");
-  const [clearCacheDialogOpen, setClearCacheDialogOpen] = useState(false);
+  const [resetCacheDialogOpen, setResetCacheDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const { data: sessionData } = useSessionQuery();
   const { value: syncSettingsEnabled, setValue: setSyncSettingsEnabled } =
     useSetting("sync.syncSettingsEnabled");
 
@@ -43,15 +49,48 @@ export function SyncSettings() {
   };
 
   const handleRebuildSearchIndex = () => {
-    const promise = SearchService.rebuildSearchIndex(notes);
+    const promise = searchService.rebuildSearchIndex(notes);
 
     toast.promise(promise, {
       loading:
         "Rebuilding search index... This may take a while depending on the size of your notes.",
       success: "Search index rebuilt successfully",
       error: "Failed to rebuild search index",
-      richColors: true,
-      position: "bottom-center",
+    });
+  };
+
+  const handleResetCache = async () => {
+    setResetCacheDialogOpen(false);
+
+    if (!syncService) {
+      toast.error("Sync service not initialized");
+      return;
+    }
+
+    const clearPromises = Promise.all([
+      yjsDB.delete({ disableAutoOpen: false }),
+      searchService.clearNotesIndex(),
+      userDatabaseService.destroy({ disableAutoOpen: false }),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+
+    toast.promise(clearPromises, {
+      loading: "Resetting cache...",
+      success: "Cache reset successfully",
+      error: (error) =>
+        `Failed to reset cache. Please submit an issue on GitHub and include the following information:\n\nError: ${error}`,
+    });
+
+    await clearPromises;
+    await userDatabaseService.initialize(sessionData?.user.id);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const syncPromise = syncService.syncAll();
+
+    toast.promise(syncPromise, {
+      loading: "Syncing data...",
+      success: "Data synced successfully",
+      error: "Failed to sync data",
     });
   };
 
@@ -126,9 +165,9 @@ export function SyncSettings() {
         <div className="flex gap-2">
           <Button
             variant="destructive"
-            onClick={() => setClearCacheDialogOpen(true)}
+            onClick={() => setResetCacheDialogOpen(true)}
           >
-            Clear Local Cache
+            Reset Local Cache
           </Button>
           <Button variant="outline" onClick={handleRebuildSearchIndex}>
             Rebuild Search Index
@@ -137,24 +176,30 @@ export function SyncSettings() {
       </SettingsSection>
 
       <AlertDialog
-        open={clearCacheDialogOpen}
-        onOpenChange={setClearCacheDialogOpen}
+        open={resetCacheDialogOpen}
+        onOpenChange={setResetCacheDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear local cache?</AlertDialogTitle>
+            <AlertDialogTitle>Reset local cache?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove all locally stored data. Any unsynced changes
-              will be lost. Make sure you have synced your data before
-              proceeding.
+              This will remove all locally stored data and redownload the latest
+              data from the server. Any unsynced changes will be lost. Make sure
+              you have synced your data before proceeding.
+              {!syncSettingsEnabled && (
+                <span className="block mt-2">
+                  Your local settings will be reset to the server values.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
+              onClick={handleResetCache}
             >
-              Clear Cache
+              Reset Cache
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

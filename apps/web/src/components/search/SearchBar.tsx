@@ -1,7 +1,12 @@
 import { Loader2, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { SearchService } from "@/services/SearchService";
+import { useIgnoreQuickChange } from "@/hooks/useIgnoreQuickChange";
+import {
+  SEARCH_INDEXING_EVENT,
+  SEARCH_INDEXING_END_EVENT,
+  searchService,
+} from "@/services/SearchService";
 import { Button } from "../ui/button";
 import { SearchResults } from "./SearchResults";
 import { NoteSearchResult } from "@/types/FlexSearch";
@@ -10,6 +15,32 @@ export function SearchBar() {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NoteSearchResult[]>([]);
+  const [_isIndexing, setIsIndexing] = useState(false);
+  const isIndexing = useIgnoreQuickChange(1000, _isIndexing);
+
+  useEffect(() => {
+    const handleIndexing = () => {
+      setIsIndexing(true);
+    };
+
+    const handleIndexingEnd = () => {
+      setIsIndexing(false);
+    };
+
+    searchService.addEventListener(SEARCH_INDEXING_EVENT, handleIndexing);
+    searchService.addEventListener(
+      SEARCH_INDEXING_END_EVENT,
+      handleIndexingEnd
+    );
+
+    return () => {
+      searchService.removeEventListener(SEARCH_INDEXING_EVENT, handleIndexing);
+      searchService.removeEventListener(
+        SEARCH_INDEXING_END_EVENT,
+        handleIndexingEnd
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (query.length === 1) {
@@ -18,7 +49,7 @@ export function SearchBar() {
 
     setSearching(true);
 
-    SearchService.searchNotes({ query }).then((results) => {
+    searchService.searchNotes({ query }).then((results) => {
       setResults(results);
       setSearching(false);
     });
@@ -42,11 +73,12 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           type="text"
-          placeholder="Search..."
+          placeholder={isIndexing ? "Indexing..." : "Search..."}
+          disabled={isIndexing}
           className="pl-10 pr-16 bg-background/70 h-10 shadow-sm focus-visible:ring-primary/70 focus-visible:border-primary rounded-3xl"
         />
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          {searching ? (
+          {searching || isIndexing ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <Search className="h-5 w-5" />

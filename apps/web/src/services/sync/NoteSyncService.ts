@@ -6,15 +6,14 @@ import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
 import { ApiService } from "@/services/ApiService";
 import { IndexeddbPersistence } from "@/services/db/yIndexedDb";
-import { SearchService } from "@/services/SearchService";
+import { searchService } from "@/services/SearchService";
 import { ErrorService, SyncError } from "@/lib/errors";
 import { router } from "@/lib/router";
 import { Store } from "@/lib/store";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
-import { ClientNote, ServerNote, ServerNoteYDocState } from "@/types/Entities";
+import { ServerNote, ServerNoteYDocState } from "@/types/Entities";
 import {
-  IActionQueueRepository,
   INoteRepository,
   INoteYDocStateRepository,
 } from "@/types/Repositories";
@@ -24,14 +23,9 @@ const syncSocket = new HocuspocusProviderWebsocket({
   url: import.meta.env.VITE_HOCUSPOCUS_URL || "",
 });
 
-export const NOTE_SYNCING_EVENT = "note:syncing";
-export const NOTE_SYNCED_EVENT = "note:synced";
-export const NOTE_SYNC_ERROR_EVENT = "note:sync-error";
-
 export class NoteSyncService extends EventTarget {
   constructor(
     private noteRepository: INoteRepository,
-    private queueRepository: IActionQueueRepository,
     private noteYDocStateRepository: INoteYDocStateRepository,
     private store: UseBoundStore<StoreApi<Store>>
   ) {
@@ -58,12 +52,8 @@ export class NoteSyncService extends EventTarget {
     console.debug("NoteSyncService: Loaded local notes to store", localNotes);
   }
 
-  async syncNoteYDocStates(
-    remoteYDocState?: ServerNoteYDocState
-  ): Promise<void> {
-    const remoteYDocStates = remoteYDocState
-      ? [remoteYDocState]
-      : await ApiService.fetchAllYDocStates();
+  async syncAllNoteYDocStates(): Promise<void> {
+    const remoteYDocStates = await ApiService.fetchAllYDocStates();
 
     console.debug("NoteSyncService: Syncing YDoc states", remoteYDocStates);
 
@@ -123,51 +113,12 @@ export class NoteSyncService extends EventTarget {
           persistence.destroy();
           doc.destroy();
 
-          SearchService.updateNoteFromYDoc(remoteYDocState.noteId);
+          searchService.updateNoteFromYDoc(remoteYDocState.noteId);
 
           resolve();
         });
       });
     });
-  }
-
-  async syncNote(noteId: string): Promise<void> {
-    try {
-      this.dispatchEvent(
-        new CustomEvent(NOTE_SYNCING_EVENT, { detail: { noteId } })
-      );
-
-      const localNote = await this.noteRepository.getById(noteId);
-      // For now, we'll sync all notes until individual note fetch is implemented
-      const remoteNotes = await ApiService.fetchAllNotes();
-      const remoteNote = remoteNotes.find((note) => note.id === noteId);
-
-      if (!remoteNote) {
-        throw new Error(`Note ${noteId} not found on server`);
-      }
-
-      if (this.needsSync(localNote, remoteNote)) {
-        await this.reconcileNote(localNote, remoteNote);
-      }
-
-      this.dispatchEvent(
-        new CustomEvent(NOTE_SYNCED_EVENT, { detail: { noteId } })
-      );
-    } catch (error) {
-      const appError = ErrorService.handle(error);
-      const syncError = new SyncError(
-        `Failed to sync note ${noteId}: ${appError.message}`,
-        appError
-      );
-
-      this.dispatchEvent(
-        new CustomEvent(NOTE_SYNC_ERROR_EVENT, {
-          detail: { noteId, error: syncError },
-        })
-      );
-
-      throw syncError;
-    }
   }
 
   async syncAllNotesToLocal(): Promise<ServerNote[]> {
@@ -181,32 +132,6 @@ export class NoteSyncService extends EventTarget {
     } catch (error) {
       const appError = ErrorService.handle(error);
       throw new SyncError("Failed to sync all notes to local", appError);
-    }
-  }
-
-  async processQueuedNoteActions(): Promise<void> {
-    try {
-      const queueItems = await this.queueRepository.getAll();
-      const noteActions = queueItems.filter(
-        (item) =>
-          ["CREATE_NOTE", "UPDATE_NOTE", "DELETE_NOTE"].includes(item.type) &&
-          item.status === "pending"
-      );
-
-      for (const item of noteActions) {
-        try {
-          await this.processQueueItem(item);
-        } catch (error) {
-          console.error(`Failed to process queue item ${item.id}:`, error);
-          await this.queueRepository.update(item.id, {
-            status: "error",
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
-      }
-    } catch (error) {
-      const appError = ErrorService.handle(error);
-      throw new SyncError("Failed to process queued note actions", appError);
     }
   }
 
@@ -290,9 +215,8 @@ export class NoteSyncService extends EventTarget {
   async handleSSEEvent(event: SSEEvent): Promise<void> {
     switch (event.type) {
       case "NOTE_CREATED":
-        // Sync YDoc first, then handle note creation
-        await this.syncNoteYDocStates(event.note.noteYDocState);
         await this.handleRemoteNoteCreated(event.note);
+        await this.syncNoteYDocState(event.note.noteYDocState);
         break;
       case "NOTE_UPDATED":
         await this.handleRemoteNoteUpdated(event.note);
@@ -321,35 +245,10 @@ export class NoteSyncService extends EventTarget {
           noteYDocState: event.ydocState,
         });
 
-        await this.syncNoteYDocStates(event.ydocState);
+        await this.syncNoteYDocState(event.ydocState);
         break;
       }
       // Ignore all other events
-    }
-  }
-
-  private needsSync(
-    local: ClientNote | undefined,
-    remote: ServerNote
-  ): boolean {
-    if (!local) return true;
-    if (!local.serverUpdatedAt || !remote.serverUpdatedAt) return true;
-    return local.serverUpdatedAt < remote.serverUpdatedAt;
-  }
-
-  private async reconcileNote(
-    local: ClientNote | undefined,
-    remote: ServerNote
-  ): Promise<void> {
-    try {
-      // Update local note with remote data
-      await this.noteRepository.put(remote);
-
-      // Update search index
-      await SearchService.updateNoteFromYDoc(remote.id);
-    } catch (error) {
-      const appError = ErrorService.handle(error);
-      throw new SyncError(`Failed to reconcile note ${remote.id}`, appError);
     }
   }
 }

@@ -1,10 +1,16 @@
-import { LucideUser, PaintBucket, RefreshCw, Shield } from "lucide-react";
+import {
+  ChevronRight,
+  LucideUser,
+  PaintBucket,
+  RefreshCw,
+  Shield,
+} from "lucide-react";
 import type React from "react";
 import { cn } from "@/lib/utils";
 import type { SettingsTab } from "./types";
 
 interface SettingsSidebarProps {
-  activeTab: SettingsTab;
+  activeTab: SettingsTab | null;
   onTabChange: (tab: SettingsTab) => void;
 }
 
@@ -20,7 +26,7 @@ function SidebarItem({ label, icon, active, onClick }: SidebarItemProps) {
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-md text-left",
+        "flex items-center gap-3 w-full px-4 py-3 text-base sm:text-sm font-medium rounded-md text-left bg-muted/40 sm:bg-transparent text-muted-foreground",
         active
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:bg-muted"
@@ -29,6 +35,8 @@ function SidebarItem({ label, icon, active, onClick }: SidebarItemProps) {
     >
       {icon}
       <span>{label}</span>
+      <div className="flex-1 sm:hidden" />
+      <ChevronRight size={18} className="text-muted-foreground sm:hidden" />
     </button>
   );
 }
@@ -61,8 +69,8 @@ export function SettingsSidebar({
   onTabChange,
 }: SettingsSidebarProps) {
   return (
-    <div className="w-[200px] border-r shrink-0 bg-muted/40 rounded-l-md">
-      <nav className="flex flex-col gap-1 p-2">
+    <div className="w-full sm:w-[200px] sm:border-r shrink-0 sm:bg-muted/40 sm:rounded-l-md">
+      <nav className="flex flex-col gap-2 sm:gap-1 sm:p-2">
         {items.map((item) => (
           <SidebarItem
             key={item.id}

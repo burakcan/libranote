@@ -14,7 +14,7 @@ import { useCustomizedProseClasses } from "@/hooks/useCustomizedProseClasses";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSetting } from "@/hooks/useSetting";
 import { useStore } from "@/hooks/useStore";
-import { SearchService } from "@/services/SearchService";
+import { searchService } from "@/services/SearchService";
 import { cn, getUserColors } from "@/lib/utils";
 import { baseExtensions } from "./baseExtensions";
 import { EditorMobileHeader } from "./EditorMobileHeader";
@@ -99,7 +99,7 @@ const debouncedOnUpdate = debounce(
       true
     );
 
-    SearchService.updateNoteFromYDoc(note.current.id);
+    searchService.updateNoteFromYDoc(note.current.id);
   },
   1000
 );

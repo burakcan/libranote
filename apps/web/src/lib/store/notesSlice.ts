@@ -3,7 +3,7 @@ import type { StateCreator } from "zustand";
 import { NoteRepository } from "@/services/db/NoteRepository";
 import { NoteYDocStateRepository } from "@/services/db/NoteYDocStateRepository";
 import { TransactionService } from "@/services/db/TransactionService";
-import { SearchService } from "@/services/SearchService";
+import { searchService } from "@/services/SearchService";
 import type { Store, InitialStoreState } from "./types";
 import { P } from "./utils";
 import { ClientNote } from "@/types/Entities";
@@ -46,7 +46,7 @@ export const createNotesSlice: StateCreator<
             draft.notes.data.push(remoteNote);
           });
 
-          SearchService.addNote({
+          searchService.addNote({
             id: remoteNote.id,
             title: remoteNote.title,
             content: remoteNote.description || "",
@@ -99,7 +99,7 @@ export const createNotesSlice: StateCreator<
         relatedEntityId: noteId,
       });
 
-      SearchService.addNote({
+      searchService.addNote({
         id: noteId,
         title,
         content,
@@ -153,7 +153,7 @@ export const createNotesSlice: StateCreator<
         });
       }
 
-      SearchService.removeNote(noteId);
+      searchService.removeNote(noteId);
     },
 
     updateNote: async (update, noAction = false) => {
@@ -207,7 +207,7 @@ export const createNotesSlice: StateCreator<
       });
       await NoteRepository.put(note);
 
-      SearchService.addNote({
+      searchService.addNote({
         id: note.id,
         title: note.title,
         content: note.description || "",
@@ -221,7 +221,7 @@ export const createNotesSlice: StateCreator<
       await NoteRepository.delete(noteId);
       await NoteYDocStateRepository.delete(noteId);
 
-      SearchService.removeNote(noteId);
+      searchService.removeNote(noteId);
     },
 
     remoteUpdatedNote: async (note) => {
@@ -258,15 +258,17 @@ export const createNotesSlice: StateCreator<
       await TransactionService.swapNoteWithRemote(localId, remoteNote);
 
       if (remoteNote.id !== localId) {
-        SearchService.removeNote(localId);
+        searchService.removeNote(localId);
 
-        SearchService.addNote({
-          id: remoteNote.id,
-          title: remoteNote.title,
-          content: remoteNote.description || "",
-        }).then(() => {
-          SearchService.updateNoteFromYDoc(remoteNote.id);
-        });
+        searchService
+          .addNote({
+            id: remoteNote.id,
+            title: remoteNote.title,
+            content: remoteNote.description || "",
+          })
+          .then(() => {
+            searchService.updateNoteFromYDoc(remoteNote.id);
+          });
       }
     },
 

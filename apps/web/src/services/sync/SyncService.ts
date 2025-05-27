@@ -7,32 +7,16 @@ import {
   ONLINE_EVENT,
   OFFLINE_EVENT,
 } from "../NetworkStatusService";
-import {
-  CollectionSyncService,
-  COLLECTION_SYNCING_EVENT,
-  COLLECTION_SYNCED_EVENT,
-} from "./CollectionSyncService";
-import {
-  NoteSyncService,
-  NOTE_SYNCING_EVENT,
-  NOTE_SYNCED_EVENT,
-} from "./NoteSyncService";
-import {
-  QueueService,
-  QUEUE_PROCESSING_STARTED_EVENT,
-  QUEUE_PROCESSING_COMPLETED_EVENT,
-} from "./QueueService";
+import { CollectionSyncService } from "./CollectionSyncService";
+import { NoteSyncService } from "./NoteSyncService";
+import { QueueService } from "./QueueService";
 import {
   RealtimeService,
   REALTIME_MESSAGE_EVENT,
   REALTIME_CONNECTED_EVENT,
   REALTIME_DISCONNECTED_EVENT,
 } from "./RealtimeService";
-import {
-  SettingsSyncService,
-  SETTING_SYNCING_EVENT,
-  SETTING_SYNCED_EVENT,
-} from "./SettingsSyncService";
+import { SettingsSyncService } from "./SettingsSyncService";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import {
   ICollectionRepository,
@@ -51,6 +35,7 @@ let instance: SyncService | null = null;
 export class SyncService extends EventTarget {
   syncing = false;
   synced = false;
+  private syncOperationCount = 0;
 
   // Focused services
   private realtimeService!: RealtimeService;
@@ -93,6 +78,38 @@ export class SyncService extends EventTarget {
     }
   }
 
+  private startSyncOperation(): void {
+    this.syncOperationCount++;
+    if (this.syncOperationCount === 1) {
+      this.syncing = true;
+      this.synced = false;
+      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
+      console.debug(
+        `SyncService: Started syncing (operations: ${this.syncOperationCount})`
+      );
+    } else {
+      console.debug(
+        `SyncService: Added sync operation (operations: ${this.syncOperationCount})`
+      );
+    }
+  }
+
+  private endSyncOperation(): void {
+    this.syncOperationCount = Math.max(0, this.syncOperationCount - 1);
+    if (this.syncOperationCount === 0) {
+      this.syncing = false;
+      this.synced = true;
+      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
+      console.debug(
+        `SyncService: Finished syncing (operations: ${this.syncOperationCount})`
+      );
+    } else {
+      console.debug(
+        `SyncService: Completed sync operation (operations: ${this.syncOperationCount})`
+      );
+    }
+  }
+
   private initializeServices(): void {
     console.debug("SyncService: Initializing services...");
 
@@ -100,7 +117,6 @@ export class SyncService extends EventTarget {
       // Initialize domain sync services with store access
       this.noteSyncService = new NoteSyncService(
         this.repositories.note,
-        this.repositories.actionQueue,
         this.repositories.noteYDocState,
         this.store
       );
@@ -116,7 +132,6 @@ export class SyncService extends EventTarget {
     try {
       this.collectionSyncService = new CollectionSyncService(
         this.repositories.collection,
-        this.repositories.actionQueue,
         this.store
       );
       console.debug("SyncService: ✅ CollectionSyncService initialized");
@@ -131,7 +146,6 @@ export class SyncService extends EventTarget {
     try {
       this.settingsSyncService = new SettingsSyncService(
         this.repositories.setting,
-        this.repositories.actionQueue,
         this.store
       );
       console.debug("SyncService: ✅ SettingsSyncService initialized");
@@ -191,51 +205,6 @@ export class SyncService extends EventTarget {
     this.realtimeService.addEventListener(REALTIME_DISCONNECTED_EVENT, () => {
       console.log("SyncService: Real-time connection lost");
     });
-
-    // Handle queue processing events
-    this.queueService.addEventListener(QUEUE_PROCESSING_STARTED_EVENT, () => {
-      this.syncing = true;
-      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
-    });
-
-    this.queueService.addEventListener(QUEUE_PROCESSING_COMPLETED_EVENT, () => {
-      this.syncing = false;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
-    });
-
-    // Handle individual sync events
-    this.noteSyncService.addEventListener(NOTE_SYNCING_EVENT, () => {
-      this.syncing = true;
-      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
-    });
-
-    this.noteSyncService.addEventListener(NOTE_SYNCED_EVENT, () => {
-      this.syncing = false;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
-    });
-
-    this.collectionSyncService.addEventListener(
-      COLLECTION_SYNCING_EVENT,
-      () => {
-        this.syncing = true;
-        this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
-      }
-    );
-
-    this.collectionSyncService.addEventListener(COLLECTION_SYNCED_EVENT, () => {
-      this.syncing = false;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
-    });
-
-    this.settingsSyncService.addEventListener(SETTING_SYNCING_EVENT, () => {
-      this.syncing = true;
-      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
-    });
-
-    this.settingsSyncService.addEventListener(SETTING_SYNCED_EVENT, () => {
-      this.syncing = false;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
-    });
   }
 
   watchOnlineStatus() {
@@ -255,8 +224,7 @@ export class SyncService extends EventTarget {
       return;
     }
 
-    this.syncing = true;
-    this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
+    this.startSyncOperation();
 
     console.debug("SyncService: Syncing");
 
@@ -285,12 +253,9 @@ export class SyncService extends EventTarget {
         this.noteSyncService.syncAllNotesToLocal(),
       ]);
 
-      this.noteSyncService.syncNoteYDocStates(); // Non-blocking background sync
+      this.noteSyncService.syncAllNoteYDocStates(); // Non-blocking background sync
 
       console.debug("SyncService: Initial sync completed successfully");
-
-      this.synced = true;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
 
       // Start listening to queue changes
       this.listenQueue();
@@ -301,10 +266,9 @@ export class SyncService extends EventTarget {
       const appError = ErrorService.handle(error);
       console.error("SyncService: Error syncing", appError);
 
-      this.syncing = false;
       this.dispatchEvent(new CustomEvent("sync-error", { detail: appError }));
     } finally {
-      this.syncing = false;
+      this.endSyncOperation();
     }
   }
 
@@ -319,13 +283,19 @@ export class SyncService extends EventTarget {
         currentIds.some((id) => !prevIds.includes(id));
 
       if (hasChanges && !this.syncing) {
-        // Use the new QueueService to process changes
-        await this.queueService.processQueue();
+        this.startSyncOperation();
+        try {
+          await this.queueService.processQueue();
+        } finally {
+          this.endSyncOperation();
+        }
       }
     });
   }
 
   private async handleSSEEvent(event: SSEEvent): Promise<void> {
+    this.startSyncOperation();
+
     try {
       const store = this.store.getState();
 
@@ -359,6 +329,8 @@ export class SyncService extends EventTarget {
       const appError = ErrorService.handle(error);
       console.error("SyncService: Error processing SSE event:", appError);
       throw appError;
+    } finally {
+      this.endSyncOperation();
     }
   }
 
@@ -374,6 +346,8 @@ export class SyncService extends EventTarget {
       this.unsubscribeQueue = null;
     }
 
+    // Reset sync state
+    this.syncOperationCount = 0;
     this.syncing = false;
     this.synced = false;
   }

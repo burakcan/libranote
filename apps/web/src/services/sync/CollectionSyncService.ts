@@ -4,21 +4,13 @@ import { ErrorService, SyncError } from "@/lib/errors";
 import { queryClient } from "@/lib/queryClient";
 import { Store } from "@/lib/store";
 import { ActionQueueItem } from "@/types/ActionQueue";
-import { ClientCollection, ServerCollection } from "@/types/Entities";
-import {
-  IActionQueueRepository,
-  ICollectionRepository,
-} from "@/types/Repositories";
+import { ServerCollection } from "@/types/Entities";
+import { ICollectionRepository } from "@/types/Repositories";
 import { SSEEvent } from "@/types/SSE";
-
-export const COLLECTION_SYNCING_EVENT = "collection:syncing";
-export const COLLECTION_SYNCED_EVENT = "collection:synced";
-export const COLLECTION_SYNC_ERROR_EVENT = "collection:sync-error";
 
 export class CollectionSyncService extends EventTarget {
   constructor(
     private collectionRepository: ICollectionRepository,
-    private queueRepository: IActionQueueRepository,
     private store: UseBoundStore<StoreApi<Store>>
   ) {
     super();
@@ -33,40 +25,6 @@ export class CollectionSyncService extends EventTarget {
       "CollectionSyncService: Loaded local collections to store",
       localCollections
     );
-  }
-
-  async syncCollection(collectionId: string): Promise<void> {
-    try {
-      this.dispatchEvent(
-        new CustomEvent(COLLECTION_SYNCING_EVENT, { detail: { collectionId } })
-      );
-
-      const localCollection =
-        await this.collectionRepository.getById(collectionId);
-      const remoteCollection = await ApiService.fetchCollection(collectionId);
-
-      if (this.needsSync(localCollection, remoteCollection)) {
-        await this.reconcileCollection(localCollection, remoteCollection);
-      }
-
-      this.dispatchEvent(
-        new CustomEvent(COLLECTION_SYNCED_EVENT, { detail: { collectionId } })
-      );
-    } catch (error) {
-      const appError = ErrorService.handle(error);
-      const syncError = new SyncError(
-        `Failed to sync collection ${collectionId}: ${appError.message}`,
-        appError
-      );
-
-      this.dispatchEvent(
-        new CustomEvent(COLLECTION_SYNC_ERROR_EVENT, {
-          detail: { collectionId, error: syncError },
-        })
-      );
-
-      throw syncError;
-    }
   }
 
   async syncAllCollectionsToLocal(): Promise<ServerCollection[]> {
@@ -232,31 +190,6 @@ export class CollectionSyncService extends EventTarget {
         break;
       }
       // Ignore all other events
-    }
-  }
-
-  private needsSync(
-    local: ClientCollection | undefined,
-    remote: ServerCollection
-  ): boolean {
-    if (!local) return true;
-    if (!local.serverUpdatedAt || !remote.serverUpdatedAt) return true;
-    return local.serverUpdatedAt < remote.serverUpdatedAt;
-  }
-
-  private async reconcileCollection(
-    local: ClientCollection | undefined,
-    remote: ServerCollection
-  ): Promise<void> {
-    try {
-      // Update local collection with remote data
-      await this.collectionRepository.put(remote);
-    } catch (error) {
-      const appError = ErrorService.handle(error);
-      throw new SyncError(
-        `Failed to reconcile collection ${remote.id}`,
-        appError
-      );
     }
   }
 }

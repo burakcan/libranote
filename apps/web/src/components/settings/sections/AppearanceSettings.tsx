@@ -87,7 +87,7 @@ export function AppearanceSettings() {
             </Label>
           </RadioGroup>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-2">
             {(themeMode === "light" || themeMode === "system") && (
               <div className="space-y-2">
                 <Label htmlFor="light-theme">Light Theme</Label>
@@ -154,7 +154,7 @@ export function AppearanceSettings() {
       </SettingsSection>
 
       <SettingsSection title="Font Family">
-        <div className="grid grid-cols-2 gap-2 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-2 sm:space-y-4">
           <div className="space-y-2">
             <Label htmlFor="heading-font">Headings Font</Label>
             <Select

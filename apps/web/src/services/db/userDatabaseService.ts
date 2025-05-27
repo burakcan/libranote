@@ -50,9 +50,9 @@ export class UserDatabaseService implements DatabaseService {
     }
   }
 
-  async destroy(): Promise<void> {
+  async destroy(deleteOptions?: { disableAutoOpen: boolean }): Promise<void> {
     if (this.db) {
-      await this.db.delete();
+      await this.db.delete(deleteOptions || { disableAutoOpen: true });
       this.db = null;
       this.userId = null;
     }

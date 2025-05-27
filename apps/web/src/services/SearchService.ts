@@ -11,10 +11,14 @@ import {
   NoteSearchResult,
 } from "@/types/FlexSearch";
 
-export class SearchService extends EventTarget {
-  static notesIndexMutex = new Mutex();
+export const SEARCH_INDEXING_EVENT = "search:indexing";
+export const SEARCH_INDEXING_END_EVENT = "search:indexing-end";
 
-  static notesIndex = new Document({
+export class SearchService extends EventTarget {
+  operationsInProgress = 0;
+  notesIndexMutex = new Mutex();
+
+  notesIndex = new Document({
     encoder: Charset.LatinBalance,
     document: {
       store: true,
@@ -32,15 +36,31 @@ export class SearchService extends EventTarget {
     context: true,
   });
 
-  static notesDb = new IndexedDB({
+  notesDb = new IndexedDB({
     name: "libranote-search-notes",
   });
 
-  static async init() {
-    await SearchService.notesIndex.mount(SearchService.notesDb);
+  constructor() {
+    super();
+
+    this.notesIndex.mount(this.notesDb);
   }
 
-  static async getNoteContentFromYDoc(noteId: string) {
+  get isIndexing() {
+    return this.operationsInProgress > 0;
+  }
+
+  onIndexing() {
+    this.operationsInProgress++;
+    this.dispatchEvent(new CustomEvent(SEARCH_INDEXING_EVENT));
+  }
+
+  onIndexingEnd() {
+    this.operationsInProgress--;
+    this.dispatchEvent(new CustomEvent(SEARCH_INDEXING_END_EVENT));
+  }
+
+  async getNoteContentFromYDoc(noteId: string) {
     const yDoc = new Y.Doc();
     const persistence = new YIndexeddbPersistence(noteId, yDoc);
 
@@ -62,7 +82,7 @@ export class SearchService extends EventTarget {
     };
   }
 
-  static async addNote({
+  async addNote({
     id,
     title,
     content,
@@ -71,8 +91,10 @@ export class SearchService extends EventTarget {
     title: string;
     content: string;
   }) {
+    this.onIndexing();
+
     await this.notesIndexMutex.acquire();
-    console.log("SearchService: Adding note to search index", id, title);
+    console.log("searchService: Adding note to search index", id, title);
 
     try {
       await this.notesIndex.add({
@@ -82,13 +104,16 @@ export class SearchService extends EventTarget {
       });
       await this.notesIndex.commit();
     } catch (error) {
-      console.error("SearchService: Error adding note to search index", error);
+      console.error("searchService: Error adding note to search index", error);
     } finally {
       this.notesIndexMutex.release();
+      this.onIndexingEnd();
     }
   }
 
-  static async addNoteFromYDoc(note: ClientNote) {
+  async addNoteFromYDoc(note: ClientNote) {
+    this.onIndexing();
+
     const { title, content } = await this.getNoteContentFromYDoc(note.id);
 
     await this.addNote({
@@ -96,26 +121,31 @@ export class SearchService extends EventTarget {
       title,
       content,
     });
+
+    this.onIndexingEnd();
   }
 
-  static async removeNote(id: string) {
+  async removeNote(id: string) {
+    this.onIndexing();
+
     await this.notesIndexMutex.acquire();
-    console.log("SearchService: Removing note from search index", id);
+    console.log("searchService: Removing note from search index", id);
 
     try {
       await this.notesIndex.remove(id);
       await this.notesIndex.commit();
     } catch (error) {
       console.error(
-        "SearchService: Error removing note from search index",
+        "searchService: Error removing note from search index",
         error
       );
     } finally {
       this.notesIndexMutex.release();
+      this.onIndexingEnd();
     }
   }
 
-  static async updateNote({
+  async updateNote({
     id,
     title,
     content,
@@ -124,8 +154,10 @@ export class SearchService extends EventTarget {
     title: string;
     content: string;
   }) {
+    this.onIndexing();
+
     await this.notesIndexMutex.acquire();
-    console.log("SearchService: Updating note in search index", id, title);
+    console.log("searchService: Updating note in search index", id, title);
 
     try {
       await this.notesIndex.update(id, {
@@ -135,15 +167,18 @@ export class SearchService extends EventTarget {
       await this.notesIndex.commit();
     } catch (error) {
       console.error(
-        "SearchService: Error updating note in search index",
+        "searchService: Error updating note in search index",
         error
       );
     } finally {
       this.notesIndexMutex.release();
+      this.onIndexingEnd();
     }
   }
 
-  static async updateNoteFromYDoc(noteId: string) {
+  async updateNoteFromYDoc(noteId: string) {
+    this.onIndexing();
+
     const { title, content } = await this.getNoteContentFromYDoc(noteId);
 
     await this.updateNote({
@@ -151,9 +186,11 @@ export class SearchService extends EventTarget {
       title,
       content,
     });
+
+    this.onIndexingEnd();
   }
 
-  static shortenMarkedText(text: string, charsBefore = 10, charsAfter = 100) {
+  shortenMarkedText(text: string, charsBefore = 10, charsAfter = 100) {
     const matches = text.match(/<mark>(.*?)<\/mark>/g);
 
     if (!matches) return text;
@@ -180,11 +217,7 @@ export class SearchService extends EventTarget {
     return withEllipsis;
   }
 
-  static async searchNotes({
-    query,
-  }: {
-    query: string;
-  }): Promise<NoteSearchResult[]> {
+  async searchNotes({ query }: { query: string }): Promise<NoteSearchResult[]> {
     let searchResults: EnrichedDocumentSearchResults;
 
     try {
@@ -195,7 +228,7 @@ export class SearchService extends EventTarget {
         highlight: `<mark>$1</mark>`,
       })) as EnrichedDocumentSearchResults;
     } catch (error) {
-      console.error("SearchService: Error searching notes", error);
+      console.error("searchService: Error searching notes", error);
       return [];
     }
 
@@ -246,14 +279,18 @@ export class SearchService extends EventTarget {
     return mergedResults;
   }
 
-  static async rebuildSearchIndex(notes: ClientNote[]) {
+  async clearNotesIndex() {
     await this.notesIndexMutex.acquire();
     await this.notesDb.destroy();
     this.notesDb = new IndexedDB({
       name: "libranote-search-notes",
     });
-    await this.init();
+    await this.notesIndex.mount(this.notesDb);
     this.notesIndexMutex.release();
+  }
+
+  async rebuildSearchIndex(notes: ClientNote[]) {
+    await this.clearNotesIndex();
 
     console.log("HELLO: Add notes to search index", notes.length);
 
@@ -264,4 +301,4 @@ export class SearchService extends EventTarget {
   }
 }
 
-SearchService.init();
+export const searchService = new SearchService();
