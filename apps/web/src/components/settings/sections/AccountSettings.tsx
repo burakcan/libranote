@@ -4,6 +4,7 @@ import Avatar from "boring-avatars";
 import { Github, Loader2, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { useStore } from "@/hooks/useStore";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
+import {
+  EXPORT_COMPLETED_EVENT,
+  EXPORT_STARTED_EVENT,
+  exportService,
+} from "@/services/ExportService";
 import { getUserColors } from "@/lib/utils";
 
 export function AccountSettings() {
@@ -29,6 +36,39 @@ export function AccountSettings() {
   const sessionData = useSessionQuery();
   const user = sessionData.data?.user;
   const { mutate: updateUser, isPending } = useUpdateUserMutation();
+  const [isExporting, setIsExporting] = useState(exportService.isExporting);
+  const { notes, collections } = useStore(
+    useShallow((state) => ({
+      notes: state.notes.data,
+      collections: state.collections.data,
+    }))
+  );
+
+  useEffect(() => {
+    const handleExportStarted = () => {
+      setIsExporting(true);
+    };
+    const handleExportCompleted = () => {
+      setIsExporting(false);
+    };
+
+    exportService.addEventListener(EXPORT_STARTED_EVENT, handleExportStarted);
+    exportService.addEventListener(
+      EXPORT_COMPLETED_EVENT,
+      handleExportCompleted
+    );
+
+    return () => {
+      exportService.removeEventListener(
+        EXPORT_STARTED_EVENT,
+        handleExportStarted
+      );
+      exportService.removeEventListener(
+        EXPORT_COMPLETED_EVENT,
+        handleExportCompleted
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -38,6 +78,15 @@ export function AccountSettings() {
   }, [user]);
 
   const nameValueChanged = name !== user?.name;
+
+  const handleExportNotes = async () => {
+    toast.promise(exportService.exportNotes(notes, collections), {
+      loading:
+        "Exporting notes... Please keep the browser window open. You can leave this dialog.",
+      success: "Notes exported successfully!",
+      error: "Failed to export notes!",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -156,11 +205,16 @@ export function AccountSettings() {
       <SettingsSection title="Export Data">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Export all your notes and collections in JSON or Markdown format.
+            Export all your notes and collections in Markdown format.
           </p>
           <div className="flex gap-2">
-            <Button variant="outline">Export as JSON</Button>
-            <Button variant="outline">Export as Markdown</Button>
+            <Button
+              variant="outline"
+              onClick={handleExportNotes}
+              disabled={isExporting}
+            >
+              Export as Markdown
+            </Button>
           </div>
         </div>
       </SettingsSection>
