@@ -21,9 +21,9 @@ export function NoteListItem({ note }: NoteListItemProps) {
     collectionColor,
 
     // Actions
-    handleShare,
     handleDeleteClick,
     handleDeleteConfirm,
+    handleExport,
   } = useNoteItem(note);
 
   return (
@@ -48,7 +48,7 @@ export function NoteListItem({ note }: NoteListItemProps) {
           />
 
           <NoteDropdownMenu
-            onShare={handleShare}
+            onExport={handleExport}
             onDelete={handleDeleteClick}
           />
         </Link>

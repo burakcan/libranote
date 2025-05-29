@@ -16,7 +16,8 @@ export type SSEEventType =
   | "COLLECTION_MEMBER_JOINED"
   | "COLLECTION_MEMBER_LEFT"
   | "COLLECTION_MEMBER_ROLE_UPDATED"
-  | "SETTING_UPDATED";
+  | "SETTING_UPDATED"
+  | "SESSION_REFRESH";
 
 export interface SSEInitEvent {
   type: "INIT";
@@ -82,6 +83,11 @@ export interface SSESettingUpdatedEvent {
   payload: UserSetting;
 }
 
+export interface SSESessionRefreshEvent {
+  type: "SESSION_REFRESH";
+  payload: object;
+}
+
 export type SSEEvent =
   | SSEInitEvent
   | SSECollectionCreatedEvent
@@ -94,4 +100,5 @@ export type SSEEvent =
   | SSECollectionMemberJoinedEvent
   | SSECollectionMemberLeftEvent
   | SSECollectionMemberRoleUpdatedEvent
-  | SSESettingUpdatedEvent;
+  | SSESettingUpdatedEvent
+  | SSESessionRefreshEvent;

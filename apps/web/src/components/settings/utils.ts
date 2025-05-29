@@ -19,7 +19,7 @@ export const SETTINGS_SECTIONS = [
   },
   {
     id: "security" as SettingsTab,
-    label: "Security",
+    label: "Security & Privacy",
     icon: Shield,
   },
 ] as const;

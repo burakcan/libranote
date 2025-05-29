@@ -1,8 +1,13 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
-import { queryOptions as sessionQueryOptions } from "@/hooks/useSessionQuery";
+import { useLogout } from "@/hooks/useLogout";
+import {
+  queryOptions as sessionQueryOptions,
+  useSessionQuery,
+} from "@/hooks/useSessionQuery";
 import { userDatabaseService } from "@/services/db/userDatabaseService";
 
 export const Route = createFileRoute("/(authenticated)")({
@@ -30,7 +35,15 @@ export const Route = createFileRoute("/(authenticated)")({
 });
 
 function RouteComponent() {
+  const { data: session } = useSessionQuery();
+  const { mutate: logout } = useLogout();
   const { userId } = Route.useRouteContext();
+
+  useEffect(() => {
+    if (!session) {
+      logout();
+    }
+  }, [session, logout]);
 
   return (
     <StoreProvider userId={userId}>

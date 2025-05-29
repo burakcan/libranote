@@ -86,6 +86,10 @@ export function AccountSettings() {
     });
   };
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
       <SettingsSection title="Profile Information">
@@ -93,10 +97,9 @@ export function AccountSettings() {
           <div className="flex flex-col items-center gap-2">
             <Avatar
               name={user.id}
-              key={user.clientId}
+              key={user.id}
               size={96}
               className="outline-1 outline-offset-1 rounded-full mt-6"
-              style={{ outlineColor: user.color }}
               variant="beam"
               colors={[...getUserColors(user.id)]}
             />

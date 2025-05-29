@@ -1,5 +1,7 @@
 import { UseBoundStore, StoreApi } from "zustand";
+import { invalidateSessionQuery } from "@/hooks/useSessionQuery";
 import { ErrorService } from "@/lib/errors";
+import { queryClient } from "@/lib/queryClient";
 import { router } from "@/lib/router";
 import { Store } from "@/lib/store";
 import {
@@ -321,6 +323,10 @@ export class SyncService extends EventTarget {
           if (currentNoteId === event.noteId) {
             router.navigate({ to: "/notes" });
           }
+          break;
+        }
+        case "SESSION_REFRESH": {
+          invalidateSessionQuery(queryClient);
           break;
         }
         // Other events are handled by domain services

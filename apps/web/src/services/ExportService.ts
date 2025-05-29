@@ -2,11 +2,11 @@ import { gfm } from "@joplin/turndown-plugin-gfm";
 import { Editor } from "@tiptap/core";
 import { Collaboration } from "@tiptap/extension-collaboration";
 import JSZip from "jszip";
-import TurndownService from "turndown";
 import * as Y from "yjs";
 import { baseExtensions } from "@/components/noteEditor/baseExtensions";
 import { IndexeddbPersistence as YIndexeddbPersistence } from "@/services/db/yIndexedDb";
 import { ClientCollection, ClientNote } from "@/types/Entities";
+import TurndownService from "turndown";
 
 export const EXPORT_STARTED_EVENT = "export-started";
 export const EXPORT_COMPLETED_EVENT = "export-completed";
@@ -68,10 +68,7 @@ turndownService.use(function (s) {
 class ExportService extends EventTarget {
   isExporting = false;
 
-  async getNoteMarkdown(
-    note: ClientNote,
-    collectionMap: Map<string, ClientCollection>
-  ) {
+  async getNoteMarkdown(note: ClientNote, collection: ClientCollection | null) {
     console.debug(
       `ExportService: 📝 Converting note "${note.title}" to markdown...`
     );
@@ -104,7 +101,6 @@ class ExportService extends EventTarget {
       new Date(note.updatedAt).toISOString()
     );
 
-    const collection = collectionMap.get(note.collectionId ?? "");
     markdown = markdown.replace(/{{%collection%}}/, collection?.title ?? "");
     markdown = markdown.replace(/{{%collectionId%}}/, collection?.id ?? "");
 
@@ -116,12 +112,12 @@ class ExportService extends EventTarget {
 
   async downloadNoteMarkdown(
     note: ClientNote,
-    collectionMap: Map<string, ClientCollection>
+    collection: ClientCollection | null
   ) {
     console.debug(
       `ExportService: 📥 Starting download for note "${note.title}"...`
     );
-    const markdown = await this.getNoteMarkdown(note, collectionMap);
+    const markdown = await this.getNoteMarkdown(note, collection);
 
     console.debug(`ExportService: 💾 Creating downloadable file...`);
     const blob = new Blob([markdown], { type: "text/markdown" });
@@ -162,7 +158,11 @@ class ExportService extends EventTarget {
     for (const note of notes) {
       console.debug(`ExportService: 📝 Processing note "${note.title}"...`);
 
-      const markdown = await this.getNoteMarkdown(note, collectionMap);
+      const markdown = await this.getNoteMarkdown(
+        note,
+        collectionMap.get(note.collectionId ?? "") || null
+      );
+
       const fileName = `${note.title.replace(/ /g, "-").toLowerCase()}.md`;
 
       zip.file(fileName, markdown);

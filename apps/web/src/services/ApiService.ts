@@ -216,4 +216,10 @@ export class ApiService {
 
     return data.setting;
   }
+
+  static async triggerClientSessionRefresh(): Promise<void> {
+    await this.fetch("/api/settings/trigger-session-refresh", {
+      method: "POST",
+    });
+  }
 }

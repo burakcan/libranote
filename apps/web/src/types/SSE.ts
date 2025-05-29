@@ -83,6 +83,11 @@ export interface SSESettingUpdatedEvent {
   payload: ServerUserSetting;
 }
 
+export interface SSESessionRefreshEvent {
+  type: "SESSION_REFRESH";
+  payload: object;
+}
+
 export type SSEEvent =
   | SSEInitEvent
   | SSECollectionCreatedEvent
@@ -95,4 +100,5 @@ export type SSEEvent =
   | SSECollectionMemberJoinedEvent
   | SSECollectionMemberLeftEvent
   | SSECollectionMemberRoleUpdatedEvent
-  | SSESettingUpdatedEvent;
+  | SSESettingUpdatedEvent
+  | SSESessionRefreshEvent;

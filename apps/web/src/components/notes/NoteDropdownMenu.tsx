@@ -1,4 +1,4 @@
-import { MoreHorizontal, Share2, Trash } from "lucide-react";
+import { Download, MoreHorizontal, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,14 +10,17 @@ import {
 import { vibrate } from "@/lib/utils";
 
 type NoteDropdownMenuProps = {
-  onShare: () => void;
   onDelete: () => void;
+  onExport: () => void;
 };
 
-export function NoteDropdownMenu({ onShare, onDelete }: NoteDropdownMenuProps) {
-  const handleShare = (e: React.MouseEvent) => {
+export function NoteDropdownMenu({
+  onDelete,
+  onExport,
+}: NoteDropdownMenuProps) {
+  const handleExport = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onShare();
+    onExport();
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -39,9 +42,9 @@ export function NoteDropdownMenu({ onShare, onDelete }: NoteDropdownMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={handleShare}>
-          <Share2 className="h-4 w-4 mr-2" />
-          Share
+        <DropdownMenuItem onClick={handleExport}>
+          <Download className="h-4 w-4 mr-2" />
+          Export as Markdown
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleDelete}>

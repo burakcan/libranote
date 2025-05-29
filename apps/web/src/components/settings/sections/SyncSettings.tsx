@@ -34,6 +34,10 @@ export function SyncSettings() {
   const { value: syncSettingsEnabled, setValue: setSyncSettingsEnabled } =
     useSetting("sync.syncSettingsEnabled");
 
+  if (!sessionData) {
+    return null;
+  }
+
   const handleSync = () => {
     setIsSyncing(true);
     setSyncStatus("syncing");

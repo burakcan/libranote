@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { SettingsService } from "../services/settings-service.js";
-import { BadRequestError, NotFoundError } from "../utils/errors.js";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors.js";
 import type { Setting } from "@repo/types";
+import { SSEService } from "../services/sse-service.js";
 
 /**
  * Get all settings for the current user.
@@ -95,6 +96,25 @@ export async function bulkUpsertUserSettings(req: Request, res: Response, next: 
       clientId,
     );
     res.status(200).json({ settings: updatedSettings });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function triggerClientSessionRefresh(req: Request, res: Response, next: NextFunction) {
+  const userId = req.userId;
+
+  if (!userId) {
+    throw new ForbiddenError("You must be logged in to trigger a client session refresh");
+  }
+
+  try {
+    SSEService.broadcastSSEToUser(userId, {
+      type: "SESSION_REFRESH",
+      payload: {},
+    });
+
+    res.status(200).json({ message: "OK" });
   } catch (error) {
     next(error);
   }

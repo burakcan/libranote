@@ -1,5 +1,17 @@
 import { ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useRevokeOtherSessionsMutation } from "@/hooks/useRevokeOtherSessionsMutation";
 import { useRevokeSessionMutation } from "@/hooks/useRevokeSessionMutation";
@@ -8,17 +20,46 @@ import { useSessionsQuery } from "@/hooks/useSessionsQuery";
 import { parseUserAgent, formatLastActive } from "@/lib/sessionUtils";
 
 export function SecuritySettings() {
+  const [sessionToRevoke, setSessionToRevoke] = useState<string | null>(null);
+  const [showBulkRevokeDialog, setShowBulkRevokeDialog] = useState(false);
+
   const { data: currentSession } = useSessionQuery();
   const { data: sessions, isLoading, error } = useSessionsQuery();
   const revokeSessionMutation = useRevokeSessionMutation();
   const revokeOtherSessionsMutation = useRevokeOtherSessionsMutation();
 
-  const handleRevokeSession = (sessionToken: string) => {
-    revokeSessionMutation.mutate(sessionToken);
+  const handleRevokeSessionClick = (sessionToken: string) => {
+    setSessionToRevoke(sessionToken);
   };
 
-  const handleRevokeOtherSessions = () => {
-    revokeOtherSessionsMutation.mutate();
+  const handleConfirmRevokeSession = () => {
+    if (sessionToRevoke) {
+      revokeSessionMutation.mutate(sessionToRevoke, {
+        onSuccess: () => {
+          toast.success("Session revoked successfully");
+        },
+        onError: () => {
+          toast.error("Failed to revoke session");
+        },
+      });
+      setSessionToRevoke(null);
+    }
+  };
+
+  const handleBulkRevokeClick = () => {
+    setShowBulkRevokeDialog(true);
+  };
+
+  const handleConfirmBulkRevoke = () => {
+    revokeOtherSessionsMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("All other sessions revoked successfully");
+      },
+      onError: () => {
+        toast.error("Failed to revoke other sessions");
+      },
+    });
+    setShowBulkRevokeDialog(false);
   };
 
   if (error) {
@@ -37,12 +78,12 @@ export function SecuritySettings() {
     <div className="space-y-6">
       <SettingsSection title="Active Sessions">
         <div className="space-y-4">
-          <div className="border rounded-md overflow-hidden">
-            <div className="grid grid-cols-12 gap-2 p-3 bg-muted font-medium text-sm">
-              <div className="col-span-5 sm:col-span-4">Device</div>
-              <div className="col-span-4 sm:col-span-3">Location</div>
+          <div className="border rounded-md overflow-auto whitespace-nowrap">
+            <div className="grid grid-cols-14 gap-2 p-3 bg-muted font-medium text-sm">
+              <div className="col-span-5">Device</div>
+              <div className="col-span-4">Location</div>
               <div className="col-span-3">Last Active</div>
-              <div className="hidden sm:block sm:col-span-2"></div>
+              <div className="col-span-2"></div>
             </div>
 
             {isLoading ? (
@@ -59,12 +100,12 @@ export function SecuritySettings() {
                 return (
                   <div
                     key={session.id}
-                    className="grid grid-cols-12 gap-2 p-3 border-t text-sm items-center"
+                    className="grid grid-cols-14 gap-2 p-3 border-t text-sm items-center"
                   >
-                    <div className="col-span-5 sm:col-span-4 truncate">
+                    <div className="col-span-5 truncate">
                       {parseUserAgent(session.userAgent ?? "")}
                     </div>
-                    <div className="col-span-4 sm:col-span-3 truncate">
+                    <div className="col-span-4 truncate">
                       {session.ipAddress || "Unknown Location"}
                     </div>
                     <div className="col-span-3 truncate">
@@ -76,12 +117,14 @@ export function SecuritySettings() {
                         formatLastActive(session.updatedAt.toISOString(), false)
                       )}
                     </div>
-                    <div className="hidden sm:block sm:col-span-2 text-right">
+                    <div className="col-span-2 text-right">
                       {!isCurrent && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRevokeSession(session.token)}
+                          onClick={() =>
+                            handleRevokeSessionClick(session.token)
+                          }
                           disabled={revokeSessionMutation.isPending}
                         >
                           {revokeSessionMutation.isPending ? (
@@ -105,7 +148,7 @@ export function SecuritySettings() {
           {sessions && sessions.length > 1 && (
             <Button
               variant="outline"
-              onClick={handleRevokeOtherSessions}
+              onClick={handleBulkRevokeClick}
               disabled={revokeOtherSessionsMutation.isPending}
             >
               {revokeOtherSessionsMutation.isPending ? (
@@ -143,6 +186,61 @@ export function SecuritySettings() {
           </div>
         </div>
       </SettingsSection>
+
+      {/* Individual Session Revocation Confirmation Dialog */}
+      <AlertDialog
+        open={!!sessionToRevoke}
+        onOpenChange={() => setSessionToRevoke(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out Session</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out this session? If this device has
+              any unsynced changes to your notes, they will be lost permanently.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRevokeSession}
+              className={buttonVariants({
+                variant: "destructive",
+              })}
+            >
+              Log Out Session
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Session Revocation Confirmation Dialog */}
+      <AlertDialog
+        open={showBulkRevokeDialog}
+        onOpenChange={setShowBulkRevokeDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out All Other Sessions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out all other sessions? This will
+              immediately sign you out of all other devices. Any unsynced
+              changes on those devices will be lost permanently.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBulkRevoke}
+              className={buttonVariants({
+                variant: "destructive",
+              })}
+            >
+              Log Out All Other Sessions
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

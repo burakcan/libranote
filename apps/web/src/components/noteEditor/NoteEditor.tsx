@@ -1,121 +1,41 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { Editor } from "@tiptap/core";
-import Collaboration from "@tiptap/extension-collaboration";
-import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
-import { Transaction } from "@tiptap/pm/state";
-import { useEditor, EditorContent, EditorOptions } from "@tiptap/react";
-import { debounce } from "es-toolkit";
-import { RefObject, useEffect, useMemo, useRef } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { useEffect, useRef } from "react";
 import * as Y from "yjs";
 import { useShallow } from "zustand/react/shallow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBreakpointSM } from "@/hooks/useBreakpointSM";
 import { useCustomizedProseClasses } from "@/hooks/useCustomizedProseClasses";
-import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSetting } from "@/hooks/useSetting";
 import { useStore } from "@/hooks/useStore";
-import { searchService } from "@/services/SearchService";
-import { cn, getUserColors } from "@/lib/utils";
-import { baseExtensions } from "./baseExtensions";
+import { cn } from "@/lib/utils";
 import { EditorMobileHeader } from "./EditorMobileHeader";
 import { EditorStatusBar } from "./EditorStatusBar";
 import EditorToolbar from "./EditorToolbar";
+import { useCollaborationUser } from "./hooks/useCollaborationUser";
 import { LinkBubbleMenu } from "./LinkBubbleMenu";
+import { createEditorConfig } from "./utils/editorConfig";
+import { createDebouncedUpdateHandler } from "./utils/updateHandler";
 import { ClientNote } from "@/types/Entities";
 
-const didTransactionChangeContent = (transaction: Transaction) => {
-  const before = transaction.before;
-  const after = transaction.doc;
-
-  if (before.nodeSize !== after.nodeSize) {
-    return true;
-  }
-
-  const now = performance.now();
-  const result = before.textContent !== after.textContent;
-  const time = performance.now() - now;
-  console.info("NoteEditor: string comparison took", time, "ms");
-  return result;
-};
-
-const debouncedOnUpdate = debounce(
-  (
-    editor: RefObject<Editor | null>,
-    transaction: Transaction,
-    note: RefObject<ClientNote | null>,
-    updateNote: RefObject<
-      | ((
-          update: Partial<ClientNote> & { id: ClientNote["id"] },
-          noAction?: boolean
-        ) => Promise<void>)
-      | null
-    >
-  ) => {
-    if (!editor.current || !note.current || !updateNote.current) return;
-
-    const didChangeContent = didTransactionChangeContent(transaction);
-
-    if (!didChangeContent) return;
-
-    const json = editor.current.getJSON();
-    const text = editor.current.getText();
-
-    const title = json?.content?.[0]?.content?.[0]?.text || "";
-
-    let description = "";
-
-    if (json?.content?.[1]?.type === "image") {
-      console.log("image");
-      description = "[Image] ";
-    }
-
-    description +=
-      text
-        .replace(title, "")
-        .split("\n")
-        .find((line: string) => line.trim() !== "")
-        ?.slice(0, 75) || "";
-
-    if (
-      title !== note.current.title ||
-      description !== note.current.description
-    ) {
-      updateNote.current({
-        ...note.current,
-        title: title || "",
-        description: description || "",
-      });
-    }
-
-    // Update the noteYDocState optimistically without creating an action
-    updateNote.current(
-      {
-        id: note.current.id,
-        noteYDocState: {
-          ...note.current.noteYDocState,
-          updatedAt: new Date(),
-        },
-      },
-      true
-    );
-
-    searchService.updateNoteFromYDoc(note.current.id);
-  },
-  1000
-);
-
-export function NoteEditor(props: {
+interface NoteEditorProps {
   yDoc: Y.Doc;
   provider: HocuspocusProvider;
   noteId: string;
   setEditorReady: (ready: boolean) => void;
-}) {
+}
+
+export function NoteEditor(props: NoteEditorProps) {
+  const { yDoc, provider, noteId, setEditorReady } = props;
+
+  // Hooks
   const lineHeight = useSetting("appearance.lineHeight").value;
   const proseClasses = useCustomizedProseClasses();
   const isMobile = useBreakpointSM();
-  const { yDoc, provider, noteId, setEditorReady } = props;
-  const sessionData = useSessionQuery();
+  const collaborationUser = useCollaborationUser();
 
+  // Store data
   const { note, updateNote } = useStore(
     useShallow((state) => {
       return {
@@ -125,59 +45,35 @@ export function NoteEditor(props: {
     })
   );
 
+  // Refs for the debounced update handler
   const editorRef = useRef<Editor | null>(null);
   const noteRef = useRef<ClientNote | null>(null);
   const updateNoteRef = useRef<typeof updateNote | null>(null);
 
+  // Keep refs current
   noteRef.current = note || null;
   updateNoteRef.current = updateNote || null;
 
-  const collaborationUser = useMemo(() => {
-    return {
-      name: sessionData.data?.user.name,
-      id: sessionData.data?.user.id,
-      color: getUserColors(sessionData.data?.user.id)[0],
-    };
-  }, [sessionData.data]);
+  // Create debounced update handler
+  const debouncedOnUpdate = createDebouncedUpdateHandler();
 
-  const editor = useEditor(
-    {
-      onCreate: () => {
-        setEditorReady(true);
-      },
-      onUpdate: ({ editor, transaction }) => {
-        editorRef.current = editor;
-        debouncedOnUpdate(editorRef, transaction, noteRef, updateNoteRef);
-      },
-      extensions: [
-        ...baseExtensions,
-        Collaboration.configure({ document: yDoc }),
-        CollaborationCursor.configure({
-          provider,
-          user: collaborationUser,
-        }),
-      ],
-      editorProps: {
-        scrollThreshold: 80,
-        scrollMargin: 80,
-        transformPastedHTML(html, view) {
-          const { $head } = view.state.selection;
+  // Create editor configuration
+  const editorConfig = createEditorConfig({
+    yDoc,
+    provider,
+    collaborationUser,
+    setEditorReady,
+    editorRef,
+    noteRef,
+    updateNoteRef,
+    debouncedOnUpdate,
+  });
 
-          // If the pasted content is a note title, return the content of the note title
-          if ($head.parent.type.name === "noteTitle") {
-            const tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
-            return tempDiv.textContent || tempDiv.innerText || "";
-          }
-
-          return html;
-        },
-      },
-    } satisfies Partial<EditorOptions>,
-    [collaborationUser]
-  );
+  // Initialize editor
+  const editor = useEditor(editorConfig, [collaborationUser]);
   editorRef.current = editor;
 
+  // Handle visual viewport resize for mobile
   useEffect(() => {
     const handleResize = () => {
       if (editorRef.current?.isFocused) {

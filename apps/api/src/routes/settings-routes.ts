@@ -1,10 +1,11 @@
-import express from "express"; // Import express directly
+import express from "express";
 import type { Router as RouterType } from "express";
 import {
   getAllUserSettings,
-  getUserSettingByKey, // Commented out due to persistent type error on route
-  upsertUserSetting, // Commented out due to persistent type error on route
-  bulkUpsertUserSettings, // Commented out due to persistent type error on route
+  getUserSettingByKey,
+  upsertUserSetting,
+  bulkUpsertUserSettings,
+  triggerClientSessionRefresh,
 } from "../controllers/settings-controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -14,7 +15,7 @@ import {
   updateSettingSchema,
 } from "../validators/settings-validators.js";
 
-const router: RouterType = express.Router(); // Use express.Router()
+const router: RouterType = express.Router();
 
 // All settings routes require authentication
 router.use(requireAuth);
@@ -23,7 +24,7 @@ router.use(requireAuth);
 router.get("/", getAllUserSettings);
 
 // GET a specific setting by key for the authenticated user
-router.get("/:key", validate(settingParamsSchema, "params"), getUserSettingByKey); // Commented out due to persistent type error
+router.get("/:key", validate(settingParamsSchema, "params"), getUserSettingByKey);
 
 // PUT (update or create) a specific setting by key for the authenticated user
 router.put(
@@ -31,9 +32,12 @@ router.put(
   validate(settingParamsSchema, "params"),
   validate(updateSettingSchema, "body"),
   upsertUserSetting,
-); // Commented out due to persistent type error
+);
 
 // PUT (bulk update or create) settings for the authenticated user
-router.put("/", validate(bulkUpsertUserSettingsSchema), bulkUpsertUserSettings); // Commented out due to persistent type error
+router.put("/", validate(bulkUpsertUserSettingsSchema), bulkUpsertUserSettings);
+
+// POST (trigger a client session refresh)
+router.post("/trigger-session-refresh", triggerClientSessionRefresh);
 
 export default router;
