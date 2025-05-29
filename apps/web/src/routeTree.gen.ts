@@ -18,6 +18,7 @@ import { Route as authenticatedSettingsImport } from './routes/(authenticated)/s
 import { Route as authenticatedNotesImport } from './routes/(authenticated)/notes'
 import { Route as authSignupImport } from './routes/(auth)/signup'
 import { Route as authSigninImport } from './routes/(auth)/signin'
+import { Route as authResetPasswordImport } from './routes/(auth)/reset-password'
 import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
 import { Route as authenticatedSettingsIndexImport } from './routes/(authenticated)/settings.index'
 import { Route as authenticatedNotesIndexImport } from './routes/(authenticated)/notes.index'
@@ -63,6 +64,12 @@ const authSignupRoute = authSignupImport.update({
 const authSigninRoute = authSigninImport.update({
   id: '/signin',
   path: '/signin',
+  getParentRoute: () => authRouteRoute,
+} as any)
+
+const authResetPasswordRoute = authResetPasswordImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => authRouteRoute,
 } as any)
 
@@ -131,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authForgotPasswordImport
       parentRoute: typeof authRouteImport
     }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordImport
+      parentRoute: typeof authRouteImport
+    }
     '/(auth)/signin': {
       id: '/(auth)/signin'
       path: '/signin'
@@ -194,12 +208,14 @@ declare module '@tanstack/react-router' {
 
 interface authRouteRouteChildren {
   authForgotPasswordRoute: typeof authForgotPasswordRoute
+  authResetPasswordRoute: typeof authResetPasswordRoute
   authSigninRoute: typeof authSigninRoute
   authSignupRoute: typeof authSignupRoute
 }
 
 const authRouteRouteChildren: authRouteRouteChildren = {
   authForgotPasswordRoute: authForgotPasswordRoute,
+  authResetPasswordRoute: authResetPasswordRoute,
   authSigninRoute: authSigninRoute,
   authSignupRoute: authSignupRoute,
 }
@@ -252,6 +268,7 @@ const authenticatedRouteRouteWithChildren =
 export interface FileRoutesByFullPath {
   '/': typeof authenticatedRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
+  '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
   '/notes': typeof authenticatedNotesRouteWithChildren
@@ -265,6 +282,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof authenticatedRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
+  '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
@@ -279,6 +297,7 @@ export interface FileRoutesById {
   '/(auth)': typeof authRouteRouteWithChildren
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
+  '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signin': typeof authSigninRoute
   '/(auth)/signup': typeof authSignupRoute
   '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
@@ -294,6 +313,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
+    | '/reset-password'
     | '/signin'
     | '/signup'
     | '/notes'
@@ -306,6 +326,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/forgot-password'
+    | '/reset-password'
     | '/signin'
     | '/signup'
     | '/notes/$noteId'
@@ -318,6 +339,7 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/(authenticated)'
     | '/(auth)/forgot-password'
+    | '/(auth)/reset-password'
     | '/(auth)/signin'
     | '/(auth)/signup'
     | '/(authenticated)/notes'
@@ -363,6 +385,7 @@ export const routeTree = rootRoute
       "filePath": "(auth)/route.tsx",
       "children": [
         "/(auth)/forgot-password",
+        "/(auth)/reset-password",
         "/(auth)/signin",
         "/(auth)/signup"
       ]
@@ -376,6 +399,10 @@ export const routeTree = rootRoute
     },
     "/(auth)/forgot-password": {
       "filePath": "(auth)/forgot-password.tsx",
+      "parent": "/(auth)"
+    },
+    "/(auth)/reset-password": {
+      "filePath": "(auth)/reset-password.tsx",
       "parent": "/(auth)"
     },
     "/(auth)/signin": {

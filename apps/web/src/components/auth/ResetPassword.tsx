@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Loader2, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,24 +12,38 @@ import {
 } from "@/components/ui/card";
 import { FormField } from "@/components/auth/FormField";
 import {
-  forgotPasswordSchema,
-  type ForgotPasswordFormData,
+  resetPasswordSchema,
+  type ResetPasswordFormData,
 } from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";
 
-export function ForgotPassword() {
+interface ResetPasswordProps {
+  token?: string;
+}
+
+export function ResetPassword({ token }: ResetPasswordProps = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState<
-    Partial<Record<keyof ForgotPasswordFormData, string>>
+    Partial<Record<keyof ResetPasswordFormData, string>>
   >({});
   const [generalError, setGeneralError] = useState<string>("");
-  const [formData, setFormData] = useState<ForgotPasswordFormData>({
-    email: "",
+  const [formData, setFormData] = useState<ResetPasswordFormData>({
+    password: "",
+    confirmPassword: "",
   });
 
+  useEffect(() => {
+    // Check if token is present
+    if (!token) {
+      setGeneralError(
+        "Invalid or missing reset token. Please request a new password reset."
+      );
+    }
+  }, [token]);
+
   const handleInputChange = (
-    field: keyof ForgotPasswordFormData,
+    field: keyof ResetPasswordFormData,
     value: string
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -38,19 +52,19 @@ export function ForgotPassword() {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
     // Clear general error when user makes changes
-    if (generalError) {
+    if (generalError && token) {
       setGeneralError("");
     }
   };
 
   const validateForm = (): boolean => {
-    const result = forgotPasswordSchema.safeParse(formData);
+    const result = resetPasswordSchema.safeParse(formData);
 
     if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ForgotPasswordFormData, string>> =
+      const fieldErrors: Partial<Record<keyof ResetPasswordFormData, string>> =
         {};
       result.error.errors.forEach((error) => {
-        const field = error.path[0] as keyof ForgotPasswordFormData;
+        const field = error.path[0] as keyof ResetPasswordFormData;
         if (!fieldErrors[field]) {
           fieldErrors[field] = error.message;
         }
@@ -66,34 +80,42 @@ export function ForgotPassword() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!token) {
+      // Keep form error for invalid token - this is a persistent state issue
+      setGeneralError(
+        "Invalid or missing reset token. Please request a new password reset."
+      );
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
-    setGeneralError("");
+    setGeneralError(""); // Clear any previous token errors
 
     try {
-      const response = await authClient.forgetPassword({
-        email: formData.email,
-        redirectTo: `${window.location.origin}/reset-password`,
+      const response = await authClient.resetPassword({
+        token: token,
+        newPassword: formData.password,
       });
 
       setIsLoading(false);
 
       if (response.error) {
         const errorMessage =
-          response.error.message || "Failed to send reset email";
+          response.error.message || "Failed to reset password";
         // Don't set form error for auth failures - just show toast
-        toast.error("Failed to send reset email", {
+        toast.error("Failed to reset password", {
           description: errorMessage,
         });
         return;
       }
 
       // Success - show success message
-      toast.success("Reset email sent!", {
-        description: `Check your inbox at ${formData.email}`,
+      toast.success("Password reset successful!", {
+        description: "Your password has been updated. You can now sign in.",
       });
       setIsSuccess(true);
     } catch (error) {
@@ -101,7 +123,7 @@ export function ForgotPassword() {
       const errorMessage =
         error instanceof Error ? error.message : "An unexpected error occurred";
       // Don't set form error for network failures - just show toast
-      toast.error("Failed to send reset email", {
+      toast.error("Failed to reset password", {
         description: errorMessage,
       });
     }
@@ -114,35 +136,16 @@ export function ForgotPassword() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <CheckCircle className="h-6 w-6 text-green-600" />
           </div>
-          <CardTitle className="text-xl">Check your email</CardTitle>
+          <CardTitle className="text-xl">Password reset successful</CardTitle>
           <CardDescription>
-            We've sent a password reset link to {formData.email}
+            Your password has been successfully updated
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            <div className="text-center text-sm text-muted-foreground">
-              Didn't receive the email? Check your spam folder or try again.
-            </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setIsSuccess(false);
-                setFormData({ email: "" });
-              }}
-            >
-              Try again
+            <Button asChild className="w-full">
+              <Link to="/signin">Sign in with new password</Link>
             </Button>
-            <div className="text-center text-sm">
-              Back to{" "}
-              <Link
-                to="/signin"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Sign in
-              </Link>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -152,11 +155,8 @@ export function ForgotPassword() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Reset password</CardTitle>
-        <CardDescription>
-          Enter your email address and we'll send you a link to reset your
-          password
-        </CardDescription>
+        <CardTitle className="text-xl">Set new password</CardTitle>
+        <CardDescription>Enter your new password below</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -167,20 +167,39 @@ export function ForgotPassword() {
           )}
 
           <FormField
-            label="Email"
-            type="email"
-            placeholder="m@example.com"
-            value={formData.email}
-            onChange={(e) => handleInputChange("email", e.target.value)}
-            error={errors.email}
-            disabled={isLoading}
+            label="New password"
+            type="password"
+            placeholder="Create a secure password"
+            value={formData.password}
+            onChange={(e) => handleInputChange("password", e.target.value)}
+            error={errors.password}
+            hint="At least 8 characters with uppercase, lowercase, and number"
+            disabled={isLoading || !token}
             required
-            autoComplete="email"
+            autoComplete="new-password"
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <FormField
+            label="Confirm new password"
+            type="password"
+            placeholder="Confirm your new password"
+            value={formData.confirmPassword}
+            onChange={(e) =>
+              handleInputChange("confirmPassword", e.target.value)
+            }
+            error={errors.confirmPassword}
+            disabled={isLoading || !token}
+            required
+            autoComplete="new-password"
+          />
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !token}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? "Sending..." : "Send reset link"}
+            {isLoading ? "Updating password..." : "Update password"}
           </Button>
         </form>
 

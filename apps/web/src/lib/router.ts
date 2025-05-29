@@ -13,9 +13,8 @@ export const router = createRouter({
   defaultPendingMinMs: 0,
   scrollRestoration: true,
   defaultViewTransition:
-    getDeviceOS() === "ios"
-      ? false
-      : {
+    getDeviceOS() === "android"
+      ? {
           types(locationChangeInfo) {
             if (!locationChangeInfo.pathChanged) return [];
 
@@ -31,5 +30,6 @@ export const router = createRouter({
 
             return [`navigate-${direction}`];
           },
-        },
+        }
+      : false,
 });

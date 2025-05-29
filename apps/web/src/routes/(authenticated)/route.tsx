@@ -45,6 +45,14 @@ function RouteComponent() {
     }
   }, [session, logout]);
 
+  useEffect(() => {
+    document.body.classList.add("logged-in");
+
+    return () => {
+      document.body.classList.remove("logged-in");
+    };
+  }, []);
+
   return (
     <StoreProvider userId={userId}>
       <SyncProvider>
