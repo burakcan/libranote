@@ -41,7 +41,7 @@ function RouteComponent() {
   }, [noteId]);
 
   return (
-    <div className="flex flex-col flex-1 h-full max-h-full relative">
+    <div className="flex flex-col flex-1 h-full max-h-full relative sm:pt-2 sm:pl-2 lg:pt-4 lg:px-4 bg-gradient-to-t from-background to-accent/30">
       {renderEditor && (
         <NoteEditorPanel
           key={noteId}

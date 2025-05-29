@@ -35,6 +35,23 @@ function RouteComponent() {
   const { data: session } = useSessionQuery();
 
   useEffect(() => {
+    document.body.classList.add("theme-monochrome");
+    const handlePrefersColorSchemeChange = (event: MediaQueryListEvent) => {
+      document.body.classList.toggle("dark", event.matches);
+    };
+
+    const mediaQueryList = window.matchMedia("(prefers-color-scheme: light)");
+    mediaQueryList.addEventListener("change", handlePrefersColorSchemeChange);
+
+    return () => {
+      mediaQueryList.removeEventListener(
+        "change",
+        handlePrefersColorSchemeChange
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     if (search.redirectTo && session) {
       navigate({
         to: search.redirectTo,

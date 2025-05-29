@@ -24,12 +24,6 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        document.body.classList.add("dark");
-      } else {
-        document.body.classList.remove("dark");
-      }
-
       const style = window.getComputedStyle(document.body);
       const accentColor = style.getPropertyValue("--accent");
 

@@ -19,6 +19,7 @@ export class SettingsSyncService extends EventTarget {
     const localSettings = await this.settingRepository.getAll();
     this.store.getState().settings.setSettingsData(localSettings);
     this.store.getState().settings.setInitialDataLoaded(true);
+
     console.debug(
       "SettingsSyncService: Loaded local settings to store",
       localSettings

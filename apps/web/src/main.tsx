@@ -6,7 +6,6 @@ import ReactDOM from "react-dom/client";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SWReloadPrompt from "@/components/swReloadPrompt/SWReloadPrompt";
-import { exportService } from "@/services/ExportService";
 import { queryClient } from "@/lib/queryClient";
 import { router } from "@/lib/router";
 
@@ -38,5 +37,3 @@ if (!rootElement.innerHTML) {
     </StrictMode>
   );
 }
-
-window.exportService = exportService;

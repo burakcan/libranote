@@ -19,8 +19,6 @@ export const Route = createFileRoute("/(authenticated)")({
       });
     }
 
-    console.log(sessionData);
-
     await userDatabaseService.initialize(sessionData.user.id);
 
     return {
