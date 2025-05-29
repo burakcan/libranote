@@ -16,6 +16,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
@@ -168,7 +169,7 @@ export function AccountSettings() {
       </SettingsSection>
 
       <SettingsSection title="Password Management">
-        <Button>Change Password</Button>
+        <ChangePasswordDialog />
       </SettingsSection>
 
       <SettingsSection title="Connected Accounts">
