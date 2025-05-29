@@ -1,13 +1,8 @@
-import {
-  ChevronRight,
-  LucideUser,
-  PaintBucket,
-  RefreshCw,
-  Shield,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type React from "react";
 import { cn } from "@/lib/utils";
 import type { SettingsTab } from "./types";
+import { SETTINGS_SECTIONS } from "./utils";
 
 interface SettingsSidebarProps {
   activeTab: SettingsTab | null;
@@ -28,7 +23,7 @@ function SidebarItem({ label, icon, active, onClick }: SidebarItemProps) {
       className={cn(
         "flex items-center gap-3 w-full px-4 py-3 text-base sm:text-sm font-medium rounded-md text-left bg-muted/40 sm:bg-transparent text-muted-foreground",
         active
-          ? "bg-accent text-accent-foreground"
+          ? "bg-accent! text-accent-foreground!"
           : "text-muted-foreground hover:bg-muted"
       )}
       aria-selected={active}
@@ -41,29 +36,6 @@ function SidebarItem({ label, icon, active, onClick }: SidebarItemProps) {
   );
 }
 
-const items = [
-  {
-    id: "account" as const,
-    label: "Account",
-    icon: <LucideUser size={18} />,
-  },
-  {
-    id: "appearance" as const,
-    label: "Appearance",
-    icon: <PaintBucket size={18} />,
-  },
-  {
-    id: "sync" as const,
-    label: "Sync & Network",
-    icon: <RefreshCw size={18} />,
-  },
-  {
-    id: "security" as const,
-    label: "Security",
-    icon: <Shield size={18} />,
-  },
-];
-
 export function SettingsSidebar({
   activeTab,
   onTabChange,
@@ -71,15 +43,18 @@ export function SettingsSidebar({
   return (
     <div className="w-full sm:w-[200px] sm:border-r shrink-0 sm:bg-muted/40 sm:rounded-l-md">
       <nav className="flex flex-col gap-2 sm:gap-1 sm:p-2">
-        {items.map((item) => (
-          <SidebarItem
-            key={item.id}
-            label={item.label}
-            icon={item.icon}
-            active={activeTab === item.id}
-            onClick={() => onTabChange(item.id)}
-          />
-        ))}
+        {SETTINGS_SECTIONS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <SidebarItem
+              key={item.id}
+              label={item.label}
+              icon={<Icon size={18} />}
+              active={activeTab === item.id}
+              onClick={() => onTabChange(item.id)}
+            />
+          );
+        })}
       </nav>
     </div>
   );

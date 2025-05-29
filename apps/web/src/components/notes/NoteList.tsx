@@ -1,4 +1,3 @@
-import { Smile } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStore } from "@/hooks/useStore";
@@ -21,9 +20,9 @@ export function NoteList() {
                 <NoteListItem note={note} />
               </motion.div>
             ))}
-            {activeCollectionIdNotes.length > 10 && (
-              <div className="h-24 w-full flex items-center justify-center text-primary-foreground">
-                <Smile className="w-12 h-12" />
+            {activeCollectionIdNotes.length > 15 && (
+              <div className="h-24 w-full flex items-center justify-center text-primary-foreground border-t border-border">
+                <img src="/fox.png" alt="Fox" className="w-12 h-12" />
               </div>
             )}
           </>

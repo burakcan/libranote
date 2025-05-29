@@ -6,10 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AccountSettings } from "./sections/AccountSettings";
-import { AppearanceSettings } from "./sections/AppearanceSettings";
-import { SecuritySettings } from "./sections/SecuritySettings";
-import { SyncSettings } from "./sections/SyncSettings";
+import { SettingsContent } from "./SettingsContent";
 import { SettingsSidebar } from "./SettingsSidebar";
 import type { SettingsTab } from "./types";
 
@@ -39,10 +36,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
           <ScrollArea className="flex-1 h-[90vh] max-h-[600px] min-h-0">
             <div className="p-6 pt-8">
-              {activeTab === "account" && <AccountSettings />}
-              {activeTab === "appearance" && <AppearanceSettings />}
-              {activeTab === "sync" && <SyncSettings />}
-              {activeTab === "security" && <SecuritySettings />}
+              <SettingsContent activeTab={activeTab} />
             </div>
           </ScrollArea>
         </div>
