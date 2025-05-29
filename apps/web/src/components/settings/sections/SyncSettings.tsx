@@ -1,5 +1,3 @@
-"use client";
-
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";

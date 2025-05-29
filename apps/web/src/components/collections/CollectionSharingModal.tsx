@@ -1,5 +1,3 @@
-"use client";
-
 import Avatar from "boring-avatars";
 import { Loader2, Mail, Send, X } from "lucide-react";
 import type React from "react";

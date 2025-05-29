@@ -1,33 +1,37 @@
-"use client";
-
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { useRevokeOtherSessionsMutation } from "@/hooks/useRevokeOtherSessionsMutation";
+import { useRevokeSessionMutation } from "@/hooks/useRevokeSessionMutation";
+import { useSessionQuery } from "@/hooks/useSessionQuery";
+import { useSessionsQuery } from "@/hooks/useSessionsQuery";
+import { parseUserAgent, formatLastActive } from "@/lib/sessionUtils";
 
 export function SecuritySettings() {
-  const activeSessions = [
-    {
-      id: 1,
-      device: "Chrome on macOS",
-      location: "New York, USA",
-      lastActive: "Current session",
-      isCurrent: true,
-    },
-    {
-      id: 2,
-      device: "Firefox on Windows",
-      location: "San Francisco, USA",
-      lastActive: "2 hours ago",
-      isCurrent: false,
-    },
-    {
-      id: 3,
-      device: "Safari on iOS",
-      location: "London, UK",
-      lastActive: "1 day ago",
-      isCurrent: false,
-    },
-  ];
+  const { data: currentSession } = useSessionQuery();
+  const { data: sessions, isLoading, error } = useSessionsQuery();
+  const revokeSessionMutation = useRevokeSessionMutation();
+  const revokeOtherSessionsMutation = useRevokeOtherSessionsMutation();
+
+  const handleRevokeSession = (sessionToken: string) => {
+    revokeSessionMutation.mutate(sessionToken);
+  };
+
+  const handleRevokeOtherSessions = () => {
+    revokeOtherSessionsMutation.mutate();
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <SettingsSection title="Active Sessions">
+          <div className="text-center p-6 text-muted-foreground">
+            Failed to load sessions. Please try again later.
+          </div>
+        </SettingsSection>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -41,38 +45,79 @@ export function SecuritySettings() {
               <div className="hidden sm:block sm:col-span-2"></div>
             </div>
 
-            {activeSessions.map((session) => (
-              <div
-                key={session.id}
-                className="grid grid-cols-12 gap-2 p-3 border-t text-sm items-center"
-              >
-                <div className="col-span-5 sm:col-span-4 truncate">
-                  {session.device}
-                </div>
-                <div className="col-span-4 sm:col-span-3 truncate">
-                  {session.location}
-                </div>
-                <div className="col-span-3 truncate">
-                  {session.isCurrent ? (
-                    <span className="text-green-600 font-medium">
-                      {session.lastActive}
-                    </span>
-                  ) : (
-                    session.lastActive
-                  )}
-                </div>
-                <div className="hidden sm:block sm:col-span-2 text-right">
-                  {!session.isCurrent && (
-                    <Button variant="ghost" size="sm">
-                      Log Out
-                    </Button>
-                  )}
-                </div>
+            {isLoading ? (
+              <div className="p-6 text-center">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Loading sessions...
+                </p>
               </div>
-            ))}
+            ) : sessions && sessions.length > 0 ? (
+              sessions.map((session) => {
+                const isCurrent =
+                  session.token === currentSession?.session?.token;
+                return (
+                  <div
+                    key={session.id}
+                    className="grid grid-cols-12 gap-2 p-3 border-t text-sm items-center"
+                  >
+                    <div className="col-span-5 sm:col-span-4 truncate">
+                      {parseUserAgent(session.userAgent ?? "")}
+                    </div>
+                    <div className="col-span-4 sm:col-span-3 truncate">
+                      {session.ipAddress || "Unknown Location"}
+                    </div>
+                    <div className="col-span-3 truncate">
+                      {isCurrent ? (
+                        <span className="text-green-600 font-medium">
+                          Current session
+                        </span>
+                      ) : (
+                        formatLastActive(session.updatedAt.toISOString(), false)
+                      )}
+                    </div>
+                    <div className="hidden sm:block sm:col-span-2 text-right">
+                      {!isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeSession(session.token)}
+                          disabled={revokeSessionMutation.isPending}
+                        >
+                          {revokeSessionMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Log Out"
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-6 text-center text-muted-foreground">
+                No active sessions found.
+              </div>
+            )}
           </div>
 
-          <Button variant="outline">Log Out All Other Sessions</Button>
+          {sessions && sessions.length > 1 && (
+            <Button
+              variant="outline"
+              onClick={handleRevokeOtherSessions}
+              disabled={revokeOtherSessionsMutation.isPending}
+            >
+              {revokeOtherSessionsMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Logging Out...
+                </>
+              ) : (
+                "Log Out All Other Sessions"
+              )}
+            </Button>
+          )}
         </div>
       </SettingsSection>
 

@@ -1,5 +1,3 @@
-"use client";
-
 import Avatar from "boring-avatars";
 import { Github, Loader2, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
