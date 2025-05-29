@@ -15,7 +15,6 @@ import {
   Check,
   X,
   ListChecks,
-  ImagePlus,
   CodeSquare,
   Pilcrow,
   Strikethrough,
@@ -34,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
 import { CollaboratorHeads } from "./CollaboratorHeads";
+import { ImageInsertPopover } from "./ImageInsertPopover";
 import { ToolbarButton } from "./ToolbarButton";
 
 interface EditorToolbarProps {
@@ -61,8 +61,6 @@ export default function EditorToolbar({
   const isTaskList = editor?.isActive("taskList");
   const [linkHref, setLinkHref] = useState("");
   const [showEditLink, setShowEditLink] = useState(false);
-  const [showImage, setShowImage] = useState(false);
-  const [imageSrc, setImageSrc] = useState("");
 
   const currentTextStyle = (() => {
     if (editor?.isActive("heading", { level: 1 })) return "h1";
@@ -330,50 +328,7 @@ export default function EditorToolbar({
         )}
       </AnimatePresence>
       <div className="flex items-center gap-1">
-        <Popover open={showImage} onOpenChange={setShowImage}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-8 w-8", showImage && "bg-accent")}
-              onClick={() => setShowImage(true)}
-              disabled={isNoteTitle}
-            >
-              <ImagePlus className="size-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <div className="flex items-center gap-1">
-              <Input
-                type="url"
-                placeholder="Enter image URL"
-                value={imageSrc}
-                onChange={(e) => setImageSrc(e.target.value)}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  editor?.chain().focus().setImage({ src: imageSrc }).run();
-                  setShowImage(false);
-                  setImageSrc("");
-                }}
-              >
-                <Check className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowImage(false);
-                  setImageSrc("");
-                }}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <ImageInsertPopover editor={editor} disabled={isNoteTitle} />
         {isLink && (
           <ToolbarButton
             icon={<Unlink className="size-4" />}

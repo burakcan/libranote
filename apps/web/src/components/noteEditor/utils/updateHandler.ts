@@ -33,7 +33,6 @@ export const createDebouncedUpdateHandler = () => {
       let description = "";
 
       if (json?.content?.[1]?.type === "image") {
-        console.log("image");
         description = "[Image] ";
       }
 
