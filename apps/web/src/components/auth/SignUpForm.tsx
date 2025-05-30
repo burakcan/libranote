@@ -1,5 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,12 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormField } from "@/components/auth/FormField";
-import { invalidateSessionQuery } from "@/hooks/useSessionQuery";
 import { signUpSchema, type SignUpFormData } from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";
 
 export function SignUpForm() {
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof SignUpFormData, string>>
@@ -83,23 +81,34 @@ export function SignUpForm() {
       if (response.error) {
         const errorMessage =
           response.error.message || "Failed to create account";
-        // Don't set form error for auth failures - just show toast
         toast.error("Failed to create account", {
           description: errorMessage,
         });
         return;
       }
 
-      // Success - show success toast and invalidate session
+      // Success - show success toast and redirect to email verification
       toast.success("Account created successfully!", {
-        description: "Welcome! You're now signed in.",
+        description: "Please check your email for a verification code.",
       });
-      invalidateSessionQuery(queryClient);
+
+      // Store the timestamp for resend cooldown
+      const now = Date.now();
+      const lastSentKey = `otp_last_sent_${formData.email}`;
+      localStorage.setItem(lastSentKey, now.toString());
+
+      // Redirect to email verification page
+      navigate({
+        to: "/verify-email",
+        search: {
+          email: formData.email,
+          type: "email-verification",
+        },
+      });
     } catch (error) {
       setIsLoading(false);
       const errorMessage =
         error instanceof Error ? error.message : "An unexpected error occurred";
-      // Don't set form error for network failures - just show toast
       toast.error("Failed to create account", {
         description: errorMessage,
       });

@@ -61,7 +61,20 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const emailVerificationSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+  otp: z
+    .string()
+    .min(1, "Verification code is required")
+    .length(6, "Verification code must be 6 digits")
+    .regex(/^\d{6}$/, "Verification code must contain only numbers"),
+});
+
 export type SignInFormData = z.infer<typeof signInSchema>;
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+export type EmailVerificationFormData = z.infer<typeof emailVerificationSchema>;

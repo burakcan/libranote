@@ -13,7 +13,7 @@ export const createRootSlice =
     // And each client is limited under user. So a user can only tamper with their own stuff.
     clientId: CLIENT_ID,
     userId: initialData.userId,
-    jwt: "",
+    jwt: initialData.jwt,
     setJWT: (jwt: string) => {
       set({ jwt });
     },

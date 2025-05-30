@@ -1,6 +1,7 @@
 import {
   HocuspocusProvider,
   HocuspocusProviderWebsocket,
+  WebSocketStatus,
 } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { UseBoundStore, StoreApi } from "zustand";
@@ -31,6 +32,8 @@ export class NoteSyncService extends EventTarget {
   ) {
     super();
   }
+
+  activeSyncProviders: number = 0;
 
   getCurrentNoteId() {
     const params = router.matchRoute(Route.fullPath) as
@@ -105,6 +108,20 @@ export class NoteSyncService extends EventTarget {
           token: jwt,
         });
 
+        this.activeSyncProviders++;
+
+        provider.on("status", ({ status }: { status: WebSocketStatus }) => {
+          console.debug("NoteSyncService: YDoc status", status);
+
+          if (status === "disconnected") {
+            this.activeSyncProviders--;
+          }
+        });
+
+        provider.on("error", (error: Error) => {
+          console.error("NoteSyncService: YDoc error", error);
+        });
+
         provider.on("synced", () => {
           console.debug("NoteSyncService: YDoc synced", remoteYDocState.id);
 
@@ -113,7 +130,28 @@ export class NoteSyncService extends EventTarget {
             remoteYDocState
           );
 
-          provider.destroy();
+          // If there are more than 1 active sync providers, destroy the provider immediately.
+          // Otherwise, destroy the provider after 1 second.
+          if (this.activeSyncProviders > 1) {
+            provider.destroy();
+
+            this.activeSyncProviders--;
+          } else {
+            setTimeout(() => {
+              // Destroy provider after 1 second.
+              // So if another document starts to sync within a second, they reuse the same socket and avoid
+              // recreating the socket.
+              console.log(
+                "NoteSyncService: Destroying provider",
+                remoteYDocState.id
+              );
+
+              provider.destroy();
+
+              this.activeSyncProviders--;
+            }, 1000);
+          }
+
           persistence.destroy();
           doc.destroy();
 

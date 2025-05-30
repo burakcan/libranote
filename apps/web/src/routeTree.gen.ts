@@ -16,6 +16,7 @@ import { Route as authRouteImport } from './routes/(auth)/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as authenticatedSettingsImport } from './routes/(authenticated)/settings'
 import { Route as authenticatedNotesImport } from './routes/(authenticated)/notes'
+import { Route as authVerifyEmailImport } from './routes/(auth)/verify-email'
 import { Route as authSignupImport } from './routes/(auth)/signup'
 import { Route as authSigninImport } from './routes/(auth)/signin'
 import { Route as authResetPasswordImport } from './routes/(auth)/reset-password'
@@ -53,6 +54,12 @@ const authenticatedNotesRoute = authenticatedNotesImport.update({
   id: '/notes',
   path: '/notes',
   getParentRoute: () => authenticatedRouteRoute,
+} as any)
+
+const authVerifyEmailRoute = authVerifyEmailImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => authRouteRoute,
 } as any)
 
 const authSignupRoute = authSignupImport.update({
@@ -159,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignupImport
       parentRoute: typeof authRouteImport
     }
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailImport
+      parentRoute: typeof authRouteImport
+    }
     '/(authenticated)/notes': {
       id: '/(authenticated)/notes'
       path: '/notes'
@@ -211,6 +225,7 @@ interface authRouteRouteChildren {
   authResetPasswordRoute: typeof authResetPasswordRoute
   authSigninRoute: typeof authSigninRoute
   authSignupRoute: typeof authSignupRoute
+  authVerifyEmailRoute: typeof authVerifyEmailRoute
 }
 
 const authRouteRouteChildren: authRouteRouteChildren = {
@@ -218,6 +233,7 @@ const authRouteRouteChildren: authRouteRouteChildren = {
   authResetPasswordRoute: authResetPasswordRoute,
   authSigninRoute: authSigninRoute,
   authSignupRoute: authSignupRoute,
+  authVerifyEmailRoute: authVerifyEmailRoute,
 }
 
 const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
@@ -271,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/notes': typeof authenticatedNotesRouteWithChildren
   '/settings': typeof authenticatedSettingsRouteWithChildren
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
@@ -285,6 +302,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/settings/$section': typeof authenticatedSettingsSectionRoute
   '/notes': typeof authenticatedNotesIndexRoute
@@ -300,6 +318,7 @@ export interface FileRoutesById {
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signin': typeof authSigninRoute
   '/(auth)/signup': typeof authSignupRoute
+  '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
   '/(authenticated)/settings': typeof authenticatedSettingsRouteWithChildren
   '/(authenticated)/notes/$noteId': typeof authenticatedNotesNoteIdRoute
@@ -316,6 +335,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signin'
     | '/signup'
+    | '/verify-email'
     | '/notes'
     | '/settings'
     | '/notes/$noteId'
@@ -329,6 +349,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signin'
     | '/signup'
+    | '/verify-email'
     | '/notes/$noteId'
     | '/settings/$section'
     | '/notes'
@@ -342,6 +363,7 @@ export interface FileRouteTypes {
     | '/(auth)/reset-password'
     | '/(auth)/signin'
     | '/(auth)/signup'
+    | '/(auth)/verify-email'
     | '/(authenticated)/notes'
     | '/(authenticated)/settings'
     | '/(authenticated)/notes/$noteId'
@@ -387,7 +409,8 @@ export const routeTree = rootRoute
         "/(auth)/forgot-password",
         "/(auth)/reset-password",
         "/(auth)/signin",
-        "/(auth)/signup"
+        "/(auth)/signup",
+        "/(auth)/verify-email"
       ]
     },
     "/(authenticated)": {
@@ -411,6 +434,10 @@ export const routeTree = rootRoute
     },
     "/(auth)/signup": {
       "filePath": "(auth)/signup.tsx",
+      "parent": "/(auth)"
+    },
+    "/(auth)/verify-email": {
+      "filePath": "(auth)/verify-email.tsx",
       "parent": "/(auth)"
     },
     "/(authenticated)/notes": {

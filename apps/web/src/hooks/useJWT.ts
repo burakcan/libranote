@@ -11,8 +11,8 @@ export const queryOptions = {
     const jwt = await ApiService.getJWT();
     return jwt;
   },
-  staleTime: 1000 * 60 * 1, // 15 minutes
-  refetchInterval: 1000 * 55 * 1, // 14 minutes
+  staleTime: 1000 * 60 * 15, // 15 minutes
+  refetchInterval: 1000 * 60 * 14, // 14 minutes
   refetchIntervalInBackground: true,
 };
 

@@ -1,5 +1,5 @@
 import Avatar from "boring-avatars";
-import { Github, Loader2, Mail } from "lucide-react";
+import { CheckCircle, Github, Loader2, Mail, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
@@ -163,6 +163,11 @@ export function AccountSettings() {
               <div className="flex items-center gap-2">
                 <Input id="email" type="email" value={email} disabled />
               </div>
+              {user.emailVerified ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500" />
+              )}
             </div>
           </div>
         </div>

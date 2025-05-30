@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { authClient } from "@/lib/authClient";
 
 export function SignInForm() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof SignInFormData, string>>
@@ -79,7 +80,51 @@ export function SignInForm() {
 
       if (response.error) {
         const errorMessage = response.error.message || "Failed to sign in";
-        // Don't set form error for auth failures - just show toast
+
+        // Check if email verification is required
+        if (
+          response.error.status === 403 ||
+          (errorMessage.includes("email") &&
+            errorMessage.includes("verification")) ||
+          errorMessage.includes("verify") ||
+          errorMessage.includes("unverified")
+        ) {
+          // Send OTP for email verification
+          try {
+            await authClient.emailOtp.sendVerificationOtp({
+              email: formData.email,
+              type: "email-verification",
+            });
+
+            // Store the timestamp for resend cooldown
+            const now = Date.now();
+            const lastSentKey = `otp_last_sent_${formData.email}`;
+            localStorage.setItem(lastSentKey, now.toString());
+
+            toast.success("Verification code sent!", {
+              description:
+                "Please check your email and enter the verification code.",
+            });
+
+            // Redirect to email verification page
+            navigate({
+              to: "/verify-email",
+              search: {
+                email: formData.email,
+                type: "email-verification",
+              },
+            });
+            return;
+          } catch {
+            // If OTP sending fails, show the original error
+            toast.error("Email verification required", {
+              description: "Please verify your email address to continue.",
+            });
+            return;
+          }
+        }
+
+        // Regular sign-in error
         toast.error("Failed to sign in", {
           description: errorMessage,
         });
@@ -95,7 +140,6 @@ export function SignInForm() {
       setIsLoading(false);
       const errorMessage =
         error instanceof Error ? error.message : "An unexpected error occurred";
-      // Don't set form error for network failures - just show toast
       toast.error("Failed to sign in", {
         description: errorMessage,
       });

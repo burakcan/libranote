@@ -37,7 +37,7 @@
     "@repo/db": "workspace:*",
     "@repo/types": "workspace:*",
     "@types/cors": "^2.8.17",
-    "better-auth": "^1.2.4",
+    "better-auth": "^1.2.8",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "nanoid": "^5.1.5",

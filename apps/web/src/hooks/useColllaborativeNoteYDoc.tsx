@@ -67,6 +67,7 @@ export function useColllaborativeNoteYDoc(noteId: string) {
       document: yDoc,
       name: noteId,
       connect: false, // Don't connect immediately
+      token: "",
     });
 
     setProvider(newProvider);
@@ -90,7 +91,9 @@ export function useColllaborativeNoteYDoc(noteId: string) {
     console.info("NoteEditor: Connecting provider with JWT");
 
     // Set the token
-    provider.configuration.token = jwt;
+    provider.setConfiguration({
+      token: jwt,
+    });
 
     // Connect
     provider.connect();
