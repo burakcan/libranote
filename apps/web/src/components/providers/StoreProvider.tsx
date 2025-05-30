@@ -11,13 +11,18 @@ export const StoreContext = createContext<StoreInstance | undefined>(undefined);
 export interface StoreProviderProps {
   children: ReactNode;
   userId: string;
+  jwt: string;
 }
 
-export const StoreProvider = ({ children, userId }: StoreProviderProps) => {
+export const StoreProvider = ({
+  children,
+  userId,
+  jwt,
+}: StoreProviderProps) => {
   const storeRef = useRef<StoreInstance | null>(null);
 
   if (storeRef.current === null) {
-    storeRef.current = createStore({ userId });
+    storeRef.current = createStore({ userId, jwt });
   }
 
   return (

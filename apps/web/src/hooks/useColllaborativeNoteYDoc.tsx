@@ -21,6 +21,7 @@ export function useColllaborativeNoteYDoc(noteId: string) {
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const [isDocReady, setIsDocReady] = useState(false);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
+  const hasConnectedRef = useRef(false);
   const { data: jwt } = useJWT();
 
   // Effect for creating/destroying Y.Doc and persistence (only depends on noteId)
@@ -53,47 +54,53 @@ export function useColllaborativeNoteYDoc(noteId: string) {
     };
   }, [noteId]);
 
-  // Effect for creating/destroying provider (depends on noteId, jwt, and isDocReady)
+  // Effect for creating/destroying provider (depends on noteId and isDocReady, but NOT jwt)
   useEffect(() => {
     if (!isDocReady || !yDoc) {
       return;
     }
 
-    console.info("NoteEditor: Creating provider with JWT");
+    console.info("NoteEditor: Creating provider");
 
     const newProvider = new HocuspocusProvider({
       websocketProvider: hocuspocusSocket,
       document: yDoc,
       name: noteId,
-      connect: false,
+      connect: false, // Don't connect immediately
     });
 
     setProvider(newProvider);
+    // Reset connection state when provider changes (i.e., when noteId changes)
+    hasConnectedRef.current = false;
 
     return () => {
       console.info("NoteEditor: Destroying provider");
       newProvider.destroy();
       setProvider(null);
+      hasConnectedRef.current = false;
     };
   }, [noteId, isDocReady, yDoc]);
 
+  // Effect for connecting once when both provider and JWT are ready
   useEffect(() => {
-    if (!provider || !jwt) {
+    if (!provider || !jwt || hasConnectedRef.current) {
       return;
     }
 
+    console.info("NoteEditor: Connecting provider with JWT");
+
+    // Set the token
     provider.configuration.token = jwt;
+
+    // Connect
     provider.connect();
+
+    // Mark as connected so we don't reconnect on JWT changes
+    hasConnectedRef.current = true;
 
     provider.on("status", (status: unknown) => {
       console.log("NoteEditor: Provider status", status);
     });
-
-    return () => {
-      console.log("NoteEditor: Token changed, disconnecting provider");
-      provider.configuration.token = null;
-      provider.disconnect();
-    };
   }, [provider, jwt]);
 
   return { yDoc, provider };

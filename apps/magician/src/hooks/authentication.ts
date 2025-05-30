@@ -5,7 +5,7 @@ export async function onAuthenticate(socket: {
   token: string;
   documentName: string;
   context: Record<string, unknown>;
-}): Promise<boolean | { userId: string; user: unknown }> {
+}): Promise<boolean | { userId: string }> {
   // Handle keep-alive connections
   if (JWTService.isKeepAliveToken(socket.token)) {
     return true;
@@ -16,9 +16,6 @@ export async function onAuthenticate(socket: {
   try {
     // Verify the JWT token
     const payload = await JWTService.verifyToken(socket.token);
-
-    // Store token and user context
-    socket.context.token = socket.token;
     socket.context.userId = payload.sub;
 
     // Check if user has access to the note
@@ -32,7 +29,6 @@ export async function onAuthenticate(socket: {
 
     return {
       userId: payload.sub,
-      user: payload,
     };
   } catch (error) {
     console.error('Authentication failed:', error);

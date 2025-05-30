@@ -9,6 +9,7 @@ import type { Store } from "./types";
 
 export interface StoreInitialData {
   userId: string;
+  jwt: string;
 }
 
 // The main store creator function

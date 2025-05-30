@@ -1,7 +1,6 @@
 import { createContext, useEffect, useRef, useState } from "react";
-import { useJWT } from "@/hooks/useJWT";
 import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
-import { useStore, useStoreInstance } from "@/hooks/useStore";
+import { useStoreInstance } from "@/hooks/useStore";
 import { ActionQueueRepository } from "@/services/db/ActionQueueRepository";
 import { CollectionRepository } from "@/services/db/CollectionRepository";
 import { NoteRepository } from "@/services/db/NoteRepository";
@@ -32,13 +31,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { networkService } = useNetworkStatusContext();
   const syncServiceRef = useRef<SyncService | null>(null);
   const [isSynced, setIsSynced] = useState(false);
-  const setJWT = useStore((state) => state.setJWT);
-
-  const { data: jwt } = useJWT();
-
-  useEffect(() => {
-    setJWT(jwt || "");
-  }, [jwt, setJWT]);
 
   useEffect(() => {
     const handleSyncing = () => {

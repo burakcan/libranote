@@ -33,6 +33,7 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.817.0",
     "@repo/db": "workspace:*",
     "@repo/types": "workspace:*",
     "@types/cors": "^2.8.17",

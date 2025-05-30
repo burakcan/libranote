@@ -41,7 +41,7 @@ export const Route = createFileRoute("/(authenticated)")({
 function RouteComponent() {
   const { data: session } = useSessionQuery();
   const { mutate: logout } = useLogout();
-  const { userId } = Route.useRouteContext();
+  const { userId, jwt } = Route.useRouteContext();
 
   useEffect(() => {
     if (!session) {
@@ -58,7 +58,7 @@ function RouteComponent() {
   }, []);
 
   return (
-    <StoreProvider userId={userId}>
+    <StoreProvider userId={userId} jwt={jwt}>
       <SyncProvider>
         <CollectionListContextProvider>
           <Outlet />

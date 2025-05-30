@@ -16,7 +16,7 @@ import EditorToolbar from "./EditorToolbar";
 import { useCollaborationUser } from "./hooks/useCollaborationUser";
 import { LinkBubbleMenu } from "./LinkBubbleMenu";
 import { createEditorConfig } from "./utils/editorConfig";
-import { createDebouncedUpdateHandler } from "./utils/updateHandler";
+import { debouncedOnUpdate } from "./utils/updateHandler";
 import { ClientNote } from "@/types/Entities";
 
 interface NoteEditorProps {
@@ -53,9 +53,6 @@ export function NoteEditor(props: NoteEditorProps) {
   // Keep refs current
   noteRef.current = note || null;
   updateNoteRef.current = updateNote || null;
-
-  // Create debounced update handler
-  const debouncedOnUpdate = createDebouncedUpdateHandler();
 
   // Create editor configuration
   const editorConfig = createEditorConfig({

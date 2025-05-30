@@ -1,5 +1,4 @@
 import { DocumentService } from '@/services/document-service.js';
-import { JWTService } from '@/services/jwt-service.js';
 import { AuthService } from '@/services/auth-service.js';
 import type { DocumentData } from '@/types/index.js';
 
@@ -10,11 +9,12 @@ export async function onStoreDocument(data: DocumentData): Promise<void> {
   }
 
   try {
-    // Verify the token from context
-    const payload = await JWTService.verifyToken(data.context.token);
+    if (!data.context.userId) {
+      throw new Error('User ID is required');
+    }
 
     // Check if user still has access to the note
-    const note = await AuthService.getEditableNote(data.documentName, payload.sub);
+    const note = await AuthService.getEditableNote(data.documentName, data.context.userId);
 
     if (!note) {
       throw new Error('User does not have access to this note');

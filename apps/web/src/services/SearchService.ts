@@ -1,6 +1,6 @@
 import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
-import { Mutex } from "es-toolkit";
+import { debounce, Mutex } from "es-toolkit";
 import { Charset, Document, IndexedDB } from "flexsearch";
 import * as Y from "yjs";
 import { baseExtensions } from "@/components/noteEditor/baseExtensions";
@@ -175,6 +175,12 @@ export class SearchService extends EventTarget {
       this.onIndexingEnd();
     }
   }
+
+  debouncedUpdateNoteFromYDoc = debounce(
+    (noteId: string) => this.updateNoteFromYDoc(noteId),
+    1000,
+    { edges: ["trailing"] }
+  );
 
   async updateNoteFromYDoc(noteId: string) {
     this.onIndexing();

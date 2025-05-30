@@ -55,7 +55,7 @@ export const auth = betterAuth({
     jwt({
       jwt: {
         // 5 minutes
-        expirationTime: "5m",
+        expirationTime: "1m",
         definePayload: (session) => {
           return {
             userId: session.user.id,
