@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
+import { queryOptions as jwtQueryOptions } from "@/hooks/useJWT";
 import { useLogout } from "@/hooks/useLogout";
 import {
   queryOptions as sessionQueryOptions,
@@ -24,10 +25,13 @@ export const Route = createFileRoute("/(authenticated)")({
       });
     }
 
+    const jwt = await context.queryClient.ensureQueryData(jwtQueryOptions);
+
     await userDatabaseService.initialize(sessionData.user.id);
 
     return {
       userId: sessionData.user.id,
+      jwt,
     };
   },
 

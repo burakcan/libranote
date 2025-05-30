@@ -84,6 +84,8 @@ export class NoteSyncService extends EventTarget {
         remoteYDocState.id,
         remoteYDocState
       );
+      // Ignore sync if note is already open.
+      // Because the editor will handle the sync.
       return;
     }
 
@@ -94,11 +96,13 @@ export class NoteSyncService extends EventTarget {
 
     return new Promise<void>((resolve) => {
       persistence.whenSynced.then(() => {
+        const jwt = this.store.getState().jwt;
+
         const provider = new HocuspocusProvider({
           websocketProvider: syncSocket,
           document: doc,
           name: remoteYDocState.id,
-          token: "123",
+          token: jwt,
         });
 
         provider.on("synced", () => {
@@ -224,6 +228,11 @@ export class NoteSyncService extends EventTarget {
       case "NOTE_DELETED":
         await this.handleRemoteNoteDeleted(event.noteId);
         break;
+      case "COLLECTION_MEMBER_JOINED": {
+        await this.syncAllNotesToLocal();
+        await this.syncAllNoteYDocStates();
+        break;
+      }
       case "NOTE_YDOC_STATE_UPDATED": {
         const store = this.store.getState();
         const note = store.notes.data.find(

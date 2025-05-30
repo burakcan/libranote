@@ -1,11 +1,11 @@
 {
   "name": "magician",
   "version": "1.0.0",
-  "description": "Modern Node.js backend server",
+  "description": "Hocuspocus collaboration server",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "node --env-file=.env --watch src/index.ts",
+    "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc",
     "start": "node --env-file=.env dist/index.js",
     "check-types": "tsc --noEmit",
@@ -14,7 +14,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build"
   },
-  "keywords": [],
+  "keywords": ["hocuspocus", "collaboration", "websocket"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
@@ -28,6 +28,7 @@
     "prettier": "^3.2.5",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   },
   "dependencies": {

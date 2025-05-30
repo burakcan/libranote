@@ -52,10 +52,16 @@ export const auth = betterAuth({
   //   }),
   // },
   plugins: [
-    // jwt({
-    //   jwt: {
-    //     expirationTime: "1h",
-    //   },
-    // }),
+    jwt({
+      jwt: {
+        // 5 minutes
+        expirationTime: "5m",
+        definePayload: (session) => {
+          return {
+            userId: session.user.id,
+          };
+        },
+      },
+    }),
   ],
 });

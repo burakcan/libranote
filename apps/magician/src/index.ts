@@ -1,121 +1,63 @@
-import { Server } from '@hocuspocus/server';
-import * as Y from 'yjs';
-// import * as jose from 'jose';
+import { createServer } from '@/server.js';
+import { Logger } from '@/utils/logger.js';
+import { env } from '@/env.js';
 
-export * from '@repo/db';
-import { PrismaClient } from '@repo/db';
+/**
+ * Graceful shutdown handler
+ */
+async function gracefulShutdown(
+  signal: string,
+  server: ReturnType<typeof createServer>,
+): Promise<void> {
+  Logger.server(`${signal} received. Shutting down gracefully...`);
 
-export const prisma: PrismaClient = new PrismaClient();
-
-const DEFAULT_PORT = 3001;
-
-// const JWKS = jose.createRemoteJWKSet(new URL(process.env.JWKS_URL as string));
-
-const server = Server.configure({
-  port: process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT,
-  onAuthenticate: async (socket) => {
-    console.info(`Authenticated: ${socket.documentName} - ${socket.token}`);
-
-    console.log('Documents size: ', server.documents.size);
-    console.log('Total connections: ', server.getConnectionsCount());
-    // const { payload } = await jose.jwtVerify(socket.token, JWKS);
-    // if (!payload || !payload.sub) {
-    //   throw new Error('Invalid token');
-    // }
-    // // TODO: Check if user has access to the document
-    // console.info(`Authenticated: ${socket.documentName} - ${payload.sub}`);
-    // return true;
-    return true;
-  },
-
-  async onStoreDocument(data) {
-    if (data.documentName === 'keep-alive') {
-      return;
-    }
-
-    const update = Y.encodeStateAsUpdateV2(data.document);
-
-    console.info(`Storing document: ${data.documentName}`);
-
-    try {
-      await prisma.noteYDocState.upsert({
-        where: {
-          id: data.documentName,
-        },
-        update: { encodedDoc: update },
-        create: {
-          id: data.documentName,
-          noteId: data.documentName,
-          encodedDoc: update,
-        },
-      });
-
-      console.log('Notifying the sse webhook', data.documentName);
-
-      await fetch(process.env.SSE_WEBHOOK_URL as string, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          event: {
-            type: 'NOTE_YDOC_STATE_UPDATED',
-            noteId: data.documentName,
-          },
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to store document:', error);
-    }
-  },
-
-  async onLoadDocument(data) {
-    const yDocState = await prisma.noteYDocState.findUnique({
-      where: {
-        id: data.documentName,
-      },
-      select: {
-        encodedDoc: true,
-      },
-    });
-
-    const update = yDocState?.encodedDoc;
-
-    if (update?.length) {
-      Y.applyUpdateV2(data.document, update);
-    }
-
-    return data.document;
-  },
-});
-
-async function startServer(): Promise<void> {
   try {
-    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
-
-    // Start the server
-    await server.listen();
-    console.info(`Hocuspocus server started on port ${port}`);
-
-    // Handle graceful shutdown
-    process.on('SIGTERM', async () => {
-      console.info('SIGTERM received. Shutting down gracefully...');
-      await server.destroy();
-      process.exit(0);
-    });
-
-    process.on('SIGINT', async () => {
-      console.info('SIGINT received. Shutting down gracefully...');
-      await server.destroy();
-      process.exit(0);
-    });
+    await server.destroy();
+    Logger.server('Server destroyed successfully');
+    process.exit(0);
   } catch (error) {
-    console.error('Failed to start server:', error);
+    Logger.error('Error during shutdown:', error);
     process.exit(1);
   }
 }
 
+/**
+ * Main server startup function
+ */
+async function startServer(): Promise<void> {
+  try {
+    // Create and configure the server
+    const server = createServer();
+
+    // Setup graceful shutdown handlers
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM', server));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT', server));
+
+    // Handle uncaught errors
+    process.on('uncaughtException', (error) => {
+      Logger.error('Uncaught exception:', error);
+      gracefulShutdown('UNCAUGHT_EXCEPTION', server);
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      Logger.error('Unhandled rejection:', { reason, promise });
+      gracefulShutdown('UNHANDLED_REJECTION', server);
+    });
+
+    // Start the server
+    await server.listen();
+
+    Logger.server(`Magician collaboration server is ready!`);
+    Logger.server(`Environment: ${env.NODE_ENV}`);
+    Logger.server(`Port: ${env.PORT}`);
+  } catch (error) {
+    Logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
 startServer().catch((error) => {
-  console.error('Unhandled error:', error);
+  Logger.error('Unhandled error during startup:', error);
   process.exit(1);
 });

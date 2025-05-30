@@ -1,7 +1,6 @@
 import { Loader2, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { useIgnoreQuickChange } from "@/hooks/useIgnoreQuickChange";
 import {
   SEARCH_INDEXING_EVENT,
   SEARCH_INDEXING_END_EVENT,
@@ -15,8 +14,7 @@ export function SearchBar() {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NoteSearchResult[]>([]);
-  const [_isIndexing, setIsIndexing] = useState(false);
-  const isIndexing = useIgnoreQuickChange(1000, _isIndexing);
+  const [isIndexing, setIsIndexing] = useState(false);
 
   useEffect(() => {
     const handleIndexing = () => {
@@ -73,12 +71,10 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           type="text"
-          placeholder={isIndexing ? "Indexing..." : "Search..."}
-          disabled={isIndexing}
           className="pl-10 pr-16 bg-background/70 h-10 shadow-sm focus-visible:ring-primary/70 focus-visible:border-primary rounded-3xl"
         />
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          {searching || isIndexing ? (
+          {searching ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <Search className="h-5 w-5" />

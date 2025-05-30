@@ -222,4 +222,12 @@ export class ApiService {
       method: "POST",
     });
   }
+
+  static async getJWT(): Promise<string> {
+    const response = await this.fetch("/api/auth/token");
+
+    const data: { token: string } = await response.json();
+
+    return data.token;
+  }
 }

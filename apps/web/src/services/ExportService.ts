@@ -1,3 +1,4 @@
+import TurndownService from "@joplin/turndown";
 import { gfm } from "@joplin/turndown-plugin-gfm";
 import { Editor } from "@tiptap/core";
 import { Collaboration } from "@tiptap/extension-collaboration";
@@ -6,7 +7,6 @@ import * as Y from "yjs";
 import { baseExtensions } from "@/components/noteEditor/baseExtensions";
 import { IndexeddbPersistence as YIndexeddbPersistence } from "@/services/db/yIndexedDb";
 import { ClientCollection, ClientNote } from "@/types/Entities";
-import TurndownService from "turndown";
 
 export const EXPORT_STARTED_EVENT = "export-started";
 export const EXPORT_COMPLETED_EVENT = "export-completed";

@@ -1,6 +1,27 @@
 import { prisma } from "../db/prisma.js";
 import { NotFoundError } from "../utils/errors.js";
 
+const whereUserCanAccess = (userId: string) => ({
+  OR: [
+    {
+      noteCollaborators: {
+        some: {
+          userId,
+        },
+      },
+    },
+    {
+      collection: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+    },
+  ],
+});
+
 export class YDocStateService {
   static async getYDocStates(userId: string) {
     return prisma.noteYDocState.findMany({
@@ -11,11 +32,7 @@ export class YDocStateService {
       },
       where: {
         note: {
-          noteCollaborators: {
-            some: {
-              userId,
-            },
-          },
+          ...whereUserCanAccess(userId),
         },
       },
     });
@@ -26,11 +43,7 @@ export class YDocStateService {
       where: {
         noteId,
         note: {
-          noteCollaborators: {
-            some: {
-              userId,
-            },
-          },
+          ...whereUserCanAccess(userId),
         },
       },
     });

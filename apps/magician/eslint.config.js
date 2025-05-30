@@ -21,13 +21,16 @@ export default [
       globals: {
         console: 'readonly',
         process: 'readonly',
+        fetch: 'readonly',
+        globalThis: 'readonly',
       },
     },
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
-      'no-console': ['warn', { 'allow': ['warn', 'error', 'info'] }],
+      'no-console': 'off',
+      'no-undef': 'error',
       'prettier/prettier': 'error',
     },
   },

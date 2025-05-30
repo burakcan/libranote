@@ -318,6 +318,9 @@ export class CollectionService {
             name: true,
           },
         },
+        collection: {
+          include: collectionDefaultInclude(userToInvite.id),
+        },
       },
     });
 
@@ -326,7 +329,7 @@ export class CollectionService {
       {
         type: "COLLECTION_MEMBER_JOINED",
         userId: newMember.userId,
-        collection: collection,
+        collection: newMember.collection,
       },
       userId,
       clientId,

@@ -14,6 +14,7 @@ import { ClientUserSetting, ServerUserSetting } from "@/types/Settings";
 export interface StoreState {
   clientId: string;
   userId: string;
+  jwt: string;
   collections: {
     activeCollectionId:
       | ClientCollection["id"]
@@ -40,8 +41,9 @@ export type InitialStoreState = Omit<StoreState, "clientId" | "userId">;
 
 // --- Slice Action Types (Define only the actions for each slice) ---
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type RootSliceActions = {};
+export type RootSliceActions = {
+  setJWT: (jwt: string) => void;
+};
 
 export type CollectionsSliceActions = {
   setActiveCollectionId: (
@@ -142,7 +144,7 @@ export type ActionQueueSliceActions = {
 
 // --- Final Store Type (Combining state and nested actions) ---
 
-export type Store = Pick<StoreState, "clientId" | "userId"> &
+export type Store = Pick<StoreState, "clientId" | "userId" | "jwt"> &
   RootSliceActions & {
     collections: StoreState["collections"] & CollectionsSliceActions;
     notes: StoreState["notes"] & NotesSliceActions;
