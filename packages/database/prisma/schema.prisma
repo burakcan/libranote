@@ -13,20 +13,21 @@ datasource db {
 // These should align with the fields Better Auth expects.
 
 model User {
-  id                String             @id
-  name              String
-  email             String             @unique
-  emailVerified     Boolean
-  image             String?
-  createdAt         DateTime
-  updatedAt         DateTime
-  accounts          Account[]
-  sessions          Session[]
-  noteCollaborators NoteCollaborator[]
-  collectionMembers CollectionMember[]
-  ownedCollections  Collection[]       @relation("OwnedCollections")
-  createdNotes      Note[]             @relation("CreatedNotes")
-  UserSetting       UserSetting[]
+  id                 String             @id
+  name               String
+  email              String             @unique
+  emailVerified      Boolean
+  image              String?
+  createdAt          DateTime
+  updatedAt          DateTime
+  accounts           Account[]
+  sessions           Session[]
+  noteCollaborators  NoteCollaborator[]
+  collectionMembers  CollectionMember[]
+  ownedCollections   Collection[]       @relation("OwnedCollections")
+  createdNotes       Note[]             @relation("CreatedNotes")
+  UserSetting        UserSetting[]
+  onboardingFinished Boolean            @default(false)
 
   @@map("user")
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
+import { PagePending } from "@/components/pagePending/PagePending";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
 import { queryOptions as jwtQueryOptions } from "@/hooks/useJWT";
@@ -36,6 +37,10 @@ export const Route = createFileRoute("/(authenticated)")({
   },
 
   component: RouteComponent,
+
+  pendingComponent: () => <PagePending />,
+
+  pendingMinMs: 3000,
 });
 
 function RouteComponent() {

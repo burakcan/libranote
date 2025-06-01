@@ -1,3 +1,4 @@
+import { useForm } from "@tanstack/react-form";
 import { Link } from "@tanstack/react-router";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useState } from "react";
@@ -18,94 +19,53 @@ import {
 import { authClient } from "@/lib/authClient";
 
 export function ForgotPassword() {
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof ForgotPasswordFormData, string>>
-  >({});
-  const [generalError, setGeneralError] = useState<string>("");
-  const [formData, setFormData] = useState<ForgotPasswordFormData>({
-    email: "",
-  });
+  const [successEmail, setSuccessEmail] = useState("");
 
-  const handleInputChange = (
-    field: keyof ForgotPasswordFormData,
-    value: string
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field-specific error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    // Clear general error when user makes changes
-    if (generalError) {
-      setGeneralError("");
-    }
-  };
+  const form = useForm({
+    defaultValues: {
+      email: "",
+    } as ForgotPasswordFormData,
+    validators: {
+      onSubmit: forgotPasswordSchema,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        const response = await authClient.forgetPassword({
+          email: value.email,
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
 
-  const validateForm = (): boolean => {
-    const result = forgotPasswordSchema.safeParse(formData);
-
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ForgotPasswordFormData, string>> =
-        {};
-      result.error.errors.forEach((error) => {
-        const field = error.path[0] as keyof ForgotPasswordFormData;
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = error.message;
+        if (response.error) {
+          const errorMessage =
+            response.error.message || "Failed to send reset email";
+          toast.error("Failed to send reset email", {
+            description: errorMessage,
+          });
+          return;
         }
-      });
-      setErrors(fieldErrors);
-      return false;
-    }
 
-    setErrors({});
-    return true;
-  };
+        // Success - show success message
+        toast.success("Reset email sent!", {
+          description: `Check your inbox at ${value.email}`,
+        });
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    setGeneralError("");
-
-    try {
-      const response = await authClient.forgetPassword({
-        email: formData.email,
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      setIsLoading(false);
-
-      if (response.error) {
+        setSuccessEmail(value.email);
+        setIsSuccess(true);
+      } catch (error) {
         const errorMessage =
-          response.error.message || "Failed to send reset email";
-        // Don't set form error for auth failures - just show toast
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+
         toast.error("Failed to send reset email", {
           description: errorMessage,
         });
-        return;
       }
+    },
+  });
 
-      // Success - show success message
-      toast.success("Reset email sent!", {
-        description: `Check your inbox at ${formData.email}`,
-      });
-      setIsSuccess(true);
-    } catch (error) {
-      setIsLoading(false);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      // Don't set form error for network failures - just show toast
-      toast.error("Failed to send reset email", {
-        description: errorMessage,
-      });
-    }
-  };
+  const isSubmitting = form.state.isSubmitting;
 
   if (isSuccess) {
     return (
@@ -116,7 +76,7 @@ export function ForgotPassword() {
           </div>
           <CardTitle className="text-xl">Check your email</CardTitle>
           <CardDescription>
-            We've sent a password reset link to {formData.email}
+            We've sent a password reset link to {successEmail}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,7 +89,8 @@ export function ForgotPassword() {
               className="w-full"
               onClick={() => {
                 setIsSuccess(false);
-                setFormData({ email: "" });
+                setSuccessEmail("");
+                form.reset();
               }}
             >
               Try again
@@ -159,29 +120,58 @@ export function ForgotPassword() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          {generalError && (
-            <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive border border-destructive/20">
-              {generalError}
-            </div>
-          )}
-
-          <FormField
-            label="Email"
-            type="email"
-            placeholder="m@example.com"
-            value={formData.email}
-            onChange={(e) => handleInputChange("email", e.target.value)}
-            error={errors.email}
-            disabled={isLoading}
-            required
-            autoComplete="email"
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="grid gap-4"
+        >
+          <form.Field
+            name="email"
+            validators={{
+              onBlur: forgotPasswordSchema.shape.email,
+            }}
+            children={(field) => (
+              <FormField
+                label="Email"
+                type="email"
+                placeholder="m@example.com"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                error={
+                  (field.state.meta.isTouched || form.state.isSubmitted) &&
+                  field.state.meta.errors.length > 0
+                    ? field.state.meta.errors[0]?.message
+                    : undefined
+                }
+                disabled={isSubmitting}
+                required
+                autoComplete="email"
+              />
+            )}
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? "Sending..." : "Send reset link"}
-          </Button>
+          <form.Subscribe
+            selector={(formState) => [
+              formState.canSubmit,
+              formState.isSubmitting,
+            ]}
+            children={([canSubmit, isSubmitting]) => (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!canSubmit || isSubmitting}
+              >
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isSubmitting ? "Sending..." : "Send reset link"}
+              </Button>
+            )}
+          />
         </form>
 
         <div className="mt-6 text-center text-sm">

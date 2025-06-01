@@ -49,6 +49,13 @@ export const auth = betterAuth({
       partitioned: true, // New browser standards will mandate this for foreign cookies
     },
   },
+  user: {
+    additionalFields: {
+      onboardingFinished: {
+        type: "boolean",
+      },
+    },
+  },
   trustedOrigins: env.AUTH_TRUSTED_ORIGINS.split(","),
   // hooks: {
   //   after: createAuthMiddleware(async (ctx) => {
@@ -104,10 +111,10 @@ export const auth = betterAuth({
             appName: "LibraNote",
             type: type,
           });
+
           console.log(`OTP email sent successfully to: ${email}, type: ${type}`);
         } catch (error) {
           console.error("Failed to send OTP email:", error);
-          throw error;
         }
       },
     }),

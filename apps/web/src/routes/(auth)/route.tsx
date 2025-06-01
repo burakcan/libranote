@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { PagePending } from "@/components/pagePending/PagePending";
+import { usePrefersColorScheme } from "@/hooks/usePrefersColorScheme";
 import {
   queryOptions as sessionQueryOptions,
   useSessionQuery,
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/(auth)")({
     }
   },
 
-  pendingComponent: () => <div>Loading...</div>,
+  pendingComponent: () => <PagePending />,
   component: RouteComponent,
 });
 
@@ -36,20 +38,9 @@ function RouteComponent() {
 
   useEffect(() => {
     document.body.classList.add("theme-monochrome");
-    const handlePrefersColorSchemeChange = (event: MediaQueryListEvent) => {
-      document.body.classList.toggle("dark", event.matches);
-    };
-
-    const mediaQueryList = window.matchMedia("(prefers-color-scheme: light)");
-    mediaQueryList.addEventListener("change", handlePrefersColorSchemeChange);
-
-    return () => {
-      mediaQueryList.removeEventListener(
-        "change",
-        handlePrefersColorSchemeChange
-      );
-    };
   }, []);
+
+  usePrefersColorScheme();
 
   useEffect(() => {
     if (search.redirectTo && session) {
@@ -62,9 +53,7 @@ function RouteComponent() {
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col gap-6">
-          <Outlet />
-        </div>
+        <Outlet />
       </div>
     </div>
   );

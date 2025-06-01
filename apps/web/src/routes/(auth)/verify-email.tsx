@@ -6,14 +6,9 @@ export const Route = createFileRoute("/(auth)/verify-email")({
     search: Record<string, unknown>
   ): {
     email?: string;
-    type?: "email-verification" | "sign-in";
   } => {
     return {
       email: typeof search.email === "string" ? search.email : undefined,
-      type:
-        search.type === "email-verification" || search.type === "sign-in"
-          ? search.type
-          : "email-verification",
     };
   },
 
@@ -32,5 +27,5 @@ export const Route = createFileRoute("/(auth)/verify-email")({
 function RouteComponent() {
   const search = Route.useSearch();
 
-  return <EmailVerification email={search.email!} type={search.type} />;
+  return <EmailVerification email={search.email!} />;
 }

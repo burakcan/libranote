@@ -1,3 +1,4 @@
+import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, Mail, Timer } from "lucide-react";
@@ -17,149 +18,95 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { invalidateSessionQuery } from "@/hooks/useSessionQuery";
+import {
+  emailVerificationSchema,
+  type EmailVerificationFormData,
+} from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";
 
 interface EmailVerificationProps {
   email: string;
-  type?: "email-verification" | "sign-in";
 }
 
-export function EmailVerification({
-  email,
-  type = "email-verification",
-}: EmailVerificationProps) {
+export function EmailVerification({ email }: EmailVerificationProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [generalError, setGeneralError] = useState<string>("");
-  const [otpValue, setOtpValue] = useState("");
 
-  // Initialize cooldown if there's a stored timestamp
-  useEffect(() => {
-    const lastSentKey = `otp_last_sent_${email}`;
-    const lastSent = localStorage.getItem(lastSentKey);
-
-    if (lastSent) {
-      const lastSentTime = parseInt(lastSent);
-      const now = Date.now();
-      const elapsed = now - lastSentTime;
-      const cooldownTime = 15 * 60 * 1000; // 15 minutes
-
-      if (elapsed < cooldownTime) {
-        setResendCooldown(Math.ceil((cooldownTime - elapsed) / 1000));
-      } else {
-        localStorage.removeItem(lastSentKey);
-      }
-    }
-  }, [email]);
-
-  // Countdown timer for resend cooldown
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
-        setResendCooldown(resendCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-  // Auto-submit when OTP is complete
-  useEffect(() => {
-    if (otpValue.length === 6) {
-      handleSubmit();
-    }
-  }, [otpValue]);
-
-  const handleSubmit = async () => {
-    if (otpValue.length !== 6) {
-      return;
-    }
-
-    setIsLoading(true);
-    setGeneralError("");
-
-    try {
-      let response;
-
-      if (type === "sign-in") {
-        // Sign in with OTP
-        response = await authClient.signIn.emailOtp({
+  const form = useForm({
+    defaultValues: {
+      otp: "",
+    } as EmailVerificationFormData,
+    validators: {
+      onSubmit: emailVerificationSchema,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        // Only verify email with OTP - this should auto-login the user
+        const response = await authClient.emailOtp.verifyEmail({
           email: email,
-          otp: otpValue,
+          otp: value.otp,
         });
-      } else {
-        // Verify email with OTP - this should auto-login the user
-        response = await authClient.emailOtp.verifyEmail({
-          email: email,
-          otp: otpValue,
+
+        if (response.error) {
+          const errorMessage =
+            response.error.message || "Invalid verification code";
+
+          // Check for max attempts exceeded
+          if (response.error.code === "TOO_MANY_ATTEMPTS") {
+            toast.error("Too many failed attempts", {
+              description:
+                "Please request a new verification code after the cooldown period.",
+            });
+
+            form.reset();
+            return;
+          }
+
+          // Check for expired code
+          if (
+            response.error.code === "INVALID_OTP" ||
+            response.error.code === "EXPIRED_OTP"
+          ) {
+            toast.error("Code expired or invalid", {
+              description: "Please request a new verification code.",
+            });
+            form.reset();
+            return;
+          }
+
+          // Generic error
+          toast.error("Verification failed", {
+            description: errorMessage,
+          });
+          form.reset();
+          return;
+        }
+
+        // Success - Better Auth should auto-login after email verification
+        toast.success("Email verified successfully!", {
+          description: "Welcome! You're now signed in.",
         });
-      }
 
-      setIsLoading(false);
+        // Invalidate session to get the new authenticated state
+        invalidateSessionQuery(queryClient);
 
-      if (response.error) {
+        // Navigate to notes after successful verification
+        navigate({ to: "/notes" });
+      } catch (error) {
         const errorMessage =
-          response.error.message || "Invalid verification code";
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
 
-        // Check for max attempts exceeded
-        if (
-          response.error.status === 429 ||
-          errorMessage.includes("MAX_ATTEMPTS_EXCEEDED") ||
-          errorMessage.includes("maximum attempts")
-        ) {
-          setGeneralError(
-            "Too many failed attempts. Please request a new verification code."
-          );
-          setOtpValue(""); // Clear the OTP input
-          return;
-        }
-
-        // Check for expired code
-        if (
-          errorMessage.includes("expired") ||
-          errorMessage.includes("invalid")
-        ) {
-          setGeneralError(
-            "Verification code has expired or is invalid. Please request a new code."
-          );
-          setOtpValue(""); // Clear the OTP input
-          return;
-        }
-
-        // Generic error
-        setGeneralError(errorMessage);
-        setOtpValue(""); // Clear the OTP input
-        return;
+        toast.error("Verification failed", {
+          description: errorMessage,
+        });
+        form.reset();
       }
-
-      // Success - Better Auth OTP should auto-login after verification
-      toast.success(
-        type === "sign-in"
-          ? "Signed in successfully!"
-          : "Email verified successfully!",
-        {
-          description:
-            type === "sign-in"
-              ? "Welcome back!"
-              : "Your account has been verified.",
-        }
-      );
-
-      // Invalidate session to get the new authenticated state
-      invalidateSessionQuery(queryClient);
-
-      // Navigate to notes after successful verification
-      navigate({ to: "/notes" });
-    } catch (error) {
-      setIsLoading(false);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      setGeneralError(errorMessage);
-      setOtpValue(""); // Clear the OTP input
-    }
-  };
+    },
+  });
 
   const handleResendCode = async () => {
     if (resendCooldown > 0) {
@@ -167,12 +114,11 @@ export function EmailVerification({
     }
 
     setIsResending(true);
-    setGeneralError("");
 
     try {
       const response = await authClient.emailOtp.sendVerificationOtp({
         email: email,
-        type: type,
+        type: "email-verification",
       });
 
       setIsResending(false);
@@ -209,56 +155,112 @@ export function EmailVerification({
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
+  // Initialize cooldown if there's a stored timestamp
+  useEffect(() => {
+    const lastSentKey = `otp_last_sent_${email}`;
+    const lastSent = localStorage.getItem(lastSentKey);
+
+    if (lastSent) {
+      const lastSentTime = parseInt(lastSent);
+      const now = Date.now();
+      const elapsed = now - lastSentTime;
+      const cooldownTime = 15 * 60 * 1000; // 15 minutes
+
+      if (elapsed < cooldownTime) {
+        setResendCooldown(Math.ceil((cooldownTime - elapsed) / 1000));
+      } else {
+        localStorage.removeItem(lastSentKey);
+      }
+    }
+  }, [email]);
+
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const isSubmitting = form.state.isSubmitting;
+
   return (
     <Card>
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Mail className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle className="text-xl">
-          {type === "sign-in" ? "Enter verification code" : "Verify your email"}
-        </CardTitle>
+        <CardTitle className="text-xl">Verify your email</CardTitle>
         <CardDescription>
-          {type === "sign-in"
-            ? `Enter the 6-digit code sent to ${email} to sign in`
-            : `Enter the 6-digit code sent to ${email} to verify your account`}
+          Enter the 6-digit code sent to {email} to verify your account
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6">
-          {generalError && (
-            <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive border border-destructive/20">
-              {generalError}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Verification code</label>
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={otpValue}
-                onChange={setOtpValue}
-                disabled={isLoading}
-                autoComplete="one-time-code"
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            {isLoading && (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Verifying...
-              </div>
-            )}
-          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }}
+          >
+            <form.Field
+              name="otp"
+              validators={{
+                onBlur: emailVerificationSchema.shape.otp,
+              }}
+              children={(field) => (
+                <div className="space-y-2">
+                  <label className="block text-sm text-center font-medium">
+                    Verification code
+                  </label>
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={field.state.value}
+                      onChange={(value) => {
+                        field.handleChange(value);
+                        // Auto-submit when OTP is complete
+                        if (value.length === 6) {
+                          setTimeout(() => form.handleSubmit(), 100);
+                        }
+                      }}
+                      onBlur={field.handleBlur}
+                      disabled={isSubmitting}
+                      autoComplete="one-time-code"
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  {(field.state.meta.isTouched || form.state.isSubmitted) &&
+                    field.state.meta.errors.length > 0 && (
+                      <p
+                        className="text-sm text-destructive text-center"
+                        role="alert"
+                      >
+                        {field.state.meta.errors[0]?.message}
+                      </p>
+                    )}
+                  {isSubmitting && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </div>
+                  )}
+                </div>
+              )}
+            />
+          </form>
 
           <div className="space-y-4">
             <div className="text-center">

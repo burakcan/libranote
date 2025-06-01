@@ -1,3 +1,4 @@
+import { useForm } from "@tanstack/react-form";
 import { Link } from "@tanstack/react-router";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -22,112 +23,72 @@ interface ResetPasswordProps {
 }
 
 export function ResetPassword({ token }: ResetPasswordProps = {}) {
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof ResetPasswordFormData, string>>
-  >({});
-  const [generalError, setGeneralError] = useState<string>("");
-  const [formData, setFormData] = useState<ResetPasswordFormData>({
-    password: "",
-    confirmPassword: "",
+  const [tokenError, setTokenError] = useState<string>("");
+
+  const form = useForm({
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    } as ResetPasswordFormData,
+    validators: {
+      onSubmit: resetPasswordSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (!token) {
+        setTokenError(
+          "Invalid or missing reset token. Please request a new password reset."
+        );
+        return;
+      }
+
+      try {
+        const response = await authClient.resetPassword({
+          token: token,
+          newPassword: value.password,
+        });
+
+        if (response.error) {
+          const errorMessage =
+            response.error.message || "Failed to reset password";
+
+          toast.error("Failed to reset password", {
+            description: errorMessage,
+          });
+          return;
+        }
+
+        // Success - show success message
+        toast.success("Password reset successful!", {
+          description: "Your password has been updated. You can now sign in.",
+        });
+        setIsSuccess(true);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+
+        toast.error("Failed to reset password", {
+          description: errorMessage,
+        });
+      }
+    },
   });
+
+  const resetPasswordSchemaBeforeEffects = resetPasswordSchema._def.schema;
+  const isSubmitting = form.state.isSubmitting;
 
   useEffect(() => {
     // Check if token is present
     if (!token) {
-      setGeneralError(
+      setTokenError(
         "Invalid or missing reset token. Please request a new password reset."
       );
+    } else {
+      setTokenError("");
     }
   }, [token]);
-
-  const handleInputChange = (
-    field: keyof ResetPasswordFormData,
-    value: string
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field-specific error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    // Clear general error when user makes changes
-    if (generalError && token) {
-      setGeneralError("");
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const result = resetPasswordSchema.safeParse(formData);
-
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ResetPasswordFormData, string>> =
-        {};
-      result.error.errors.forEach((error) => {
-        const field = error.path[0] as keyof ResetPasswordFormData;
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = error.message;
-        }
-      });
-      setErrors(fieldErrors);
-      return false;
-    }
-
-    setErrors({});
-    return true;
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!token) {
-      // Keep form error for invalid token - this is a persistent state issue
-      setGeneralError(
-        "Invalid or missing reset token. Please request a new password reset."
-      );
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    setGeneralError(""); // Clear any previous token errors
-
-    try {
-      const response = await authClient.resetPassword({
-        token: token,
-        newPassword: formData.password,
-      });
-
-      setIsLoading(false);
-
-      if (response.error) {
-        const errorMessage =
-          response.error.message || "Failed to reset password";
-        // Don't set form error for auth failures - just show toast
-        toast.error("Failed to reset password", {
-          description: errorMessage,
-        });
-        return;
-      }
-
-      // Success - show success message
-      toast.success("Password reset successful!", {
-        description: "Your password has been updated. You can now sign in.",
-      });
-      setIsSuccess(true);
-    } catch (error) {
-      setIsLoading(false);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      // Don't set form error for network failures - just show toast
-      toast.error("Failed to reset password", {
-        description: errorMessage,
-      });
-    }
-  };
 
   if (isSuccess) {
     return (
@@ -159,48 +120,110 @@ export function ResetPassword({ token }: ResetPasswordProps = {}) {
         <CardDescription>Enter your new password below</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          {generalError && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="grid gap-4"
+        >
+          {tokenError && (
             <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive border border-destructive/20">
-              {generalError}
+              {tokenError}
             </div>
           )}
 
-          <FormField
-            label="New password"
-            type="password"
-            placeholder="Create a secure password"
-            value={formData.password}
-            onChange={(e) => handleInputChange("password", e.target.value)}
-            error={errors.password}
-            hint="At least 8 characters with uppercase, lowercase, and number"
-            disabled={isLoading || !token}
-            required
-            autoComplete="new-password"
+          <form.Field
+            name="password"
+            validators={{
+              onBlur: resetPasswordSchemaBeforeEffects.shape.password,
+            }}
+            children={(field) => (
+              <FormField
+                label="New password"
+                type="password"
+                placeholder="Create a secure password"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                error={
+                  (field.state.meta.isTouched || form.state.isSubmitted) &&
+                  field.state.meta.errors.length > 0
+                    ? field.state.meta.errors[0]?.message
+                    : undefined
+                }
+                hint="At least 8 characters with uppercase, lowercase, and number"
+                disabled={isSubmitting || !token}
+                required
+                autoComplete="new-password"
+              />
+            )}
           />
 
-          <FormField
-            label="Confirm new password"
-            type="password"
-            placeholder="Confirm your new password"
-            value={formData.confirmPassword}
-            onChange={(e) =>
-              handleInputChange("confirmPassword", e.target.value)
-            }
-            error={errors.confirmPassword}
-            disabled={isLoading || !token}
-            required
-            autoComplete="new-password"
+          <form.Field
+            name="confirmPassword"
+            validators={{
+              onBlur: ({ value, fieldApi }) => {
+                // First validate the field itself
+                const fieldResult =
+                  resetPasswordSchemaBeforeEffects.shape.confirmPassword.safeParse(
+                    value
+                  );
+                if (!fieldResult.success) {
+                  return fieldResult.error.errors[0];
+                }
+
+                // Then check if passwords match
+                const passwordValue = fieldApi.form.getFieldValue("password");
+                if (passwordValue && value !== passwordValue) {
+                  return {
+                    message: "Passwords don't match",
+                  };
+                }
+
+                return undefined;
+              },
+            }}
+            children={(field) => (
+              <FormField
+                label="Confirm new password"
+                type="password"
+                placeholder="Confirm your new password"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                error={
+                  (field.state.meta.isTouched || form.state.isSubmitted) &&
+                  field.state.meta.errors.length > 0
+                    ? field.state.meta.errors[0]?.message
+                    : undefined
+                }
+                disabled={isSubmitting || !token}
+                required
+                autoComplete="new-password"
+              />
+            )}
           />
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading || !token}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? "Updating password..." : "Update password"}
-          </Button>
+          <form.Subscribe
+            selector={(formState) => [
+              formState.canSubmit,
+              formState.isSubmitting,
+            ]}
+            children={([canSubmit, isSubmitting]) => (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!canSubmit || isSubmitting || !token}
+              >
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isSubmitting ? "Updating password..." : "Update password"}
+              </Button>
+            )}
+          />
         </form>
 
         <div className="mt-6 text-center text-sm">

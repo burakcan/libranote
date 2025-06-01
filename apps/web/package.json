@@ -41,6 +41,7 @@
     "@repo/types": "workspace:*",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.0.17",
+    "@tanstack/react-form": "^1.12.0",
     "@tanstack/react-query": "^5.71.1",
     "@tanstack/react-router": "^1.117.0",
     "@tiptap/core": "^2.11.7",

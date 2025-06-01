@@ -1,7 +1,7 @@
+import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,132 +19,83 @@ import { authClient } from "@/lib/authClient";
 export function SignInForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof SignInFormData, string>>
-  >({});
-  const [generalError, setGeneralError] = useState<string>("");
-  const [formData, setFormData] = useState<SignInFormData>({
-    email: "",
-    password: "",
-  });
 
-  const handleInputChange = (field: keyof SignInFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field-specific error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    // Clear general error when user makes changes
-    if (generalError) {
-      setGeneralError("");
-    }
-  };
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    } as SignInFormData,
+    validators: {
+      onSubmit: signInSchema,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        const response = await authClient.signIn.email({
+          email: value.email,
+          password: value.password,
+        });
 
-  const validateForm = (): boolean => {
-    const result = signInSchema.safeParse(formData);
+        if (response.error) {
+          const errorMessage = response.error.message || "Failed to sign in";
 
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof SignInFormData, string>> = {};
-      result.error.errors.forEach((error) => {
-        const field = error.path[0] as keyof SignInFormData;
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = error.message;
-        }
-      });
-      setErrors(fieldErrors);
-      return false;
-    }
-
-    setErrors({});
-    return true;
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    setGeneralError("");
-
-    try {
-      const response = await authClient.signIn.email({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      setIsLoading(false);
-
-      if (response.error) {
-        const errorMessage = response.error.message || "Failed to sign in";
-
-        // Check if email verification is required
-        if (
-          response.error.status === 403 ||
-          (errorMessage.includes("email") &&
-            errorMessage.includes("verification")) ||
-          errorMessage.includes("verify") ||
-          errorMessage.includes("unverified")
-        ) {
-          // Send OTP for email verification
-          try {
-            await authClient.emailOtp.sendVerificationOtp({
-              email: formData.email,
-              type: "email-verification",
-            });
-
-            // Store the timestamp for resend cooldown
-            const now = Date.now();
-            const lastSentKey = `otp_last_sent_${formData.email}`;
-            localStorage.setItem(lastSentKey, now.toString());
-
-            toast.success("Verification code sent!", {
-              description:
-                "Please check your email and enter the verification code.",
-            });
-
-            // Redirect to email verification page
-            navigate({
-              to: "/verify-email",
-              search: {
-                email: formData.email,
+          // Check if email verification is required
+          if (response.error.code === "EMAIL_NOT_VERIFIED") {
+            // Send a new verification email and redirect to verification page
+            try {
+              await authClient.emailOtp.sendVerificationOtp({
+                email: value.email,
                 type: "email-verification",
-              },
-            });
-            return;
-          } catch {
-            // If OTP sending fails, show the original error
-            toast.error("Email verification required", {
-              description: "Please verify your email address to continue.",
-            });
-            return;
+              });
+
+              // Store the timestamp for resend cooldown
+              const now = Date.now();
+              const lastSentKey = `otp_last_sent_${value.email}`;
+              localStorage.setItem(lastSentKey, now.toString());
+
+              // Redirect to email verification page
+              navigate({
+                to: "/verify-email",
+                search: {
+                  email: value.email,
+                },
+              });
+              return;
+            } catch {
+              // If sending verification email fails, show a helpful error
+              toast.error("Email verification required", {
+                description:
+                  "Please verify your email address. If you didn't receive the verification email, try signing up again.",
+              });
+              return;
+            }
           }
+
+          // Regular sign-in error
+          toast.error("Failed to sign in", {
+            description: errorMessage,
+          });
+
+          return;
         }
 
-        // Regular sign-in error
+        // Success - show success toast and invalidate session
+        toast.success("Signed in successfully!");
+
+        invalidateSessionQuery(queryClient);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+
         toast.error("Failed to sign in", {
           description: errorMessage,
         });
-        return;
       }
+    },
+  });
 
-      // Success - show success toast and invalidate session
-      toast.success("Signed in successfully!", {
-        description: "Welcome back!",
-      });
-      invalidateSessionQuery(queryClient);
-    } catch (error) {
-      setIsLoading(false);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Failed to sign in", {
-        description: errorMessage,
-      });
-    }
-  };
+  const isSubmitting = form.state.isSubmitting;
 
   return (
     <Card>
@@ -154,7 +105,6 @@ export function SignInForm() {
       </CardHeader>
       <CardContent>
         <div className="grid gap-6">
-          {/* OAuth Buttons - keeping as requested */}
           <div className="flex flex-col gap-4">
             <Button variant="outline" className="w-full" type="button" disabled>
               Sign in with Apple
@@ -170,23 +120,38 @@ export function SignInForm() {
             </span>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            {generalError && (
-              <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive border border-destructive/20">
-                {generalError}
-              </div>
-            )}
-
-            <FormField
-              label="Email"
-              type="email"
-              placeholder="m@example.com"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-              error={errors.email}
-              disabled={isLoading}
-              required
-              autoComplete="email"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }}
+            className="grid gap-4"
+          >
+            <form.Field
+              name="email"
+              validators={{
+                onBlur: signInSchema.shape.email,
+              }}
+              children={(field) => (
+                <FormField
+                  label="Email"
+                  type="email"
+                  placeholder="m@example.com"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  error={
+                    (field.state.meta.isTouched || form.state.isSubmitted) &&
+                    field.state.meta.errors.length > 0
+                      ? field.state.meta.errors[0]?.message
+                      : undefined
+                  }
+                  disabled={isSubmitting}
+                  required
+                  autoComplete="email"
+                />
+              )}
             />
 
             <div className="grid gap-2">
@@ -202,24 +167,52 @@ export function SignInForm() {
                   Forgot password?
                 </Link>
               </div>
-              <FormField
-                label=""
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                error={errors.password}
-                disabled={isLoading}
-                required
-                autoComplete="current-password"
+              <form.Field
+                name="password"
+                validators={{
+                  onBlur: signInSchema.shape.password,
+                }}
+                children={(field) => (
+                  <FormField
+                    label=""
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    error={
+                      (field.state.meta.isTouched || form.state.isSubmitted) &&
+                      field.state.meta.errors.length > 0
+                        ? field.state.meta.errors[0]?.message
+                        : undefined
+                    }
+                    disabled={isSubmitting}
+                    required
+                    autoComplete="current-password"
+                  />
+                )}
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
+            <form.Subscribe
+              selector={(formState) => [
+                formState.canSubmit,
+                formState.isSubmitting,
+              ]}
+              children={([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {isSubmitting ? "Signing in..." : "Sign in"}
+                </Button>
+              )}
+            />
           </form>
 
           <div className="text-center text-sm">
