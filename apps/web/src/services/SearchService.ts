@@ -36,12 +36,20 @@ export class SearchService extends EventTarget {
     context: true,
   });
 
-  notesDb = new IndexedDB({
-    name: "libranote-search-notes",
-  });
+  notesDb: IndexedDB | null = null;
+
+  userId: string | null = null;
 
   constructor() {
     super();
+  }
+
+  async initialize(userId: string) {
+    this.userId = userId;
+
+    this.notesDb = new IndexedDB({
+      name: `libranote-search-notes-${userId}`,
+    });
 
     this.notesIndex.mount(this.notesDb);
   }
@@ -286,11 +294,17 @@ export class SearchService extends EventTarget {
   }
 
   async clearNotesIndex() {
+    if (!this.notesDb || !this.userId) {
+      throw new Error("Notes database not initialized");
+    }
+
     await this.notesIndexMutex.acquire();
     await this.notesDb.destroy();
+
     this.notesDb = new IndexedDB({
-      name: "libranote-search-notes",
+      name: `libranote-search-notes-${this.userId}`,
     });
+
     await this.notesIndex.mount(this.notesDb);
     this.notesIndexMutex.release();
   }

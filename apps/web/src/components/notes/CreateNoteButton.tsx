@@ -11,7 +11,7 @@ import {
 } from "@/lib/store/useCollectionNotes";
 import { vibrate } from "@/lib/utils";
 
-const MotionButton = motion(Button);
+const MotionButton = motion.create(Button);
 
 export function CreateNoteButton({ floating }: { floating?: boolean }) {
   const { data: session } = useSessionQuery();

@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
-import { PagePending } from "@/components/pagePending/PagePending";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
 import { queryOptions as jwtQueryOptions } from "@/hooks/useJWT";
@@ -11,6 +10,7 @@ import {
   useSessionQuery,
 } from "@/hooks/useSessionQuery";
 import { userDatabaseService } from "@/services/db/userDatabaseService";
+import { searchService } from "@/services/SearchService";
 
 export const Route = createFileRoute("/(authenticated)")({
   beforeLoad: async ({ location, context }) => {
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/(authenticated)")({
     const jwt = await context.queryClient.ensureQueryData(jwtQueryOptions);
 
     await userDatabaseService.initialize(sessionData.user.id);
+    await searchService.initialize(sessionData.user.id);
 
     return {
       userId: sessionData.user.id,
@@ -37,10 +38,6 @@ export const Route = createFileRoute("/(authenticated)")({
   },
 
   component: RouteComponent,
-
-  pendingComponent: () => <PagePending />,
-
-  pendingMinMs: 3000,
 });
 
 function RouteComponent() {
