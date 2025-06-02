@@ -4,21 +4,6 @@
 
 import type { Collection, CollectionMember, Note, NoteYDocState, UserSetting } from "@repo/db";
 
-export type SSEEventType =
-  | "INIT"
-  | "COLLECTION_CREATED"
-  | "COLLECTION_UPDATED"
-  | "COLLECTION_DELETED"
-  | "NOTE_CREATED"
-  | "NOTE_UPDATED"
-  | "NOTE_DELETED"
-  | "NOTE_YDOC_STATE_UPDATED"
-  | "COLLECTION_MEMBER_JOINED"
-  | "COLLECTION_MEMBER_LEFT"
-  | "COLLECTION_MEMBER_ROLE_UPDATED"
-  | "SETTING_UPDATED"
-  | "SESSION_REFRESH";
-
 export interface SSEInitEvent {
   type: "INIT";
   clientId: string;

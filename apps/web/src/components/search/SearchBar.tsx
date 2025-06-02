@@ -1,11 +1,7 @@
 import { Loader2, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import {
-  SEARCH_INDEXING_EVENT,
-  SEARCH_INDEXING_END_EVENT,
-  searchService,
-} from "@/services/SearchService";
+import { searchService } from "@/services/SearchService";
 import { Button } from "../ui/button";
 import { SearchResults } from "./SearchResults";
 import { NoteSearchResult } from "@/types/FlexSearch";
@@ -14,31 +10,6 @@ export function SearchBar() {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NoteSearchResult[]>([]);
-  const [isIndexing, setIsIndexing] = useState(false);
-
-  useEffect(() => {
-    const handleIndexing = () => {
-      setIsIndexing(true);
-    };
-
-    const handleIndexingEnd = () => {
-      setIsIndexing(false);
-    };
-
-    searchService.addEventListener(SEARCH_INDEXING_EVENT, handleIndexing);
-    searchService.addEventListener(
-      SEARCH_INDEXING_END_EVENT,
-      handleIndexingEnd
-    );
-
-    return () => {
-      searchService.removeEventListener(SEARCH_INDEXING_EVENT, handleIndexing);
-      searchService.removeEventListener(
-        SEARCH_INDEXING_END_EVENT,
-        handleIndexingEnd
-      );
-    };
-  }, []);
 
   useEffect(() => {
     if (query.length === 1) {

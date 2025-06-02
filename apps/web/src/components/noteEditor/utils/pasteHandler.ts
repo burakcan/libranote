@@ -87,7 +87,7 @@ const lengthToHumanReadable = (length: number) => {
 };
 
 export const createImagePasteHandler = () => {
-  return (view: EditorView, event: ClipboardEvent, slice: Slice): boolean => {
+  return (view: EditorView, _: ClipboardEvent, slice: Slice): boolean => {
     // Check if the slice contains any image nodes
     let hasImages = false;
     const fragment = slice.content;

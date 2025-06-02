@@ -12,7 +12,7 @@ export function useLogout() {
     mutationKey: ["logout"],
     mutationFn: async () => {
       await yjsDB.delete();
-      await searchService.notesDb.destroy();
+      await searchService.notesDb?.destroy();
       await userDatabaseService.destroy();
       await authClient.signOut();
     },

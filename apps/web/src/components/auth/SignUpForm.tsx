@@ -33,6 +33,7 @@ export function SignUpForm() {
           email: value.email,
           password: value.password,
           name: value.name,
+          onboardingFinished: false,
         });
 
         if (response.error) {
