@@ -1,2 +1,0 @@
-- Initial login first example notes
-- Initial sync should be one by one and not all at once
