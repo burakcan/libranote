@@ -16,6 +16,7 @@ import { Route as authenticatedRouteImport } from './routes/(authenticated)/rout
 import { Route as authRouteImport } from './routes/(auth)/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as authenticatedSettingsImport } from './routes/(authenticated)/settings'
+import { Route as authenticatedSetPasswordImport } from './routes/(authenticated)/set-password'
 import { Route as authenticatedNotesImport } from './routes/(authenticated)/notes'
 import { Route as authVerifyEmailImport } from './routes/(auth)/verify-email'
 import { Route as authSignupImport } from './routes/(auth)/signup'
@@ -54,6 +55,12 @@ const IndexRoute = IndexImport.update({
 const authenticatedSettingsRoute = authenticatedSettingsImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => authenticatedRouteRoute,
+} as any)
+
+const authenticatedSetPasswordRoute = authenticatedSetPasswordImport.update({
+  id: '/set-password',
+  path: '/set-password',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
 
@@ -194,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedNotesImport
       parentRoute: typeof authenticatedRouteImport
     }
+    '/(authenticated)/set-password': {
+      id: '/(authenticated)/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof authenticatedSetPasswordImport
+      parentRoute: typeof authenticatedRouteImport
+    }
     '/(authenticated)/settings': {
       id: '/(authenticated)/settings'
       path: '/settings'
@@ -284,11 +298,13 @@ const authenticatedSettingsRouteWithChildren =
 
 interface authenticatedRouteRouteChildren {
   authenticatedNotesRoute: typeof authenticatedNotesRouteWithChildren
+  authenticatedSetPasswordRoute: typeof authenticatedSetPasswordRoute
   authenticatedSettingsRoute: typeof authenticatedSettingsRouteWithChildren
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedNotesRoute: authenticatedNotesRouteWithChildren,
+  authenticatedSetPasswordRoute: authenticatedSetPasswordRoute,
   authenticatedSettingsRoute: authenticatedSettingsRouteWithChildren,
 }
 
@@ -304,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
   '/notes': typeof authenticatedNotesRouteWithChildren
+  '/set-password': typeof authenticatedSetPasswordRoute
   '/settings': typeof authenticatedSettingsRouteWithChildren
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/settings/$section': typeof authenticatedSettingsSectionRoute
@@ -319,6 +336,7 @@ export interface FileRoutesByTo {
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
+  '/set-password': typeof authenticatedSetPasswordRoute
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/settings/$section': typeof authenticatedSettingsSectionRoute
   '/notes': typeof authenticatedNotesIndexRoute
@@ -337,6 +355,7 @@ export interface FileRoutesById {
   '/(auth)/signup': typeof authSignupRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
+  '/(authenticated)/set-password': typeof authenticatedSetPasswordRoute
   '/(authenticated)/settings': typeof authenticatedSettingsRouteWithChildren
   '/(authenticated)/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/(authenticated)/settings/$section': typeof authenticatedSettingsSectionRoute
@@ -355,6 +374,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/notes'
+    | '/set-password'
     | '/settings'
     | '/notes/$noteId'
     | '/settings/$section'
@@ -369,6 +389,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/verify-email'
+    | '/set-password'
     | '/notes/$noteId'
     | '/settings/$section'
     | '/notes'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/(auth)/signup'
     | '/(auth)/verify-email'
     | '/(authenticated)/notes'
+    | '/(authenticated)/set-password'
     | '/(authenticated)/settings'
     | '/(authenticated)/notes/$noteId'
     | '/(authenticated)/settings/$section'
@@ -440,6 +462,7 @@ export const routeTree = rootRoute
       "filePath": "(authenticated)/route.tsx",
       "children": [
         "/(authenticated)/notes",
+        "/(authenticated)/set-password",
         "/(authenticated)/settings"
       ]
     },
@@ -473,6 +496,10 @@ export const routeTree = rootRoute
         "/(authenticated)/notes/$noteId",
         "/(authenticated)/notes/"
       ]
+    },
+    "/(authenticated)/set-password": {
+      "filePath": "(authenticated)/set-password.tsx",
+      "parent": "/(authenticated)"
     },
     "/(authenticated)/settings": {
       "filePath": "(authenticated)/settings.tsx",

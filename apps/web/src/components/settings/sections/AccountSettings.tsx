@@ -1,23 +1,14 @@
 import Avatar from "boring-avatars";
-import { CheckCircle, Github, Loader2, Mail, XCircle } from "lucide-react";
+import { Github, Key, Loader2, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { useAccountsListQuery } from "@/hooks/useAccountsListQuery";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
@@ -28,13 +19,14 @@ import {
 } from "@/services/ExportService";
 import { authClient } from "@/lib/authClient";
 import { getUserColors } from "@/lib/utils";
+import { DeleteAccountDialog } from "../DeleteAccountDialog";
 
 export function AccountSettings() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const sessionData = useSessionQuery();
   const user = sessionData.data?.user;
+  const { data: accounts } = useAccountsListQuery();
   const { mutate: updateUser, isPending } = useUpdateUserMutation();
   const [isExporting, setIsExporting] = useState(exportService.isExporting);
   const { notes, collections } = useStore(
@@ -77,23 +69,9 @@ export function AccountSettings() {
     }
   }, [user]);
 
-  const handleConfirmDeleteAccount = async () => {
-    await authClient.deleteUser({
-      callbackURL: `${import.meta.env.VITE_PUBLIC_URL}/goodbye?email=${email}`,
-      fetchOptions: {
-        onSuccess: () => {
-          toast.info("Account deletion request sent!", {
-            description: "Please check your email for the verification link.",
-          });
-        },
-        onError: () => {
-          toast.error("Failed to delete account!", {
-            description: "Please try again later.",
-          });
-        },
-      },
-    });
-  };
+  const hasPassword = accounts?.some(
+    (account) => account.provider === "credential"
+  );
 
   const nameValueChanged = name !== user?.name;
 
@@ -103,6 +81,21 @@ export function AccountSettings() {
         "Exporting notes... Please keep the browser window open. You can leave this dialog.",
       success: "Notes exported successfully!",
       error: "Failed to export notes!",
+    });
+  };
+
+  const handleSetPassword = async () => {
+    if (!user?.email) {
+      return;
+    }
+
+    await authClient.forgetPassword({
+      email: user.email,
+      redirectTo: `${window.location.origin}/set-password`,
+    });
+
+    toast.success("Password set email sent!", {
+      description: `Check your inbox at ${user.email}`,
     });
   };
 
@@ -182,18 +175,23 @@ export function AccountSettings() {
               <div className="flex items-center gap-2">
                 <Input id="email" type="email" value={email} disabled />
               </div>
-              {user.emailVerified ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-500" />
-              )}
             </div>
           </div>
         </div>
       </SettingsSection>
 
       <SettingsSection title="Password Management">
-        <ChangePasswordDialog />
+        {hasPassword && <ChangePasswordDialog />}
+        {!hasPassword && (
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={handleSetPassword}
+          >
+            <Key className="h-4 w-4" />
+            Set Password
+          </Button>
+        )}
       </SettingsSection>
 
       <SettingsSection title="Connected Accounts">
@@ -251,41 +249,9 @@ export function AccountSettings() {
             Permanently delete your account and all associated data. This action
             cannot be undone.
           </p>
-          <Button
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            Delete Account
-          </Button>
+          <DeleteAccountDialog />
         </div>
       </SettingsSection>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              account and remove all of your data from our servers.
-              <div className="mt-4">
-                <Label htmlFor="confirm">Type DELETE to confirm</Label>
-                <Input id="confirm" className="mt-2" />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={() => {
-                handleConfirmDeleteAccount();
-              }}
-            >
-              Delete Account
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

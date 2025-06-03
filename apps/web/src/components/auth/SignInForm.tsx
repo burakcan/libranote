@@ -129,18 +129,18 @@ export function SignInForm() {
               variant="outline"
               className="w-full"
               type="button"
-              onClick={() => handleSignInSocial("github")}
+              onClick={() => handleSignInSocial("google")}
             >
-              <FaGithub /> Sign in with GitHub
+              <FaGoogle />
+              Sign in with Google
             </Button>
             <Button
               variant="outline"
               className="w-full"
               type="button"
-              onClick={() => handleSignInSocial("google")}
+              onClick={() => handleSignInSocial("github")}
             >
-              <FaGoogle />
-              Sign in with Google
+              <FaGithub /> Sign in with GitHub
             </Button>
           </div>
 
