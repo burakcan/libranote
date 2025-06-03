@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
+import { FaGithub, FaGoogle } from "react-icons/fa";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +14,12 @@ import {
 import { FormField } from "@/components/auth/FormField";
 import { signUpSchema, type SignUpFormData } from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";
+import { SupportedSocialProvider } from "./constants";
+import { Route as AuthRoute } from "@/routes/(auth)/route";
 
 export function SignUpForm() {
   const navigate = useNavigate();
+  const searchParams = AuthRoute.useSearch();
 
   const form = useForm({
     defaultValues: {
@@ -79,6 +83,22 @@ export function SignUpForm() {
   const isSubmitting = form.state.isSubmitting;
   const signupSchemaBeforeEffects = signUpSchema._def.schema;
 
+  const handleSignUpSocial = async (provider: SupportedSocialProvider) => {
+    const response = await authClient.signIn.social({
+      requestSignUp: true,
+      provider,
+      callbackURL: searchParams.redirectTo
+        ? `${import.meta.env.VITE_PUBLIC_URL}${searchParams.redirectTo}`
+        : `${import.meta.env.VITE_PUBLIC_URL}/notes`,
+    });
+
+    if (response.error) {
+      toast.error("Failed to sign up", {
+        description: response.error.message,
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="text-center">
@@ -88,11 +108,21 @@ export function SignUpForm() {
       <CardContent>
         <div className="grid gap-6">
           <div className="flex flex-col gap-4">
-            <Button variant="outline" className="w-full" type="button" disabled>
-              Sign up with Apple
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={() => handleSignUpSocial("github")}
+            >
+              <FaGithub /> Sign up with GitHub
             </Button>
-            <Button variant="outline" className="w-full" type="button" disabled>
-              Sign up with Google
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={() => handleSignUpSocial("google")}
+            >
+              <FaGoogle /> Sign up with Google
             </Button>
           </div>
 

@@ -6,6 +6,7 @@ import {
   upsertUserSetting,
   bulkUpsertUserSettings,
   triggerClientSessionRefresh,
+  deleteUser,
 } from "../controllers/settings-controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -39,5 +40,7 @@ router.put("/", validate(bulkUpsertUserSettingsSchema), bulkUpsertUserSettings);
 
 // POST (trigger a client session refresh)
 router.post("/trigger-session-refresh", triggerClientSessionRefresh);
+
+router.delete("/", deleteUser);
 
 export default router;

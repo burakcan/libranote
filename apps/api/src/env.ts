@@ -1,45 +1,49 @@
 export const env = {
+  // Application Configuration
   PORT: process.env.PORT || 3030,
+  APP_NAME: process.env.APP_NAME || "LibraNote",
   PUBLIC_URL: process.env.PUBLIC_URL || "",
+  REQUIRE_EMAIL_VALIDATION: process.env.REQUIRE_EMAIL_VALIDATION === "true",
+
+  // Authentication Configuration
   AUTH_TRUSTED_ORIGINS: process.env.AUTH_TRUSTED_ORIGINS || "",
   AUTH_COOKIE_DOMAIN: process.env.AUTH_COOKIE_DOMAIN || "",
   AUTH_SECRET: process.env.AUTH_SECRET || "",
+
   // AWS SES Configuration
   AWS_REGION: process.env.AWS_REGION,
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   SES_FROM_EMAIL: process.env.SES_FROM_EMAIL,
   SES_FROM_NAME: process.env.SES_FROM_NAME,
+
+  // Social Providers Configuration
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
 };
 
-if (!env.AWS_REGION) {
-  throw new Error("AWS_REGION is not set");
-}
+if (env.REQUIRE_EMAIL_VALIDATION) {
+  if (!env.AWS_REGION) {
+    throw new Error("AWS_REGION is not set");
+  }
 
-if (!env.AWS_ACCESS_KEY_ID) {
-  throw new Error("AWS_ACCESS_KEY_ID is not set");
-}
+  if (!env.AWS_ACCESS_KEY_ID) {
+    throw new Error("AWS_ACCESS_KEY_ID is not set");
+  }
 
-if (!env.AWS_SECRET_ACCESS_KEY) {
-  throw new Error("AWS_SECRET_ACCESS_KEY is not set");
-}
+  if (!env.AWS_SECRET_ACCESS_KEY) {
+    throw new Error("AWS_SECRET_ACCESS_KEY is not set");
+  }
 
-if (!env.SES_FROM_EMAIL) {
-  throw new Error("SES_FROM_EMAIL is not set");
-}
+  if (!env.SES_FROM_EMAIL) {
+    throw new Error("SES_FROM_EMAIL is not set");
+  }
 
-if (!env.SES_FROM_NAME) {
-  throw new Error("SES_FROM_NAME is not set");
-}
-
-if (!env.GOOGLE_CLIENT_ID) {
-  throw new Error("GOOGLE_CLIENT_ID is not set");
-}
-
-if (!env.GOOGLE_CLIENT_SECRET) {
-  throw new Error("GOOGLE_CLIENT_SECRET is not set");
+  if (!env.SES_FROM_NAME) {
+    throw new Error("SES_FROM_NAME is not set");
+  }
 }
 
 if (!env.PUBLIC_URL) {
@@ -68,16 +72,4 @@ if (!env.AUTH_COOKIE_DOMAIN.includes(".")) {
 
 if (!env.AUTH_SECRET) {
   throw new Error("AUTH_SECRET is not set");
-}
-
-if (!env.AWS_ACCESS_KEY_ID) {
-  throw new Error("AWS_ACCESS_KEY_ID is not set");
-}
-
-if (!env.AWS_SECRET_ACCESS_KEY) {
-  throw new Error("AWS_SECRET_ACCESS_KEY is not set");
-}
-
-if (!env.SES_FROM_EMAIL) {
-  throw new Error("SES_FROM_EMAIL is not set");
 }

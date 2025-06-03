@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
+import { FaGithub, FaGoogle } from "react-icons/fa";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +16,13 @@ import { FormField } from "@/components/auth/FormField";
 import { invalidateSessionQuery } from "@/hooks/useSessionQuery";
 import { signInSchema, type SignInFormData } from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";
+import { SupportedSocialProvider } from "./constants";
+import { Route as AuthRoute } from "@/routes/(auth)/route";
 
 export function SignInForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const searchParams = AuthRoute.useSearch();
 
   const form = useForm({
     defaultValues: {
@@ -97,14 +101,16 @@ export function SignInForm() {
 
   const isSubmitting = form.state.isSubmitting;
 
-  const handleSignInWithGoogle = async () => {
+  const handleSignInSocial = async (provider: SupportedSocialProvider) => {
     const response = await authClient.signIn.social({
-      provider: "google",
-      callbackURL: `${import.meta.env.VITE_PUBLIC_URL}/notes`,
+      provider,
+      callbackURL: searchParams.redirectTo
+        ? `${import.meta.env.VITE_PUBLIC_URL}${searchParams.redirectTo}`
+        : `${import.meta.env.VITE_PUBLIC_URL}/notes`,
     });
 
     if (response.error) {
-      toast.error("Failed to sign in with Google", {
+      toast.error("Failed to sign in", {
         description: response.error.message,
       });
     }
@@ -119,15 +125,21 @@ export function SignInForm() {
       <CardContent>
         <div className="grid gap-6">
           <div className="flex flex-col gap-4">
-            <Button variant="outline" className="w-full" type="button" disabled>
-              Sign in with Apple
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={() => handleSignInSocial("github")}
+            >
+              <FaGithub /> Sign in with GitHub
             </Button>
             <Button
               variant="outline"
               className="w-full"
               type="button"
-              onClick={handleSignInWithGoogle}
+              onClick={() => handleSignInSocial("google")}
             >
+              <FaGoogle />
               Sign in with Google
             </Button>
           </div>

@@ -7,6 +7,7 @@ import type {
   PasswordResetData,
   InvitationData,
   EmailOTPData,
+  DeleteAccountVerificationData,
 } from "./templates.js";
 
 export interface EmailOptions {
@@ -180,6 +181,23 @@ export class EmailService {
         
         If you receive this email, your Amazon SES configuration is working properly!
       `,
+    });
+  }
+
+  async sendDeleteAccountVerificationEmail(
+    data: DeleteAccountVerificationData & { to: string },
+  ): Promise<void> {
+    const template = emailTemplates.deleteAccountVerification({
+      userName: data.userName,
+      deleteUrl: data.deleteUrl,
+      appName: data.appName,
+    });
+
+    await this.sendEmail({
+      to: data.to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
     });
   }
 }

@@ -31,6 +31,12 @@ export interface EmailOTPData {
   type: "sign-in" | "email-verification" | "forget-password";
 }
 
+export interface DeleteAccountVerificationData {
+  userName: string;
+  deleteUrl: string;
+  appName: string;
+}
+
 export const emailTemplates = {
   verification: (data: EmailVerificationData): EmailTemplate => ({
     subject: `Verify your email address for ${data.appName}`,
@@ -324,4 +330,66 @@ export const emailTemplates = {
       `,
     };
   },
+
+  deleteAccountVerification: (data: DeleteAccountVerificationData): EmailTemplate => ({
+    subject: `Delete your account for ${data.appName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Delete Account Verification</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Delete Your Account</h2>
+              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
+                Hi ${data.userName},
+              </p>
+              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;"> 
+                We received a request to delete your account for ${data.appName}. Click the button below to delete your account.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${data.deleteUrl}" 
+                 style="background-color: #dc3545; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+                Delete Account
+              </a>
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
+              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
+                If you didn't request to delete your account, you can safely ignore this email. Your account will not be deleted.
+              </p>
+              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
+                If the button above doesn't work, copy and paste this link into your browser:
+                <br><a href="${data.deleteUrl}" style="color: #dc3545; word-break: break-all;">${data.deleteUrl}</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+      Delete Your Account - ${data.appName}
+      
+      Hi ${data.userName},
+      
+      We received a request to delete your account for ${data.appName}. Visit the following link to delete your account:
+      
+      ${data.deleteUrl}
+      
+      If you didn't request to delete your account, you can safely ignore this email. Your account will not be deleted.
+      
+      Best regards,
+      The ${data.appName} Team
+    `,
+  }),
 };

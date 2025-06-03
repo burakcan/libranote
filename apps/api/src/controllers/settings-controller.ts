@@ -3,6 +3,7 @@ import { SettingsService } from "../services/settings-service.js";
 import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors.js";
 import type { Setting } from "@repo/types";
 import { SSEService } from "../services/sse-service.js";
+import { auth } from "../auth.js";
 
 /**
  * Get all settings for the current user.
@@ -115,6 +116,24 @@ export async function triggerClientSessionRefresh(req: Request, res: Response, n
     });
 
     res.status(200).json({ message: "OK" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+  const userId = req.userId;
+
+  if (!userId) {
+    throw new ForbiddenError("You must be logged in to delete your account");
+  }
+
+  try {
+    await auth.api.deleteUser({
+      userId,
+    });
+
+    res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     next(error);
   }

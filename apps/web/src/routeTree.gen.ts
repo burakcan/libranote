@@ -11,6 +11,7 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as GoodbyeImport } from './routes/goodbye'
 import { Route as authenticatedRouteImport } from './routes/(authenticated)/route'
 import { Route as authRouteImport } from './routes/(auth)/route'
 import { Route as IndexImport } from './routes/index'
@@ -27,6 +28,12 @@ import { Route as authenticatedSettingsSectionImport } from './routes/(authentic
 import { Route as authenticatedNotesNoteIdImport } from './routes/(authenticated)/notes.$noteId'
 
 // Create/Update Routes
+
+const GoodbyeRoute = GoodbyeImport.update({
+  id: '/goodbye',
+  path: '/goodbye',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const authenticatedRouteRoute = authenticatedRouteImport.update({
   id: '/(authenticated)',
@@ -136,6 +143,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof authenticatedRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/goodbye': {
+      id: '/goodbye'
+      path: '/goodbye'
+      fullPath: '/goodbye'
+      preLoaderRoute: typeof GoodbyeImport
       parentRoute: typeof rootRoute
     }
     '/(auth)/forgot-password': {
@@ -283,6 +297,7 @@ const authenticatedRouteRouteWithChildren =
 
 export interface FileRoutesByFullPath {
   '/': typeof authenticatedRouteRouteWithChildren
+  '/goodbye': typeof GoodbyeRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
@@ -298,6 +313,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof authenticatedRouteRouteWithChildren
+  '/goodbye': typeof GoodbyeRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
@@ -314,6 +330,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
+  '/goodbye': typeof GoodbyeRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signin': typeof authSigninRoute
@@ -331,6 +348,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/goodbye'
     | '/forgot-password'
     | '/reset-password'
     | '/signin'
@@ -345,6 +363,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/goodbye'
     | '/forgot-password'
     | '/reset-password'
     | '/signin'
@@ -359,6 +378,7 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth)'
     | '/(authenticated)'
+    | '/goodbye'
     | '/(auth)/forgot-password'
     | '/(auth)/reset-password'
     | '/(auth)/signin'
@@ -377,12 +397,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
   authenticatedRouteRoute: typeof authenticatedRouteRouteWithChildren
+  GoodbyeRoute: typeof GoodbyeRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   authenticatedRouteRoute: authenticatedRouteRouteWithChildren,
+  GoodbyeRoute: GoodbyeRoute,
 }
 
 export const routeTree = rootRoute
@@ -397,7 +419,8 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/(auth)",
-        "/(authenticated)"
+        "/(authenticated)",
+        "/goodbye"
       ]
     },
     "/": {
@@ -419,6 +442,9 @@ export const routeTree = rootRoute
         "/(authenticated)/notes",
         "/(authenticated)/settings"
       ]
+    },
+    "/goodbye": {
+      "filePath": "goodbye.tsx"
     },
     "/(auth)/forgot-password": {
       "filePath": "(auth)/forgot-password.tsx",

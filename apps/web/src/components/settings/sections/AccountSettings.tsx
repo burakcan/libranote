@@ -26,6 +26,7 @@ import {
   EXPORT_STARTED_EVENT,
   exportService,
 } from "@/services/ExportService";
+import { authClient } from "@/lib/authClient";
 import { getUserColors } from "@/lib/utils";
 
 export function AccountSettings() {
@@ -75,6 +76,24 @@ export function AccountSettings() {
       setEmail(user.email);
     }
   }, [user]);
+
+  const handleConfirmDeleteAccount = async () => {
+    await authClient.deleteUser({
+      callbackURL: `${import.meta.env.VITE_PUBLIC_URL}/goodbye?email=${email}`,
+      fetchOptions: {
+        onSuccess: () => {
+          toast.info("Account deletion request sent!", {
+            description: "Please check your email for the verification link.",
+          });
+        },
+        onError: () => {
+          toast.error("Failed to delete account!", {
+            description: "Please try again later.",
+          });
+        },
+      },
+    });
+  };
 
   const nameValueChanged = name !== user?.name;
 
@@ -258,6 +277,9 @@ export function AccountSettings() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
+              onClick={() => {
+                handleConfirmDeleteAccount();
+              }}
             >
               Delete Account
             </AlertDialogAction>
