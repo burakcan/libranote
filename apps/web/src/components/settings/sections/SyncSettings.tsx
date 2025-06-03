@@ -19,17 +19,16 @@ import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSetting } from "@/hooks/useSetting";
 import { useStore } from "@/hooks/useStore";
 import { useSyncContext } from "@/hooks/useSyncContext";
+import { useSyncBasicStatus } from "@/hooks/useSyncStatus";
 import { userDatabaseService } from "@/services/db/userDatabaseService";
 import { yjsDB } from "@/services/db/yIndexedDb";
 import { searchService } from "@/services/SearchService";
 
 export function SyncSettings() {
   const notes = useStore((state) => state.notes.data);
-  const { syncService } = useSyncContext();
-  const [syncStatus, setSyncStatus] = useState("synced"); // synced, syncing, offline
-  const [lastSynced, setLastSynced] = useState("2023-05-19 10:45 AM");
+  const { syncService, isReady } = useSyncContext();
+  const { isSyncing, hasError, lastSyncTime } = useSyncBasicStatus();
   const [resetCacheDialogOpen, setResetCacheDialogOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const { data: sessionData } = useSessionQuery();
   const { value: syncSettingsEnabled, setValue: setSyncSettingsEnabled } =
     useSetting("sync.syncSettingsEnabled");
@@ -38,16 +37,19 @@ export function SyncSettings() {
     return null;
   }
 
-  const handleSync = () => {
-    setIsSyncing(true);
-    setSyncStatus("syncing");
+  const handleSync = async () => {
+    if (!syncService) {
+      toast.error("Sync service not available");
+      return;
+    }
 
-    // Simulate sync process
-    setTimeout(() => {
-      setIsSyncing(false);
-      setSyncStatus("synced");
-      setLastSynced(new Date().toLocaleString());
-    }, 2000);
+    try {
+      await syncService.syncAll();
+      toast.success("Sync completed successfully");
+    } catch (error) {
+      console.error("Sync failed:", error);
+      toast.error("Sync failed. Please try again.");
+    }
   };
 
   const handleRebuildSearchIndex = () => {
@@ -96,6 +98,22 @@ export function SyncSettings() {
     });
   };
 
+  // Determine sync status display
+  const getSyncStatus = () => {
+    if (!isReady) return { status: "offline", label: "Initializing..." };
+    if (isSyncing) return { status: "syncing", label: "Syncing..." };
+    if (hasError) return { status: "error", label: "Sync Error" };
+    if (lastSyncTime) return { status: "synced", label: "Synced" };
+    return { status: "idle", label: "Ready" };
+  };
+
+  const { status, label } = getSyncStatus();
+
+  const formatLastSyncTime = (timestamp?: number) => {
+    if (!timestamp) return "Never";
+    return new Date(timestamp).toLocaleString();
+  };
+
   return (
     <div className="space-y-6">
       <SettingsSection title="Sync Status">
@@ -104,30 +122,25 @@ export function SyncSettings() {
             <div className="flex items-center gap-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  syncStatus === "synced"
+                  status === "synced"
                     ? "bg-green-500"
-                    : syncStatus === "syncing"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
+                    : status === "syncing"
+                      ? "bg-blue-500"
+                      : status === "error"
+                        ? "bg-red-500"
+                        : "bg-gray-500"
                 }`}
               />
-              <span className="font-medium">
-                Status:{" "}
-                {syncStatus === "synced"
-                  ? "Synced"
-                  : syncStatus === "syncing"
-                    ? "Syncing..."
-                    : "Offline"}
-              </span>
+              <span className="font-medium">Status: {label}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Last synced: {lastSynced}
+              Last synced: {formatLastSyncTime(lastSyncTime)}
             </p>
           </div>
 
           <Button
             onClick={handleSync}
-            disabled={isSyncing || syncStatus === "offline"}
+            disabled={isSyncing || !isReady}
             className="flex items-center gap-2"
             variant="outline"
           >

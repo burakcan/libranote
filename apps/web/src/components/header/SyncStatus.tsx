@@ -1,15 +1,14 @@
-import { useIgnoreQuickChange } from "@/hooks/useIgnoreQuickChange";
+import ReactTimeAgo from "react-time-ago";
 import { useNetworkStatusContext } from "@/hooks/useNetworkStatusContext";
-import { useSyncContext } from "@/hooks/useSyncContext";
+import { useSyncBasicStatus } from "@/hooks/useSyncStatus";
 import { cn } from "@/lib/utils";
 
 export function SyncStatus() {
   const { isOnline } = useNetworkStatusContext();
-  const { isSyncing } = useSyncContext();
-  const deferredSyncStatus = useIgnoreQuickChange(100, isSyncing);
+  const { isSyncing, lastSyncTime } = useSyncBasicStatus();
 
   return (
-    <div className="flex flex-col justify-center items-end">
+    <div className="flex flex-col justify-center items-end w-42">
       <div className="flex items-center text-sm gap-2">
         {isOnline ? "Connected" : "Disconnected"}
         <div
@@ -21,7 +20,15 @@ export function SyncStatus() {
       </div>
       <div className="text-xs text-muted-foreground">
         {isOnline ? (
-          <>{deferredSyncStatus ? "Syncing..." : "All up to date"}</>
+          <>
+            {isSyncing || !lastSyncTime ? (
+              <>Syncing...</>
+            ) : (
+              <>
+                Last synced: <ReactTimeAgo date={lastSyncTime} />
+              </>
+            )}
+          </>
         ) : (
           "Will sync when connected"
         )}

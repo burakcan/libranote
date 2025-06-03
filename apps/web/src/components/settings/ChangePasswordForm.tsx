@@ -9,9 +9,13 @@ import { useChangePasswordMutation } from "@/hooks/useChangePasswordMutation";
 
 interface ChangePasswordFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
+export function ChangePasswordForm({
+  onSuccess,
+  onCancel,
+}: ChangePasswordFormProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -79,6 +83,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
+    onCancel?.();
   };
 
   return (

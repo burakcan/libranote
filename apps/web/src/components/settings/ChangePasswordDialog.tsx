@@ -30,7 +30,10 @@ export function ChangePasswordDialog() {
             strong password.
           </DialogDescription>
         </DialogHeader>
-        <ChangePasswordForm onSuccess={() => setOpen(false)} />
+        <ChangePasswordForm
+          onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

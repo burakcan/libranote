@@ -19,6 +19,7 @@ import {
   REALTIME_DISCONNECTED_EVENT,
 } from "./RealtimeService";
 import { SettingsSyncService } from "./SettingsSyncService";
+import { SyncStatusManager, SyncStatus } from "./SyncStatusManager";
 import { Route } from "@/routes/(authenticated)/notes.$noteId";
 import {
   ICollectionRepository,
@@ -29,15 +30,10 @@ import {
 } from "@/types/Repositories";
 import { SSEEvent } from "@/types/SSE";
 
-export const SYNCING_EVENT = "syncing";
-export const SYNCED_EVENT = "synced";
-
 let instance: SyncService | null = null;
 
 export class SyncService extends EventTarget {
-  syncing = false;
-  synced = false;
-  private syncOperationCount = 0;
+  private statusManager = new SyncStatusManager();
 
   // Focused services
   private realtimeService!: RealtimeService;
@@ -47,6 +43,7 @@ export class SyncService extends EventTarget {
   private settingsSyncService!: SettingsSyncService;
 
   unsubscribeQueue: (() => void) | null = null;
+  private statusSubscription: (() => void) | null = null;
 
   constructor(
     private readonly store: UseBoundStore<StoreApi<Store>>,
@@ -80,36 +77,25 @@ export class SyncService extends EventTarget {
     }
   }
 
-  private startSyncOperation(): void {
-    this.syncOperationCount++;
-    if (this.syncOperationCount === 1) {
-      this.syncing = true;
-      this.synced = false;
-      this.dispatchEvent(new CustomEvent(SYNCING_EVENT));
-      console.debug(
-        `SyncService: Started syncing (operations: ${this.syncOperationCount})`
-      );
-    } else {
-      console.debug(
-        `SyncService: Added sync operation (operations: ${this.syncOperationCount})`
-      );
-    }
+  /**
+   * Get the current sync status
+   */
+  getStatus(): SyncStatus {
+    return this.statusManager.getStatus();
   }
 
-  private endSyncOperation(): void {
-    this.syncOperationCount = Math.max(0, this.syncOperationCount - 1);
-    if (this.syncOperationCount === 0) {
-      this.syncing = false;
-      this.synced = true;
-      this.dispatchEvent(new CustomEvent(SYNCED_EVENT));
-      console.debug(
-        `SyncService: Finished syncing (operations: ${this.syncOperationCount})`
-      );
-    } else {
-      console.debug(
-        `SyncService: Completed sync operation (operations: ${this.syncOperationCount})`
-      );
-    }
+  /**
+   * Subscribe to sync status changes
+   */
+  subscribeToStatus(listener: (status: SyncStatus) => void): () => void {
+    return this.statusManager.subscribe(listener);
+  }
+
+  /**
+   * Get the status manager for advanced usage
+   */
+  getStatusManager(): SyncStatusManager {
+    return this.statusManager;
   }
 
   private initializeServices(): void {
@@ -221,41 +207,78 @@ export class SyncService extends EventTarget {
   }
 
   async syncAll() {
-    if (this.syncing) {
-      console.debug("SyncService: Already syncing");
-      return;
-    }
+    const operationId = this.statusManager.startOperation(
+      "initial-sync",
+      "Full sync"
+    );
 
-    this.startSyncOperation();
-
-    console.debug("SyncService: Syncing");
+    console.debug("SyncService: Starting full sync");
 
     try {
       // PRIORITY 1: Load settings immediately - nothing should block this
-      await this.settingsSyncService.loadLocalSettingsToStore();
-      console.debug("SyncService: ✅ Settings loaded (priority)");
+      const settingsOpId = this.statusManager.startOperation(
+        "settings-sync",
+        "Loading settings"
+      );
+      try {
+        await this.settingsSyncService.loadLocalSettingsToStore();
+        console.debug("SyncService: ✅ Settings loaded (priority)");
+        this.statusManager.completeOperation(settingsOpId);
+      } catch (error) {
+        this.statusManager.failOperation(settingsOpId, error as Error);
+        throw error;
+      }
 
       // PRIORITY 2: Start YDoc sync and load other local data in parallel
       const localDataPromises = [
-        this.noteSyncService.loadLocalNotesToStore(),
-        this.collectionSyncService.loadLocalCollectionsToStore(),
-        this.queueService.loadLocalActionQueueToStore(),
+        this.executeWithStatusTracking(
+          () => this.noteSyncService.loadLocalNotesToStore(),
+          "note-sync",
+          "Loading local notes"
+        ),
+        this.executeWithStatusTracking(
+          () => this.collectionSyncService.loadLocalCollectionsToStore(),
+          "collection-sync",
+          "Loading local collections"
+        ),
+        this.executeWithStatusTracking(
+          () => this.queueService.loadLocalActionQueueToStore(),
+          "queue-processing",
+          "Loading action queue"
+        ),
       ];
 
       await Promise.all(localDataPromises);
       console.debug("SyncService: ✅ Local data loaded");
 
       // Process any pending queue items (offline changes)
-      await this.queueService.processQueue();
+      await this.executeWithStatusTracking(
+        () => this.queueService.processQueue(),
+        "queue-processing",
+        "Processing queue"
+      );
 
       // Sync remote data to local in parallel
       await Promise.all([
-        this.settingsSyncService.syncAllSettingsToLocal(),
-        this.collectionSyncService.syncAllCollectionsToLocal(),
-        this.noteSyncService.syncAllNotesToLocal(),
+        this.executeWithStatusTracking(
+          () => this.settingsSyncService.syncAllSettingsToLocal(),
+          "settings-sync",
+          "Syncing settings"
+        ),
+        this.executeWithStatusTracking(
+          () => this.collectionSyncService.syncAllCollectionsToLocal(),
+          "collection-sync",
+          "Syncing collections"
+        ),
+        this.executeWithStatusTracking(
+          () => this.noteSyncService.syncAllNotesToLocal(),
+          "note-sync",
+          "Syncing notes"
+        ),
       ]);
 
-      this.noteSyncService.syncAllNoteYDocStates(); // Non-blocking background sync
+      // Non-blocking background sync
+      this.noteSyncService.syncAllNoteYDocStates();
 
       console.debug("SyncService: Initial sync completed successfully");
 
@@ -264,13 +287,15 @@ export class SyncService extends EventTarget {
 
       // Connect to real-time updates
       this.realtimeService.connect();
+
+      this.statusManager.completeOperation(operationId);
     } catch (error) {
       const appError = ErrorService.handle(error);
       console.error("SyncService: Error syncing", appError);
 
+      this.statusManager.failOperation(operationId, appError);
       this.dispatchEvent(new CustomEvent("sync-error", { detail: appError }));
-    } finally {
-      this.endSyncOperation();
+      throw appError;
     }
   }
 
@@ -284,19 +309,24 @@ export class SyncService extends EventTarget {
         prevIds.some((id) => !currentIds.includes(id)) ||
         currentIds.some((id) => !prevIds.includes(id));
 
-      if (hasChanges && !this.syncing) {
-        this.startSyncOperation();
-        try {
-          await this.queueService.processQueue();
-        } finally {
-          this.endSyncOperation();
-        }
+      if (
+        hasChanges &&
+        !this.statusManager.isOperationTypeRunning("queue-processing")
+      ) {
+        await this.executeWithStatusTracking(
+          () => this.queueService.processQueue(),
+          "queue-processing",
+          "Processing queue changes"
+        );
       }
     });
   }
 
   private async handleSSEEvent(event: SSEEvent): Promise<void> {
-    this.startSyncOperation();
+    const operationId = this.statusManager.startOperation(
+      "realtime-event",
+      `Processing ${event.type} event`
+    );
 
     try {
       const store = this.store.getState();
@@ -331,12 +361,33 @@ export class SyncService extends EventTarget {
         }
         // Other events are handled by domain services
       }
+
+      this.statusManager.completeOperation(operationId);
     } catch (error) {
       const appError = ErrorService.handle(error);
       console.error("SyncService: Error processing SSE event:", appError);
+      this.statusManager.failOperation(operationId, appError);
       throw appError;
-    } finally {
-      this.endSyncOperation();
+    }
+  }
+
+  /**
+   * Execute an async operation with status tracking
+   */
+  private async executeWithStatusTracking<T>(
+    operation: () => Promise<T>,
+    type: Parameters<SyncStatusManager["startOperation"]>[0],
+    description?: string
+  ): Promise<T> {
+    const operationId = this.statusManager.startOperation(type, description);
+
+    try {
+      const result = await operation();
+      this.statusManager.completeOperation(operationId);
+      return result;
+    } catch (error) {
+      this.statusManager.failOperation(operationId, error as Error);
+      throw error;
     }
   }
 
@@ -352,9 +403,13 @@ export class SyncService extends EventTarget {
       this.unsubscribeQueue = null;
     }
 
-    // Reset sync state
-    this.syncOperationCount = 0;
-    this.syncing = false;
-    this.synced = false;
+    // Stop status subscription
+    if (this.statusSubscription) {
+      this.statusSubscription();
+      this.statusSubscription = null;
+    }
+
+    // Clean up status manager
+    this.statusManager.destroy();
   }
 }
