@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 // import { createAuthMiddleware } from "better-auth/api";
-import { jwt } from "better-auth/plugins";
+import { jwt, oAuthProxy } from "better-auth/plugins";
 import { emailOTP } from "better-auth/plugins";
 import { prisma } from "./db/prisma.js";
 import { env } from "./env.js";
@@ -16,6 +16,12 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  socialProviders: {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -79,6 +85,7 @@ export const auth = betterAuth({
   //   }),
   // },
   plugins: [
+    oAuthProxy(),
     jwt({
       jwt: {
         // 5 minutes

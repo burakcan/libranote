@@ -12,6 +12,8 @@ export const queryOptions = {
   staleTime: 5 * 60 * 1000,
 };
 
+// We use this instead of useSession from better-auth because it fetches the
+// session from the server on each use.
 export function useSessionQuery() {
   return useQuery(queryOptions);
 }

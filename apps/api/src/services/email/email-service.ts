@@ -26,13 +26,13 @@ export class EmailService {
     this.sesClient = new SESClient({
       region: env.AWS_REGION,
       credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+        secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
       },
     });
 
-    this.fromEmail = env.SES_FROM_EMAIL;
-    this.fromName = env.SES_FROM_NAME;
+    this.fromEmail = env.SES_FROM_EMAIL as string;
+    this.fromName = env.SES_FROM_NAME as string;
   }
 
   /**

@@ -97,6 +97,19 @@ export function SignInForm() {
 
   const isSubmitting = form.state.isSubmitting;
 
+  const handleSignInWithGoogle = async () => {
+    const response = await authClient.signIn.social({
+      provider: "google",
+      callbackURL: `${import.meta.env.VITE_PUBLIC_URL}/notes`,
+    });
+
+    if (response.error) {
+      toast.error("Failed to sign in with Google", {
+        description: response.error.message,
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="text-center">
@@ -109,7 +122,12 @@ export function SignInForm() {
             <Button variant="outline" className="w-full" type="button" disabled>
               Sign in with Apple
             </Button>
-            <Button variant="outline" className="w-full" type="button" disabled>
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={handleSignInWithGoogle}
+            >
               Sign in with Google
             </Button>
           </div>
