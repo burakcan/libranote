@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCollectionListContext } from "@/hooks/useCollectionListContext";
 import { useStore } from "@/hooks/useStore";
+import { exportService } from "@/services/ExportService";
 import {
   useCollectionNotes,
   UNCATEGORIZED_COLLECTION_ID,
@@ -61,7 +62,8 @@ export function useCollectionItem(collection: CollectionType) {
   );
 
   const allOrUncategorizedCollection = isSpecialCollection(collection);
-  const totalNotes = useCollectionNotes(collection.id).length;
+  const notes = useCollectionNotes(collection.id);
+  const totalNotes = notes.length;
   const isOwner = allOrUncategorizedCollection
     ? true
     : collection.members[0].role === "OWNER";
@@ -128,6 +130,14 @@ export function useCollectionItem(collection: CollectionType) {
     }
   };
 
+  const handleExport = async () => {
+    if (allOrUncategorizedCollection) {
+      return;
+    }
+
+    await exportService.exportNotes(notes, [collection]);
+  };
+
   return {
     // State
     isRenaming,
@@ -150,5 +160,6 @@ export function useCollectionItem(collection: CollectionType) {
     handleSelectCollection,
     handleShare,
     handleDeleteOrLeave,
+    handleExport,
   };
 }

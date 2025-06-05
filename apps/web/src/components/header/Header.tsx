@@ -54,6 +54,14 @@ export function Header() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => {
+                    setSettingsOpen(true);
+                  }}
+                >
+                  <Settings className="size-4" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
                     logout();
                   }}
                   disabled={isPending}

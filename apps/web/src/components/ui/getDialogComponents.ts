@@ -5,6 +5,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -13,6 +14,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerTrigger,
 } from "@/components/ui/drawer";
 
 export const getDialogComponents = (isMobile: boolean) => {
@@ -24,6 +26,7 @@ export const getDialogComponents = (isMobile: boolean) => {
       DialogFooter: DrawerFooter,
       DialogHeader: DrawerHeader,
       DialogTitle: DrawerTitle,
+      DialogTrigger: DrawerTrigger,
     };
   }
 
@@ -34,5 +37,6 @@ export const getDialogComponents = (isMobile: boolean) => {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
   };
 };

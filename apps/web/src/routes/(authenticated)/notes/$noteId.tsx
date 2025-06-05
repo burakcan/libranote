@@ -13,7 +13,7 @@ export const Route = createFileRoute("/(authenticated)/notes/$noteId")({
 function RouteComponent() {
   const { noteId } = Route.useParams();
   const navigate = useNavigate();
-  const { isSynced } = useSyncContext();
+  const { status: syncStatus } = useSyncContext();
   const note = useStore((state) =>
     state.notes.data.find((note) => note.id === noteId)
   );
@@ -22,10 +22,10 @@ function RouteComponent() {
   const [renderEditor, setRenderEditor] = useState(false);
 
   useEffect(() => {
-    if (isSynced && !note) {
+    if (syncStatus.isSynced && !note) {
       navigate({ to: "/notes" });
     }
-  }, [isSynced, note, navigate]);
+  }, [syncStatus.isSynced, note, navigate]);
 
   useEffect(() => {
     setRenderEditor(false);

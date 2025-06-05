@@ -6,12 +6,26 @@ import {
   type CollectionMember,
 } from "../db/prisma.js";
 import { SSEService } from "./sse-service.js";
-import { NotFoundError } from "../utils/errors.js";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors.js";
 import type {
   SSECollectionCreatedEvent,
   SSECollectionUpdatedEvent,
   SSECollectionDeletedEvent,
+  SSECollectionMemberInvitedEvent,
 } from "../types/sse.js";
+import { emailService } from "./email/email-service.js";
+import { env } from "process";
+
+type InvitationApiResponse = {
+  id: string;
+  createdAt: string;
+  expiresAt: string | null;
+  inviterId: string;
+  inviterName: string;
+  inviteeEmail: string;
+  collectionId: string;
+  collectionTitle: string;
+};
 
 /**
  * Common permission filters used across methods
@@ -68,6 +82,24 @@ export class CollectionPermissions {
   static whereCanUpdateMemberRole(userId: string) {
     return {
       members: { some: { userId, role: CollectionMemberRole.OWNER } },
+    };
+  }
+
+  static whereCanAcceptOrRejectInvitation(inviteeEmail: string) {
+    return {
+      inviteeEmail,
+    };
+  }
+
+  static whereCanSeeInvitations(userId: string) {
+    return {
+      collection: CollectionPermissions.whereCanSeeMembers(userId),
+    };
+  }
+
+  static whereCanCancelInvitation(userId: string) {
+    return {
+      collection: CollectionPermissions.whereCanInvite(userId),
     };
   }
 }
@@ -280,9 +312,9 @@ export class CollectionService {
   static async inviteToCollection(
     userId: string,
     collectionId: string,
-    email: string,
+    inviteeEmail: string,
     role: CollectionMemberRole,
-    clientId: string,
+    callbackUrl: string,
   ) {
     const collection = await prisma.collection.findUnique({
       where: {
@@ -292,43 +324,269 @@ export class CollectionService {
     });
 
     if (!collection) {
-      throw new NotFoundError("Collection not found");
+      throw new ForbiddenError("You are not authorized to invite members to this collection");
     }
 
-    const userToInvite = await prisma.user.findUnique({
-      where: { email },
+    const inviter = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     });
 
-    if (!userToInvite) {
-      throw new NotFoundError("User not found");
+    if (!inviter) {
+      throw new NotFoundError("Inviter not found"); // This should never happen
     }
 
-    const newMember = await prisma.collectionMember.create({
+    if (inviteeEmail === inviter.email) {
+      throw new BadRequestError(
+        "You cannot invite yourself to a collection. Do you need friends? 🤔",
+      );
+    }
+
+    const existingInvitation = await prisma.collectionInvitation.findFirst({
+      where: {
+        collectionId,
+        inviteeEmail,
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (existingInvitation) {
+      throw new BadRequestError("This user has already been invited to this collection");
+    }
+
+    const invitation = await prisma.collectionInvitation.create({
       data: {
         id: nanoid(10),
         collectionId,
-        userId: userToInvite.id,
+        inviteeEmail,
+        inviterId: userId,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2), // 2 days
         role,
       },
+    });
+
+    await emailService.sendCollectionInvitationEmail({
+      inviterName: inviter.name,
+      collectionName: collection.title,
+      invitationUrl: `${callbackUrl}?invitation=${invitation.id}`,
+      appName: env.APP_NAME!,
+      to: inviteeEmail,
+    });
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: inviteeEmail },
+    });
+
+    const invitationPayload: SSECollectionMemberInvitedEvent["payload"] = {
+      inviteeId: existingUser?.id ?? null,
+      inviteeEmail: inviteeEmail,
+      inviterId: userId,
+      inviterName: inviter.name,
+      collectionId,
+      collectionTitle: collection.title,
+      invitationId: invitation.id,
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+    };
+
+    if (existingUser) {
+      SSEService.broadcastSSEToUser(existingUser.id, {
+        type: "COLLECTION_MEMBER_INVITED",
+        payload: invitationPayload,
+      });
+    }
+
+    return invitationPayload;
+  }
+
+  static async getInvitation(userId: string, invitationId: string): Promise<InvitationApiResponse> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const invitation = await prisma.collectionInvitation.findUnique({
+      where: {
+        id: invitationId,
+        ...CollectionPermissions.whereCanAcceptOrRejectInvitation(user.email),
+      },
       include: {
-        user: {
+        inviter: {
           select: {
-            id: true,
-            email: true,
             name: true,
           },
         },
         collection: {
-          include: collectionDefaultInclude(userToInvite.id),
+          select: {
+            id: true,
+            title: true,
+          },
         },
       },
     });
 
+    if (!invitation) {
+      throw new NotFoundError("Invitation not found");
+    }
+
+    return {
+      id: invitation.id,
+      collectionId: invitation.collectionId,
+      collectionTitle: invitation.collection.title,
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+      inviteeEmail: invitation.inviteeEmail,
+      inviterName: invitation.inviter.name,
+      inviterId: invitation.inviterId,
+    };
+  }
+
+  static async getCollectionInvitations(
+    userId: string,
+    collectionId: string,
+  ): Promise<InvitationApiResponse[]> {
+    // TODO: filter out expired invitations
+    const invitations = await prisma.collectionInvitation.findMany({
+      where: {
+        collectionId,
+        ...CollectionPermissions.whereCanSeeInvitations(userId),
+        expiresAt: { gte: new Date() },
+      },
+      include: {
+        inviter: {
+          select: {
+            name: true,
+          },
+        },
+        collection: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    return invitations.map((invitation) => ({
+      id: invitation.id,
+      collectionId: invitation.collectionId,
+      collectionTitle: invitation.collection.title,
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+      inviteeEmail: invitation.inviteeEmail,
+      inviterName: invitation.inviter.name,
+      inviterId: invitation.inviterId,
+    }));
+  }
+
+  static async getUserInvitations(userId: string): Promise<InvitationApiResponse[]> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const invitations = await prisma.collectionInvitation.findMany({
+      where: {
+        ...CollectionPermissions.whereCanAcceptOrRejectInvitation(user.email),
+        expiresAt: { gte: new Date() },
+      },
+      include: {
+        collection: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        inviter: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return invitations.map((invitation) => ({
+      id: invitation.id,
+      collectionId: invitation.collectionId,
+      collectionTitle: invitation.collection.title,
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+      inviteeEmail: invitation.inviteeEmail,
+      inviterName: invitation.inviter.name,
+      inviterId: invitation.inviterId,
+    }));
+  }
+
+  static async acceptInvitation(
+    userId: string,
+    collectionId: string,
+    invitationId: string,
+    clientId: string,
+  ) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const invitation = await prisma.collectionInvitation.findUnique({
+      where: {
+        id: invitationId,
+        collectionId,
+        ...CollectionPermissions.whereCanAcceptOrRejectInvitation(user.email),
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError("Invitation not found");
+    }
+
+    const newMember = await prisma.$transaction(async (tx) => {
+      const result = await tx.collectionMember.create({
+        data: {
+          id: nanoid(10),
+          collectionId: invitation.collectionId,
+          userId,
+          role: invitation.role,
+        },
+        include: {
+          collection: {
+            include: collectionDefaultInclude(userId),
+          },
+        },
+      });
+
+      await tx.collectionInvitation.delete({
+        where: { id: invitationId },
+      });
+
+      return result;
+    });
+
     SSEService.broadcastSSEToCollectionMembers(
-      collectionId,
+      invitation.collectionId,
       {
         type: "COLLECTION_MEMBER_JOINED",
-        userId: newMember.userId,
+        userId,
         collection: newMember.collection,
       },
       userId,
@@ -337,10 +595,46 @@ export class CollectionService {
 
     return {
       id: newMember.id,
-      userId: newMember.user.id,
-      email: newMember.user.email,
-      name: newMember.user.name,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
       role: newMember.role,
+    };
+  }
+
+  static async rejectInvitation(userId: string, collectionId: string, invitationId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    await prisma.collectionInvitation.delete({
+      where: {
+        id: invitationId,
+        collectionId,
+        ...CollectionPermissions.whereCanAcceptOrRejectInvitation(user.email),
+      },
+    });
+
+    return {
+      id: invitationId,
+    };
+  }
+
+  static async cancelInvitation(userId: string, collectionId: string, invitationId: string) {
+    await prisma.collectionInvitation.delete({
+      where: {
+        id: invitationId,
+        collectionId,
+        ...CollectionPermissions.whereCanCancelInvitation(userId),
+      },
+    });
+
+    return {
+      id: invitationId,
     };
   }
 

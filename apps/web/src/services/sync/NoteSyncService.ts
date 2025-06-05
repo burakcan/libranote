@@ -11,7 +11,7 @@ import { searchService } from "@/services/SearchService";
 import { ErrorService, SyncError } from "@/lib/errors";
 import { router } from "@/lib/router";
 import { Store } from "@/lib/store";
-import { Route } from "@/routes/(authenticated)/notes.$noteId";
+import { Route } from "@/routes/(authenticated)/notes/$noteId";
 import { ActionQueueItem } from "@/types/ActionQueue";
 import { ServerNote, ServerNoteYDocState } from "@/types/Entities";
 import {

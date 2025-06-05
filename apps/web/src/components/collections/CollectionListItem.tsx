@@ -55,6 +55,7 @@ export function CollectionListItem({
     handleSelectCollection,
     handleShare,
     handleDeleteOrLeave,
+    handleExport,
   } = useCollectionItem(collection);
 
   const handleSelect = () => {
@@ -107,6 +108,7 @@ export function CollectionListItem({
                 onColorChange={handleColorChange}
                 onDelete={handleDeleteClick}
                 onLeave={handleDeleteClick}
+                onExport={handleExport}
               />
             )}
           </>

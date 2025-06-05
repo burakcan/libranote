@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { z } from "zod";
+import { CollectionInviteModal } from "@/components/collectionInviteModal/CollectionInviteModal";
 import { CollectionListContextProvider } from "@/components/collections/CollectionListContext";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { SyncProvider } from "@/components/providers/SyncProvider";
@@ -13,6 +15,10 @@ import { userDatabaseService } from "@/services/db/userDatabaseService";
 import { searchService } from "@/services/SearchService";
 
 export const Route = createFileRoute("/(authenticated)")({
+  validateSearch: z.object({
+    invitation: z.string().optional(),
+  }),
+
   beforeLoad: async ({ location, context }) => {
     const sessionData =
       await context.queryClient.ensureQueryData(sessionQueryOptions);
@@ -44,6 +50,7 @@ function RouteComponent() {
   const { data: session } = useSessionQuery();
   const { mutate: logout } = useLogout();
   const { userId, jwt } = Route.useRouteContext();
+  const { invitation } = Route.useSearch();
 
   useEffect(() => {
     if (!session) {
@@ -64,6 +71,7 @@ function RouteComponent() {
       <SyncProvider>
         <CollectionListContextProvider>
           <Outlet />
+          <CollectionInviteModal invitationId={invitation} />
         </CollectionListContextProvider>
       </SyncProvider>
     </StoreProvider>

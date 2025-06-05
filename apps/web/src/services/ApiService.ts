@@ -1,6 +1,7 @@
 import { CLIENT_ID } from "../lib/clientId";
 import {
   ClientCollection,
+  ClientCollectionInvitation,
   ClientCollectionMember,
   ClientNote,
   ServerCollection,
@@ -13,6 +14,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export interface ApiServiceError extends Error {
   status: number;
+  message: string;
+  errorCode: string;
 }
 
 export class ApiService {
@@ -34,6 +37,10 @@ export class ApiService {
       if (!response.ok) {
         const error = new Error(response.statusText) as ApiServiceError;
         error.status = response.status;
+
+        const data = await response.json();
+        error.message = data.message;
+        error.errorCode = data.error;
 
         throw error;
       }
@@ -154,19 +161,96 @@ export class ApiService {
   static async inviteCollectionMember(
     collectionId: string,
     email: string,
-    role: ClientCollectionMember["role"]
-  ): Promise<ClientCollectionMember> {
+    role: ClientCollectionMember["role"],
+    callbackUrl: string
+  ): Promise<ClientCollectionInvitation> {
     const response = await this.fetch(
       `/api/collections/${collectionId}/members/invite`,
       {
         method: "POST",
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ email, role, callbackUrl }),
       }
     );
 
-    const data: { member: ClientCollectionMember } = await response.json();
+    const data: { invitation: ClientCollectionInvitation } =
+      await response.json();
 
-    return data.member;
+    return data.invitation;
+  }
+
+  static async acceptCollectionInvitation(
+    collectionId: string,
+    invitationId: string
+  ): Promise<ClientCollectionInvitation> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/members/invitations/${invitationId}/accept`,
+      {
+        method: "POST",
+      }
+    );
+
+    const data: { invitation: ClientCollectionInvitation } =
+      await response.json();
+
+    return data.invitation;
+  }
+
+  static async rejectCollectionInvitation(
+    collectionId: string,
+    invitationId: string
+  ): Promise<void> {
+    await this.fetch(
+      `/api/collections/${collectionId}/members/invitations/${invitationId}/reject`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  static async cancelCollectionInvitation(
+    collectionId: string,
+    invitationId: string
+  ): Promise<void> {
+    await this.fetch(
+      `/api/collections/${collectionId}/members/invitations/${invitationId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  static async getCollectionInvitations(
+    collectionId: string
+  ): Promise<ClientCollectionInvitation[]> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/members/invitations`
+    );
+
+    const data: { invitations: ClientCollectionInvitation[] } =
+      await response.json();
+
+    return data.invitations;
+  }
+
+  static async getUserInvitations(): Promise<ClientCollectionInvitation[]> {
+    const response = await this.fetch("/api/collections/invitations");
+    const data: { invitations: ClientCollectionInvitation[] } =
+      await response.json();
+
+    return data.invitations;
+  }
+
+  static async getInvitation(
+    invitationId: string
+  ): Promise<ClientCollectionInvitation> {
+    const response = await this.fetch(
+      `/api/collections/invitations/${invitationId}`
+    );
+
+    const data: { invitation: ClientCollectionInvitation } =
+      await response.json();
+
+    return data.invitation;
   }
 
   static async removeCollectionMember(

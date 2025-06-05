@@ -4,12 +4,6 @@ export interface EmailTemplate {
   text: string;
 }
 
-export interface EmailVerificationData {
-  userName: string;
-  verificationUrl: string;
-  appName: string;
-}
-
 export interface PasswordResetData {
   userName: string;
   resetUrl: string;
@@ -37,109 +31,186 @@ export interface DeleteAccountVerificationData {
   appName: string;
 }
 
-export const emailTemplates = {
-  verification: (data: EmailVerificationData): EmailTemplate => ({
-    subject: `Verify your email address for ${data.appName}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Email Verification</title>
-        </head>
-        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
-            </div>
-            
-            <div style="margin-bottom: 30px;">
-              <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Verify Your Email Address</h2>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                Hi ${data.userName},
-              </p>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                Thank you for signing up for ${data.appName}! To complete your registration and secure your account, please verify your email address by clicking the button below.
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.verificationUrl}" 
-                 style="background-color: #007bff; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-                Verify Email Address
-              </a>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
-                If you didn't create an account with ${data.appName}, you can safely ignore this email.
-              </p>
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
-                If the button above doesn't work, copy and paste this link into your browser:
-                <br><a href="${data.verificationUrl}" style="color: #007bff; word-break: break-all;">${data.verificationUrl}</a>
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `,
-    text: `
-      Verify Your Email Address - ${data.appName}
-      
-      Hi ${data.userName},
-      
-      Thank you for signing up for ${data.appName}! To complete your registration and secure your account, please verify your email address by visiting the following link:
-      
-      ${data.verificationUrl}
-      
-      If you didn't create an account with ${data.appName}, you can safely ignore this email.
-      
-      Best regards,
-      The ${data.appName} Team
-    `,
-  }),
+export interface CollectionInvitationData {
+  inviterName: string;
+  collectionName: string;
+  invitationUrl: string;
+  appName: string;
+}
 
+const baseStyles = `
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    
+    .email-container {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 560px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .email-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    
+    .email-logo {
+      font-size: 24px;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0;
+      letter-spacing: -0.025em;
+    }
+    
+    .email-content {
+      padding: 32px 24px;
+    }
+    
+    .email-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.025em;
+    }
+    
+    .email-text {
+      color: #6b7280;
+      margin: 0 0 16px 0;
+      font-size: 15px;
+    }
+    
+    .email-button {
+      display: inline-block;
+      background: #111827;
+      color: #ffffff;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 15px;
+      transition: all 0.2s ease;
+      margin: 24px 0;
+    }
+    
+    .email-button:hover {
+      background: #374151;
+      transform: translateY(-1px);
+    }
+    
+    .email-button.danger {
+      background: #dc2626;
+    }
+    
+    .email-button.danger:hover {
+      background: #b91c1c;
+    }
+    
+    .email-button.success {
+      background: #059669;
+    }
+    
+    .email-button.success:hover {
+      background: #047857;
+    }
+    
+    .email-footer {
+      background: #f9fafb;
+      padding: 24px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .email-footer-text {
+      color: #9ca3af;
+      font-size: 13px;
+      margin: 0 0 8px 0;
+    }
+    
+    .email-link {
+      color: #6366f1;
+      word-break: break-all;
+      text-decoration: none;
+    }
+    
+    .otp-container {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin: 24px 0;
+    }
+    
+    .otp-code {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 28px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: 4px;
+      margin: 8px 0;
+    }
+    
+    .otp-label {
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0;
+    }
+    
+    .center {
+      text-align: center;
+    }
+  </style>
+`;
+
+export const emailTemplates = {
   passwordReset: (data: PasswordResetData): EmailTemplate => ({
     subject: `Reset your password for ${data.appName}`,
     html: `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Password Reset</title>
+          ${baseStyles}
         </head>
-        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
+        <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
+          <div class="email-container">
+            <div class="email-header">
+              <h1 class="email-logo">${data.appName}</h1>
             </div>
             
-            <div style="margin-bottom: 30px;">
-              <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Reset Your Password</h2>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                Hi ${data.userName},
+            <div class="email-content">
+              <h2 class="email-title">Reset your password</h2>
+              <p class="email-text">Hi ${data.userName},</p>
+              <p class="email-text">
+                We received a request to reset your password for your ${data.appName} account. 
+                Click the button below to create a new password.
               </p>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                We received a request to reset your password for your ${data.appName} account. Click the button below to create a new password.
-              </p>
+              
+              <div class="center">
+                <a href="${data.resetUrl}" class="email-button danger">
+                  Reset Password
+                </a>
+              </div>
             </div>
             
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.resetUrl}" 
-                 style="background-color: #dc3545; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-                Reset Password
-              </a>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
-                If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+            <div class="email-footer">
+              <p class="email-footer-text">
+                If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
               </p>
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
-                If the button above doesn't work, copy and paste this link into your browser:
-                <br><a href="${data.resetUrl}" style="color: #dc3545; word-break: break-all;">${data.resetUrl}</a>
+              <p class="email-footer-text">
+                If the button doesn't work, copy and paste this link:
+                <br><a href="${data.resetUrl}" class="email-link">${data.resetUrl}</a>
               </p>
             </div>
           </div>
@@ -155,7 +226,7 @@ export const emailTemplates = {
       
       ${data.resetUrl}
       
-      If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+      If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
       
       Best regards,
       The ${data.appName} Team
@@ -166,42 +237,41 @@ export const emailTemplates = {
     subject: `${data.inviterName} invited you to join ${data.organizationName} on ${data.appName}`,
     html: `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invitation</title>
+          <title>Team Invitation</title>
+          ${baseStyles}
         </head>
-        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
+        <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
+          <div class="email-container">
+            <div class="email-header">
+              <h1 class="email-logo">${data.appName}</h1>
             </div>
             
-            <div style="margin-bottom: 30px;">
-              <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">You're Invited!</h2>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                Hi ${data.inviteeName},
+            <div class="email-content">
+              <h2 class="email-title">You're invited to join a team</h2>
+              <p class="email-text">Hi ${data.inviteeName},</p>
+              <p class="email-text">
+                <strong>${data.inviterName}</strong> has invited you to join <strong>${data.organizationName}</strong> 
+                on ${data.appName}. Accept the invitation to start collaborating with your team.
               </p>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                <strong>${data.inviterName}</strong> has invited you to join <strong>${data.organizationName}</strong> on ${data.appName}. Click the button below to accept the invitation and join the team.
-              </p>
+              
+              <div class="center">
+                <a href="${data.invitationUrl}" class="email-button success">
+                  Accept Invitation
+                </a>
+              </div>
             </div>
             
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.invitationUrl}" 
-                 style="background-color: #28a745; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-                Accept Invitation
-              </a>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
+            <div class="email-footer">
+              <p class="email-footer-text">
                 If you don't want to join this organization, you can safely ignore this email.
               </p>
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
-                If the button above doesn't work, copy and paste this link into your browser:
-                <br><a href="${data.invitationUrl}" style="color: #28a745; word-break: break-all;">${data.invitationUrl}</a>
+              <p class="email-footer-text">
+                If the button doesn't work, copy and paste this link:
+                <br><a href="${data.invitationUrl}" class="email-link">${data.invitationUrl}</a>
               </p>
             </div>
           </div>
@@ -209,7 +279,7 @@ export const emailTemplates = {
       </html>
     `,
     text: `
-      You're Invited! - ${data.appName}
+      Team Invitation - ${data.appName}
       
       Hi ${data.inviteeName},
       
@@ -230,29 +300,28 @@ export const emailTemplates = {
         case "sign-in":
           return {
             subject: `Sign in to ${data.appName} - Verification Code`,
-            title: "Sign In Verification",
+            title: "Sign in verification",
             message: "Here's your verification code to sign in to your account:",
             note: "If you didn't try to sign in, you can safely ignore this email.",
           };
         case "email-verification":
           return {
             subject: `Verify your email address for ${data.appName}`,
-            title: "Email Verification",
-            message:
-              "Thank you for signing up! Please use this verification code to confirm your email address:",
+            title: "Email verification",
+            message: "Please use this verification code to confirm your email address:",
             note: "If you didn't create an account, you can safely ignore this email.",
           };
         case "forget-password":
           return {
             subject: `Reset your password for ${data.appName}`,
-            title: "Password Reset",
+            title: "Password reset",
             message: "Here's your verification code to reset your password:",
             note: "If you didn't request a password reset, you can safely ignore this email.",
           };
         default:
           return {
             subject: `Verification Code for ${data.appName}`,
-            title: "Verification Required",
+            title: "Verification required",
             message: "Here's your verification code:",
             note: "If you didn't request this code, you can safely ignore this email.",
           };
@@ -265,44 +334,34 @@ export const emailTemplates = {
       subject,
       html: `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${title}</title>
+            ${baseStyles}
           </head>
-          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
+          <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
+            <div class="email-container">
+              <div class="email-header">
+                <h1 class="email-logo">${data.appName}</h1>
               </div>
               
-              <div style="margin-bottom: 30px;">
-                <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">${title}</h2>
-                <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                  Hi ${data.userName},
-                </p>
-                <p style="color: #666666; line-height: 1.6; margin: 0 0 30px 0;">
-                  ${message}
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 40px 0;">
-                <div style="background-color: #f8f9fa; border: 2px dashed #007bff; border-radius: 8px; padding: 20px; display: inline-block;">
-                  <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #007bff; font-family: 'Courier New', monospace;">
-                    ${data.otp}
-                  </div>
+              <div class="email-content">
+                <h2 class="email-title">${title}</h2>
+                <p class="email-text">Hi ${data.userName},</p>
+                <p class="email-text">${message}</p>
+                
+                <div class="otp-container">
+                  <p class="otp-label">Verification Code</p>
+                  <div class="otp-code">${data.otp}</div>
+                  <p class="email-footer-text" style="margin-top: 12px;">This code expires in 15 minutes</p>
                 </div>
-                <p style="color: #666666; font-size: 14px; margin: 15px 0 0 0;">
-                  This code will expire in 15 minutes.
-                </p>
               </div>
               
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-                <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
-                  ${note}
-                </p>
-                <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
+              <div class="email-footer">
+                <p class="email-footer-text">${note}</p>
+                <p class="email-footer-text">
                   For security reasons, never share this code with anyone.
                 </p>
               </div>
@@ -335,42 +394,41 @@ export const emailTemplates = {
     subject: `Delete your account for ${data.appName}`,
     html: `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Delete Account Verification</title>
+          ${baseStyles}
         </head>
-        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #333333; margin: 0; font-size: 28px;">${data.appName}</h1>
+        <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
+          <div class="email-container">
+            <div class="email-header">
+              <h1 class="email-logo">${data.appName}</h1>
             </div>
             
-            <div style="margin-bottom: 30px;">
-              <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Delete Your Account</h2>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;">
-                Hi ${data.userName},
+            <div class="email-content">
+              <h2 class="email-title">Delete your account</h2>
+              <p class="email-text">Hi ${data.userName},</p>
+              <p class="email-text">
+                We received a request to delete your account for ${data.appName}. 
+                This action is permanent and cannot be undone.
               </p>
-              <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0;"> 
-                We received a request to delete your account for ${data.appName}. Click the button below to delete your account.
-              </p>
+              
+              <div class="center">
+                <a href="${data.deleteUrl}" class="email-button danger">
+                  Delete Account
+                </a>
+              </div>
             </div>
             
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${data.deleteUrl}" 
-                 style="background-color: #dc3545; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-                Delete Account
-              </a>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
-                If you didn't request to delete your account, you can safely ignore this email. Your account will not be deleted.
+            <div class="email-footer">
+              <p class="email-footer-text">
+                If you didn't request to delete your account, you can safely ignore this email. Your account will remain active.
               </p>
-              <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 10px 0 0 0;">
-                If the button above doesn't work, copy and paste this link into your browser:
-                <br><a href="${data.deleteUrl}" style="color: #dc3545; word-break: break-all;">${data.deleteUrl}</a>
+              <p class="email-footer-text">
+                If the button doesn't work, copy and paste this link:
+                <br><a href="${data.deleteUrl}" class="email-link">${data.deleteUrl}</a>
               </p>
             </div>
           </div>
@@ -386,7 +444,68 @@ export const emailTemplates = {
       
       ${data.deleteUrl}
       
-      If you didn't request to delete your account, you can safely ignore this email. Your account will not be deleted.
+      If you didn't request to delete your account, you can safely ignore this email. Your account will remain active.
+      
+      Best regards,
+      The ${data.appName} Team
+    `,
+  }),
+
+  collectionInvitation: (data: CollectionInvitationData): EmailTemplate => ({
+    subject: `${data.inviterName} invited you to join ${data.collectionName} on ${data.appName}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Collection Invitation</title>
+          ${baseStyles}
+        </head>
+        <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
+          <div class="email-container">
+            <div class="email-header">
+              <h1 class="email-logo">${data.appName}</h1>
+            </div>
+
+            <div class="email-content">
+              <h2 class="email-title">You're invited to join a collection</h2>
+              <p class="email-text">Hi,</p>
+              <p class="email-text">
+                <strong>${data.inviterName}</strong> has invited you to join <strong>${data.collectionName}</strong> 
+                on ${data.appName}. Accept the invitation to start collaborating on this collection.
+              </p>
+              
+              <div class="center">
+                <a href="${data.invitationUrl}" class="email-button success">
+                  Accept Invitation
+                </a>
+              </div>
+            </div>
+            
+            <div class="email-footer">
+              <p class="email-footer-text">
+                If you don't want to join this collection, you can safely ignore this email.
+              </p>
+              <p class="email-footer-text">
+                If the button doesn't work, copy and paste this link:
+                <br><a href="${data.invitationUrl}" class="email-link">${data.invitationUrl}</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+      Collection Invitation - ${data.appName}
+      
+      Hi,
+      
+      ${data.inviterName} invited you to join ${data.collectionName} on ${data.appName}. Visit the following link to accept the invitation:
+      
+      ${data.invitationUrl}
+      
+      If you don't want to join this collection, you can safely ignore this email.
       
       Best regards,
       The ${data.appName} Team

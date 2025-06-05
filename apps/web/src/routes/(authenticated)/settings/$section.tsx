@@ -3,9 +3,11 @@ import { useEffect, useContext } from "react";
 import { MobileSettingsSection } from "@/components/settings/MobileSettingsSection";
 import type { SettingsTab } from "@/components/settings/types";
 import { getSectionInfo } from "@/components/settings/utils";
-import { SetTitleContext } from "./settings";
+import { SetTitleContext } from "./route";
 
-export const Route = createFileRoute("/(authenticated)/settings/$section")({
+export const Route = createFileRoute(
+  "/(authenticated)/settings/$section"
+)({
   component: RouteComponent,
 });
 

@@ -3,11 +3,11 @@ import type { SendEmailCommandInput } from "@aws-sdk/client-ses";
 import { env } from "../../env.js";
 import { emailTemplates } from "./templates.js";
 import type {
-  EmailVerificationData,
   PasswordResetData,
   InvitationData,
   EmailOTPData,
   DeleteAccountVerificationData,
+  CollectionInvitationData,
 } from "./templates.js";
 
 export interface EmailOptions {
@@ -36,9 +36,6 @@ export class EmailService {
     this.fromName = env.SES_FROM_NAME as string;
   }
 
-  /**
-   * Send a raw email with custom content
-   */
   async sendEmail(options: EmailOptions): Promise<void> {
     const fromAddress = options.from || `${this.fromName} <${this.fromEmail}>`;
 
@@ -85,27 +82,6 @@ export class EmailService {
     }
   }
 
-  /**
-   * Send email verification email
-   */
-  async sendVerificationEmail(data: EmailVerificationData & { to: string }): Promise<void> {
-    const template = emailTemplates.verification({
-      userName: data.userName,
-      verificationUrl: data.verificationUrl,
-      appName: data.appName,
-    });
-
-    await this.sendEmail({
-      to: data.to,
-      subject: template.subject,
-      html: template.html,
-      text: template.text,
-    });
-  }
-
-  /**
-   * Send password reset email
-   */
   async sendPasswordResetEmail(data: PasswordResetData & { to: string }): Promise<void> {
     const template = emailTemplates.passwordReset({
       userName: data.userName,
@@ -121,9 +97,6 @@ export class EmailService {
     });
   }
 
-  /**
-   * Send invitation email
-   */
   async sendInvitationEmail(data: InvitationData & { to: string }): Promise<void> {
     const template = emailTemplates.invitation({
       inviteeName: data.inviteeName,
@@ -141,9 +114,6 @@ export class EmailService {
     });
   }
 
-  /**
-   * Send OTP email for verification
-   */
   async sendOTPEmail(data: EmailOTPData & { to: string }): Promise<void> {
     const template = emailTemplates.emailOTP({
       userName: data.userName,
@@ -160,9 +130,6 @@ export class EmailService {
     });
   }
 
-  /**
-   * Test email functionality
-   */
   async testEmail(to: string): Promise<void> {
     await this.sendEmail({
       to,
@@ -190,6 +157,24 @@ export class EmailService {
     const template = emailTemplates.deleteAccountVerification({
       userName: data.userName,
       deleteUrl: data.deleteUrl,
+      appName: data.appName,
+    });
+
+    await this.sendEmail({
+      to: data.to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  async sendCollectionInvitationEmail(
+    data: CollectionInvitationData & { to: string },
+  ): Promise<void> {
+    const template = emailTemplates.collectionInvitation({
+      inviterName: data.inviterName,
+      collectionName: data.collectionName,
+      invitationUrl: data.invitationUrl,
       appName: data.appName,
     });
 

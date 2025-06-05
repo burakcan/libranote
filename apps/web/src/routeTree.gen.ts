@@ -15,18 +15,18 @@ import { Route as GoodbyeImport } from './routes/goodbye'
 import { Route as authenticatedRouteImport } from './routes/(authenticated)/route'
 import { Route as authRouteImport } from './routes/(auth)/route'
 import { Route as IndexImport } from './routes/index'
-import { Route as authenticatedSettingsImport } from './routes/(authenticated)/settings'
 import { Route as authenticatedSetPasswordImport } from './routes/(authenticated)/set-password'
-import { Route as authenticatedNotesImport } from './routes/(authenticated)/notes'
 import { Route as authVerifyEmailImport } from './routes/(auth)/verify-email'
 import { Route as authSignupImport } from './routes/(auth)/signup'
 import { Route as authSigninImport } from './routes/(auth)/signin'
 import { Route as authResetPasswordImport } from './routes/(auth)/reset-password'
 import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
-import { Route as authenticatedSettingsIndexImport } from './routes/(authenticated)/settings.index'
-import { Route as authenticatedNotesIndexImport } from './routes/(authenticated)/notes.index'
-import { Route as authenticatedSettingsSectionImport } from './routes/(authenticated)/settings.$section'
-import { Route as authenticatedNotesNoteIdImport } from './routes/(authenticated)/notes.$noteId'
+import { Route as authenticatedSettingsRouteImport } from './routes/(authenticated)/settings/route'
+import { Route as authenticatedNotesRouteImport } from './routes/(authenticated)/notes/route'
+import { Route as authenticatedSettingsIndexImport } from './routes/(authenticated)/settings/index'
+import { Route as authenticatedNotesIndexImport } from './routes/(authenticated)/notes/index'
+import { Route as authenticatedSettingsSectionImport } from './routes/(authenticated)/settings/$section'
+import { Route as authenticatedNotesNoteIdImport } from './routes/(authenticated)/notes/$noteId'
 
 // Create/Update Routes
 
@@ -52,21 +52,9 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const authenticatedSettingsRoute = authenticatedSettingsImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => authenticatedRouteRoute,
-} as any)
-
 const authenticatedSetPasswordRoute = authenticatedSetPasswordImport.update({
   id: '/set-password',
   path: '/set-password',
-  getParentRoute: () => authenticatedRouteRoute,
-} as any)
-
-const authenticatedNotesRoute = authenticatedNotesImport.update({
-  id: '/notes',
-  path: '/notes',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
 
@@ -100,31 +88,45 @@ const authForgotPasswordRoute = authForgotPasswordImport.update({
   getParentRoute: () => authRouteRoute,
 } as any)
 
+const authenticatedSettingsRouteRoute = authenticatedSettingsRouteImport.update(
+  {
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any,
+)
+
+const authenticatedNotesRouteRoute = authenticatedNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => authenticatedRouteRoute,
+} as any)
+
 const authenticatedSettingsIndexRoute = authenticatedSettingsIndexImport.update(
   {
     id: '/',
     path: '/',
-    getParentRoute: () => authenticatedSettingsRoute,
+    getParentRoute: () => authenticatedSettingsRouteRoute,
   } as any,
 )
 
 const authenticatedNotesIndexRoute = authenticatedNotesIndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => authenticatedNotesRoute,
+  getParentRoute: () => authenticatedNotesRouteRoute,
 } as any)
 
 const authenticatedSettingsSectionRoute =
   authenticatedSettingsSectionImport.update({
     id: '/$section',
     path: '/$section',
-    getParentRoute: () => authenticatedSettingsRoute,
+    getParentRoute: () => authenticatedSettingsRouteRoute,
   } as any)
 
 const authenticatedNotesNoteIdRoute = authenticatedNotesNoteIdImport.update({
   id: '/$noteId',
   path: '/$noteId',
-  getParentRoute: () => authenticatedNotesRoute,
+  getParentRoute: () => authenticatedNotesRouteRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -158,6 +160,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/goodbye'
       preLoaderRoute: typeof GoodbyeImport
       parentRoute: typeof rootRoute
+    }
+    '/(authenticated)/notes': {
+      id: '/(authenticated)/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof authenticatedNotesRouteImport
+      parentRoute: typeof authenticatedRouteImport
+    }
+    '/(authenticated)/settings': {
+      id: '/(authenticated)/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof authenticatedSettingsRouteImport
+      parentRoute: typeof authenticatedRouteImport
     }
     '/(auth)/forgot-password': {
       id: '/(auth)/forgot-password'
@@ -194,13 +210,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authVerifyEmailImport
       parentRoute: typeof authRouteImport
     }
-    '/(authenticated)/notes': {
-      id: '/(authenticated)/notes'
-      path: '/notes'
-      fullPath: '/notes'
-      preLoaderRoute: typeof authenticatedNotesImport
-      parentRoute: typeof authenticatedRouteImport
-    }
     '/(authenticated)/set-password': {
       id: '/(authenticated)/set-password'
       path: '/set-password'
@@ -208,40 +217,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedSetPasswordImport
       parentRoute: typeof authenticatedRouteImport
     }
-    '/(authenticated)/settings': {
-      id: '/(authenticated)/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof authenticatedSettingsImport
-      parentRoute: typeof authenticatedRouteImport
-    }
     '/(authenticated)/notes/$noteId': {
       id: '/(authenticated)/notes/$noteId'
       path: '/$noteId'
       fullPath: '/notes/$noteId'
       preLoaderRoute: typeof authenticatedNotesNoteIdImport
-      parentRoute: typeof authenticatedNotesImport
+      parentRoute: typeof authenticatedNotesRouteImport
     }
     '/(authenticated)/settings/$section': {
       id: '/(authenticated)/settings/$section'
       path: '/$section'
       fullPath: '/settings/$section'
       preLoaderRoute: typeof authenticatedSettingsSectionImport
-      parentRoute: typeof authenticatedSettingsImport
+      parentRoute: typeof authenticatedSettingsRouteImport
     }
     '/(authenticated)/notes/': {
       id: '/(authenticated)/notes/'
       path: '/'
       fullPath: '/notes/'
       preLoaderRoute: typeof authenticatedNotesIndexImport
-      parentRoute: typeof authenticatedNotesImport
+      parentRoute: typeof authenticatedNotesRouteImport
     }
     '/(authenticated)/settings/': {
       id: '/(authenticated)/settings/'
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof authenticatedSettingsIndexImport
-      parentRoute: typeof authenticatedSettingsImport
+      parentRoute: typeof authenticatedSettingsRouteImport
     }
   }
 }
@@ -268,44 +270,48 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
-interface authenticatedNotesRouteChildren {
+interface authenticatedNotesRouteRouteChildren {
   authenticatedNotesNoteIdRoute: typeof authenticatedNotesNoteIdRoute
   authenticatedNotesIndexRoute: typeof authenticatedNotesIndexRoute
 }
 
-const authenticatedNotesRouteChildren: authenticatedNotesRouteChildren = {
-  authenticatedNotesNoteIdRoute: authenticatedNotesNoteIdRoute,
-  authenticatedNotesIndexRoute: authenticatedNotesIndexRoute,
-}
+const authenticatedNotesRouteRouteChildren: authenticatedNotesRouteRouteChildren =
+  {
+    authenticatedNotesNoteIdRoute: authenticatedNotesNoteIdRoute,
+    authenticatedNotesIndexRoute: authenticatedNotesIndexRoute,
+  }
 
-const authenticatedNotesRouteWithChildren =
-  authenticatedNotesRoute._addFileChildren(authenticatedNotesRouteChildren)
+const authenticatedNotesRouteRouteWithChildren =
+  authenticatedNotesRouteRoute._addFileChildren(
+    authenticatedNotesRouteRouteChildren,
+  )
 
-interface authenticatedSettingsRouteChildren {
+interface authenticatedSettingsRouteRouteChildren {
   authenticatedSettingsSectionRoute: typeof authenticatedSettingsSectionRoute
   authenticatedSettingsIndexRoute: typeof authenticatedSettingsIndexRoute
 }
 
-const authenticatedSettingsRouteChildren: authenticatedSettingsRouteChildren = {
-  authenticatedSettingsSectionRoute: authenticatedSettingsSectionRoute,
-  authenticatedSettingsIndexRoute: authenticatedSettingsIndexRoute,
-}
+const authenticatedSettingsRouteRouteChildren: authenticatedSettingsRouteRouteChildren =
+  {
+    authenticatedSettingsSectionRoute: authenticatedSettingsSectionRoute,
+    authenticatedSettingsIndexRoute: authenticatedSettingsIndexRoute,
+  }
 
-const authenticatedSettingsRouteWithChildren =
-  authenticatedSettingsRoute._addFileChildren(
-    authenticatedSettingsRouteChildren,
+const authenticatedSettingsRouteRouteWithChildren =
+  authenticatedSettingsRouteRoute._addFileChildren(
+    authenticatedSettingsRouteRouteChildren,
   )
 
 interface authenticatedRouteRouteChildren {
-  authenticatedNotesRoute: typeof authenticatedNotesRouteWithChildren
+  authenticatedNotesRouteRoute: typeof authenticatedNotesRouteRouteWithChildren
+  authenticatedSettingsRouteRoute: typeof authenticatedSettingsRouteRouteWithChildren
   authenticatedSetPasswordRoute: typeof authenticatedSetPasswordRoute
-  authenticatedSettingsRoute: typeof authenticatedSettingsRouteWithChildren
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
-  authenticatedNotesRoute: authenticatedNotesRouteWithChildren,
+  authenticatedNotesRouteRoute: authenticatedNotesRouteRouteWithChildren,
+  authenticatedSettingsRouteRoute: authenticatedSettingsRouteRouteWithChildren,
   authenticatedSetPasswordRoute: authenticatedSetPasswordRoute,
-  authenticatedSettingsRoute: authenticatedSettingsRouteWithChildren,
 }
 
 const authenticatedRouteRouteWithChildren =
@@ -314,14 +320,14 @@ const authenticatedRouteRouteWithChildren =
 export interface FileRoutesByFullPath {
   '/': typeof authenticatedRouteRouteWithChildren
   '/goodbye': typeof GoodbyeRoute
+  '/notes': typeof authenticatedNotesRouteRouteWithChildren
+  '/settings': typeof authenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signin': typeof authSigninRoute
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
-  '/notes': typeof authenticatedNotesRouteWithChildren
   '/set-password': typeof authenticatedSetPasswordRoute
-  '/settings': typeof authenticatedSettingsRouteWithChildren
   '/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/settings/$section': typeof authenticatedSettingsSectionRoute
   '/notes/': typeof authenticatedNotesIndexRoute
@@ -349,14 +355,14 @@ export interface FileRoutesById {
   '/(auth)': typeof authRouteRouteWithChildren
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/goodbye': typeof GoodbyeRoute
+  '/(authenticated)/notes': typeof authenticatedNotesRouteRouteWithChildren
+  '/(authenticated)/settings': typeof authenticatedSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signin': typeof authSigninRoute
   '/(auth)/signup': typeof authSignupRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
-  '/(authenticated)/notes': typeof authenticatedNotesRouteWithChildren
   '/(authenticated)/set-password': typeof authenticatedSetPasswordRoute
-  '/(authenticated)/settings': typeof authenticatedSettingsRouteWithChildren
   '/(authenticated)/notes/$noteId': typeof authenticatedNotesNoteIdRoute
   '/(authenticated)/settings/$section': typeof authenticatedSettingsSectionRoute
   '/(authenticated)/notes/': typeof authenticatedNotesIndexRoute
@@ -368,14 +374,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/goodbye'
+    | '/notes'
+    | '/settings'
     | '/forgot-password'
     | '/reset-password'
     | '/signin'
     | '/signup'
     | '/verify-email'
-    | '/notes'
     | '/set-password'
-    | '/settings'
     | '/notes/$noteId'
     | '/settings/$section'
     | '/notes/'
@@ -400,14 +406,14 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/(authenticated)'
     | '/goodbye'
+    | '/(authenticated)/notes'
+    | '/(authenticated)/settings'
     | '/(auth)/forgot-password'
     | '/(auth)/reset-password'
     | '/(auth)/signin'
     | '/(auth)/signup'
     | '/(auth)/verify-email'
-    | '/(authenticated)/notes'
     | '/(authenticated)/set-password'
-    | '/(authenticated)/settings'
     | '/(authenticated)/notes/$noteId'
     | '/(authenticated)/settings/$section'
     | '/(authenticated)/notes/'
@@ -462,12 +468,28 @@ export const routeTree = rootRoute
       "filePath": "(authenticated)/route.tsx",
       "children": [
         "/(authenticated)/notes",
-        "/(authenticated)/set-password",
-        "/(authenticated)/settings"
+        "/(authenticated)/settings",
+        "/(authenticated)/set-password"
       ]
     },
     "/goodbye": {
       "filePath": "goodbye.tsx"
+    },
+    "/(authenticated)/notes": {
+      "filePath": "(authenticated)/notes/route.tsx",
+      "parent": "/(authenticated)",
+      "children": [
+        "/(authenticated)/notes/$noteId",
+        "/(authenticated)/notes/"
+      ]
+    },
+    "/(authenticated)/settings": {
+      "filePath": "(authenticated)/settings/route.tsx",
+      "parent": "/(authenticated)",
+      "children": [
+        "/(authenticated)/settings/$section",
+        "/(authenticated)/settings/"
+      ]
     },
     "/(auth)/forgot-password": {
       "filePath": "(auth)/forgot-password.tsx",
@@ -489,40 +511,24 @@ export const routeTree = rootRoute
       "filePath": "(auth)/verify-email.tsx",
       "parent": "/(auth)"
     },
-    "/(authenticated)/notes": {
-      "filePath": "(authenticated)/notes.tsx",
-      "parent": "/(authenticated)",
-      "children": [
-        "/(authenticated)/notes/$noteId",
-        "/(authenticated)/notes/"
-      ]
-    },
     "/(authenticated)/set-password": {
       "filePath": "(authenticated)/set-password.tsx",
       "parent": "/(authenticated)"
     },
-    "/(authenticated)/settings": {
-      "filePath": "(authenticated)/settings.tsx",
-      "parent": "/(authenticated)",
-      "children": [
-        "/(authenticated)/settings/$section",
-        "/(authenticated)/settings/"
-      ]
-    },
     "/(authenticated)/notes/$noteId": {
-      "filePath": "(authenticated)/notes.$noteId.tsx",
+      "filePath": "(authenticated)/notes/$noteId.tsx",
       "parent": "/(authenticated)/notes"
     },
     "/(authenticated)/settings/$section": {
-      "filePath": "(authenticated)/settings.$section.tsx",
+      "filePath": "(authenticated)/settings/$section.tsx",
       "parent": "/(authenticated)/settings"
     },
     "/(authenticated)/notes/": {
-      "filePath": "(authenticated)/notes.index.tsx",
+      "filePath": "(authenticated)/notes/index.tsx",
       "parent": "/(authenticated)/notes"
     },
     "/(authenticated)/settings/": {
-      "filePath": "(authenticated)/settings.index.tsx",
+      "filePath": "(authenticated)/settings/index.tsx",
       "parent": "/(authenticated)/settings"
     }
   }

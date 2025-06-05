@@ -13,21 +13,22 @@ datasource db {
 // These should align with the fields Better Auth expects.
 
 model User {
-  id                 String             @id
-  name               String
-  email              String             @unique
-  emailVerified      Boolean
-  image              String?
-  createdAt          DateTime
-  updatedAt          DateTime
-  accounts           Account[]
-  sessions           Session[]
-  noteCollaborators  NoteCollaborator[]
-  collectionMembers  CollectionMember[]
-  ownedCollections   Collection[]       @relation("OwnedCollections")
-  createdNotes       Note[]             @relation("CreatedNotes")
-  UserSetting        UserSetting[]
-  onboardingFinished Boolean            @default(false)
+  id                    String                 @id
+  name                  String
+  email                 String                 @unique
+  emailVerified         Boolean
+  image                 String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  accounts              Account[]
+  sessions              Session[]
+  noteCollaborators     NoteCollaborator[]
+  collectionMembers     CollectionMember[]
+  ownedCollections      Collection[]           @relation("OwnedCollections")
+  createdNotes          Note[]                 @relation("CreatedNotes")
+  UserSetting           UserSetting[]
+  onboardingFinished    Boolean                @default(false)
+  collectionInvitations CollectionInvitation[]
 
   @@map("user")
 }
@@ -88,16 +89,17 @@ model Jwks {
 // Application models for collections and notes.
 
 model Collection {
-  id              String             @id
+  id              String                 @id
   title           String
   createdById     String
-  createdBy       User               @relation("OwnedCollections", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy       User                   @relation("OwnedCollections", fields: [createdById], references: [id], onDelete: Cascade)
   createdAt       DateTime
-  serverCreatedAt DateTime           @default(now())
+  serverCreatedAt DateTime               @default(now())
   updatedAt       DateTime
-  serverUpdatedAt DateTime           @updatedAt
+  serverUpdatedAt DateTime               @updatedAt
   notes           Note[]
   members         CollectionMember[]
+  invitations     CollectionInvitation[]
 
   @@map("collection")
 }
@@ -120,6 +122,20 @@ model CollectionMember {
 
   @@unique([collectionId, userId])
   @@map("collection_member")
+}
+
+model CollectionInvitation {
+  id           String               @id
+  collectionId String
+  inviterId    String
+  inviteeEmail String
+  role         CollectionMemberRole
+  createdAt    DateTime             @default(now())
+  expiresAt    DateTime?
+  collection   Collection           @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  inviter      User                 @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@map("collection_invitation")
 }
 
 model Note {

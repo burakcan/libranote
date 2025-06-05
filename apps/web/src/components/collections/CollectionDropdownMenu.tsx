@@ -4,6 +4,7 @@ import {
   MoreHorizontal,
   Pencil,
   UserRoundX,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ type CollectionDropdownMenuProps = {
   onColorChange: (color: string | null) => void;
   onDelete: () => void;
   onLeave: () => void;
+  onExport: () => void;
 };
 
 export function CollectionDropdownMenu({
@@ -34,6 +36,7 @@ export function CollectionDropdownMenu({
   onColorChange,
   onDelete,
   onLeave,
+  onExport,
 }: CollectionDropdownMenuProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,6 +52,11 @@ export function CollectionDropdownMenu({
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     onShare();
+  };
+
+  const handleExport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExport();
   };
 
   return (
@@ -86,6 +94,13 @@ export function CollectionDropdownMenu({
           currentColor={currentColor}
           onColorChange={onColorChange}
         />
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={handleExport}>
+          <Download className="h-4 w-4 mr-2" />
+          Export as Markdown
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
 
         {isOwner ? (

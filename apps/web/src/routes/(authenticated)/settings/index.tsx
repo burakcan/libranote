@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useContext, useEffect } from "react";
 import { MobileSettingsList } from "@/components/settings/MobileSettings";
-import { SetTitleContext } from "./settings";
+import { SetTitleContext } from "./route";
 
 export const Route = createFileRoute("/(authenticated)/settings/")({
   component: RouteComponent,

@@ -73,6 +73,21 @@ export interface SSESessionRefreshEvent {
   payload: object;
 }
 
+export interface SSECollectionMemberInvitedEvent {
+  type: "COLLECTION_MEMBER_INVITED";
+  payload: {
+    invitationId: string;
+    createdAt: string;
+    expiresAt: string | null;
+    inviteeId: string | null;
+    inviteeEmail: string | null;
+    inviterId: string;
+    inviterName: string;
+    collectionId: string;
+    collectionTitle: string;
+  };
+}
+
 export type SSEEvent =
   | SSEInitEvent
   | SSECollectionCreatedEvent
@@ -86,4 +101,5 @@ export type SSEEvent =
   | SSECollectionMemberLeftEvent
   | SSECollectionMemberRoleUpdatedEvent
   | SSESettingUpdatedEvent
-  | SSESessionRefreshEvent;
+  | SSESessionRefreshEvent
+  | SSECollectionMemberInvitedEvent;

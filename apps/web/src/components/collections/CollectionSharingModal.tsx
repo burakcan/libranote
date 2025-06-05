@@ -2,6 +2,7 @@ import Avatar from "boring-avatars";
 import { Loader2, Mail, Send, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,8 +23,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBreakpointSM } from "@/hooks/useBreakpointSM";
+import {
+  useCancelCollectionInvitationMutation,
+  useCollectionInvitesQuery,
+  useInviteCollectionMemberMutation,
+} from "@/hooks/useCollectionInvitesQuery";
 import { useCollectionMembersQuery } from "@/hooks/useCollectionMembersQuery";
-import { useInviteCollectionMemberMutation } from "@/hooks/useInviteCollectionMemberMutation";
 import { useIosScrollHack } from "@/hooks/useIosScrollHack";
 import { useRemoveCollectionMemberMutation } from "@/hooks/useRemoveCollectionMemberMutation";
 import { getUserColors } from "@/lib/utils";
@@ -49,6 +54,15 @@ export default function CollectionSharingModal(props: SharingModalProps) {
     open ?? false
   );
 
+  const { data: collectionInvites, isLoading: isLoadingCollectionInvites } =
+    useCollectionInvitesQuery(collectionId, open ?? false);
+
+  const {
+    mutate: cancelInvitation,
+    isPending: isCancellingInvitation,
+    variables: cancelInvitationVariables,
+  } = useCancelCollectionInvitationMutation(collectionId);
+
   useEffect(() => {
     if (open) {
       pauseScrollHack();
@@ -71,15 +85,45 @@ export default function CollectionSharingModal(props: SharingModalProps) {
   const { mutate: removeCollaborator } =
     useRemoveCollectionMemberMutation(collectionId);
 
-  const handleAddCollaborator = (e: React.FormEvent) => {
+  const handleAddCollaborator = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    inviteCollaborator({
-      email: newEmail,
-      role: newRole,
-    });
+    inviteCollaborator(
+      {
+        email: newEmail,
+        role: newRole,
+        callbackUrl: `${import.meta.env.VITE_PUBLIC_URL}/notes`,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Invitation sent successfully!", {
+            description:
+              "They will join the collection when they accept the invitation.",
+          });
+          setNewEmail("");
+        },
+        onError: (error) => {
+          console.error(error);
+          toast.error("Failed to invite collaborator", {
+            description: error.message,
+          });
+        },
+      }
+    );
+  };
 
-    setNewEmail("");
+  const handleCancelInvitation = (invitationId: string) => {
+    cancelInvitation(invitationId, {
+      onSuccess: () => {
+        toast.success("Invitation cancelled successfully!");
+      },
+      onError: (error) => {
+        console.error(error);
+        toast.error("Failed to cancel invitation", {
+          description: error.message,
+        });
+      },
+    });
   };
 
   const Components = {
@@ -111,12 +155,12 @@ export default function CollectionSharingModal(props: SharingModalProps) {
           </Components.DialogDescription>
         </Components.DialogHeader>
 
-        {sortedMembers.length > 0 && (
+        {(sortedMembers?.length > 0 || collectionInvites?.length > 0) && (
           <ScrollArea className="min-h-0">
             <div className="py-4 px-4 sm:px-0">
               <h4 className="text-sm font-medium mb-3">People with access</h4>
               <div className="space-y-3 pr-2">
-                {sortedMembers.map((member) => (
+                {sortedMembers?.map((member) => (
                   <div
                     key={member.id}
                     className="flex items-center justify-between gap-4"
@@ -158,12 +202,57 @@ export default function CollectionSharingModal(props: SharingModalProps) {
                     </div>
                   </div>
                 ))}
+                {collectionInvites?.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={invite.inviteeEmail}
+                        key={invite.inviteeEmail}
+                        size={28}
+                        className="outline-1 outline-offset-1 outline-muted-foreground rounded-full ml-1 opacity-60"
+                        variant="beam"
+                        colors={[...getUserColors(invite.inviteeEmail)]}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {invite.inviteeEmail}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Invitation pending
+                          {invite.expiresAt &&
+                            ` • Expires ${new Date(invite.expiresAt).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">Invited</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          handleCancelInvitation(invite.id);
+                        }}
+                        disabled={
+                          isCancellingInvitation &&
+                          cancelInvitationVariables === invite.id
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Cancel invitation</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </ScrollArea>
         )}
 
-        {isLoading && (
+        {(isLoading || isLoadingCollectionInvites) && (
           <div className="py-4 flex items-center justify-center">
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>

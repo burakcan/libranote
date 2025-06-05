@@ -48,3 +48,14 @@ export type ClientNoteCollaborator = ServerNoteCollaborator & {
   name: string;
   email: string;
 };
+
+export type ClientCollectionInvitation = {
+  id: string;
+  createdAt: string;
+  expiresAt: string | null;
+  inviterId: string;
+  inviterName: string;
+  inviteeEmail: string;
+  collectionId: string;
+  collectionTitle: string;
+};

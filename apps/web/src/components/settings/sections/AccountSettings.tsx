@@ -76,11 +76,15 @@ export function AccountSettings() {
   const nameValueChanged = name !== user?.name;
 
   const handleExportNotes = async () => {
-    toast.promise(exportService.exportNotes(notes, collections), {
+    const promise = exportService.exportNotes(notes, collections);
+    toast.promise(promise, {
       loading:
         "Exporting notes... Please keep the browser window open. You can leave this dialog.",
       success: "Notes exported successfully!",
-      error: "Failed to export notes!",
+      error: (error) => {
+        console.error(error);
+        return "Failed to export notes!";
+      },
     });
   };
 

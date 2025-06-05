@@ -1,3 +1,4 @@
+import { CollectionMemberRole } from "@repo/db";
 import { z } from "zod";
 
 // Basic collection schema
@@ -34,7 +35,22 @@ export const collectionParamsSchema = z.object({
   id: z.string(),
 });
 
+export const invitationParamsSchema = z.object({
+  invitationId: z.string(),
+});
+
+export const collectionInvitationParamsSchema = z.object({
+  id: z.string(),
+  invitationId: z.string(),
+});
+
 export const collectionMemberParamsSchema = z.object({
   id: z.string(),
   userId: z.string(),
+});
+
+export const inviteToCollectionSchema = z.object({
+  email: z.string().email(),
+  role: z.nativeEnum(CollectionMemberRole),
+  callbackUrl: z.string().url(),
 });

@@ -1,0 +1,4 @@
+- Changing collection color triggers SSE to all members of the collection. It should only trigger SSE to the user who changed the color.
+- a lot of queue items in the indexeddb when offline.
+- errors logged to console when offline, don't attempt to send requests when offline.
+- syncs of offline changes problematic in general

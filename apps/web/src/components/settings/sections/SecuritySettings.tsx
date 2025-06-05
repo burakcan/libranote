@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/SettingsSection";
-import { useRevokeOtherSessionsMutation } from "@/hooks/useRevokeOtherSessionsMutation";
-import { useRevokeSessionMutation } from "@/hooks/useRevokeSessionMutation";
+import {
+  useRevokeSessionMutation,
+  useRevokeOtherSessionsMutation,
+} from "@/hooks/useRevokeSessionMutation";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useSessionsQuery } from "@/hooks/useSessionsQuery";
 import { parseUserAgent, formatLastActive } from "@/lib/sessionUtils";

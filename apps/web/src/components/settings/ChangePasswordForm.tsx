@@ -2,7 +2,6 @@ import { useForm } from "@tanstack/react-form";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PasswordField } from "@/components/auth/FormField";
@@ -106,169 +105,164 @@ export function ChangePasswordForm({
   };
 
   return (
-    <Card className="max-w-md">
-      <CardContent>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-          className="space-y-4"
-        >
-          <form.Field
-            name="currentPassword"
-            validators={{
-              onBlur: baseSchema.shape.currentPassword,
-            }}
-            children={(field) => (
-              <PasswordField
-                label="Current Password"
-                placeholder="Enter your current password"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                error={
-                  (field.state.meta.isTouched || form.state.isSubmitted) &&
-                  field.state.meta.errors.length > 0
-                    ? field.state.meta.errors[0]?.message
-                    : undefined
-                }
-                disabled={isSubmitting}
-                required
-                autoComplete="current-password"
-              />
-            )}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+      className="space-y-4"
+    >
+      <form.Field
+        name="currentPassword"
+        validators={{
+          onBlur: baseSchema.shape.currentPassword,
+        }}
+        children={(field) => (
+          <PasswordField
+            label="Current Password"
+            placeholder="Enter your current password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            error={
+              (field.state.meta.isTouched || form.state.isSubmitted) &&
+              field.state.meta.errors.length > 0
+                ? field.state.meta.errors[0]?.message
+                : undefined
+            }
+            disabled={isSubmitting}
+            required
+            autoComplete="current-password"
           />
+        )}
+      />
 
-          <form.Field
-            name="newPassword"
-            validators={{
-              onBlur: baseSchema.shape.newPassword,
-            }}
-            children={(field) => (
-              <PasswordField
-                label="New Password"
-                placeholder="Enter your new password"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                error={
-                  (field.state.meta.isTouched || form.state.isSubmitted) &&
-                  field.state.meta.errors.length > 0
-                    ? field.state.meta.errors[0]?.message
-                    : undefined
-                }
-                hint="At least 8 characters with uppercase, lowercase, and number"
-                disabled={isSubmitting}
-                required
-                autoComplete="new-password"
-              />
-            )}
+      <form.Field
+        name="newPassword"
+        validators={{
+          onBlur: baseSchema.shape.newPassword,
+        }}
+        children={(field) => (
+          <PasswordField
+            label="New Password"
+            placeholder="Enter your new password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            error={
+              (field.state.meta.isTouched || form.state.isSubmitted) &&
+              field.state.meta.errors.length > 0
+                ? field.state.meta.errors[0]?.message
+                : undefined
+            }
+            hint="At least 8 characters with uppercase, lowercase, and number"
+            disabled={isSubmitting}
+            required
+            autoComplete="new-password"
           />
+        )}
+      />
 
-          <form.Field
-            name="confirmPassword"
-            validators={{
-              onBlur: ({ value, fieldApi }) => {
-                // First validate the field itself
-                const fieldResult =
-                  baseSchema.shape.confirmPassword.safeParse(value);
-                if (!fieldResult.success) {
-                  return fieldResult.error.errors[0];
-                }
+      <form.Field
+        name="confirmPassword"
+        validators={{
+          onBlur: ({ value, fieldApi }) => {
+            // First validate the field itself
+            const fieldResult =
+              baseSchema.shape.confirmPassword.safeParse(value);
+            if (!fieldResult.success) {
+              return fieldResult.error.errors[0];
+            }
 
-                // Check if passwords match
-                const newPasswordValue =
-                  fieldApi.form.getFieldValue("newPassword");
-                if (newPasswordValue && value !== newPasswordValue) {
-                  return {
-                    message: "Passwords don't match",
-                  };
-                }
+            // Check if passwords match
+            const newPasswordValue = fieldApi.form.getFieldValue("newPassword");
+            if (newPasswordValue && value !== newPasswordValue) {
+              return {
+                message: "Passwords don't match",
+              };
+            }
 
-                return undefined;
-              },
-            }}
-            children={(field) => (
-              <PasswordField
-                label="Confirm New Password"
-                placeholder="Confirm your new password"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                error={
-                  (field.state.meta.isTouched || form.state.isSubmitted) &&
-                  field.state.meta.errors.length > 0
-                    ? field.state.meta.errors[0]?.message
-                    : undefined
-                }
-                disabled={isSubmitting}
-                required
-                autoComplete="new-password"
-              />
-            )}
+            return undefined;
+          },
+        }}
+        children={(field) => (
+          <PasswordField
+            label="Confirm New Password"
+            placeholder="Confirm your new password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            error={
+              (field.state.meta.isTouched || form.state.isSubmitted) &&
+              field.state.meta.errors.length > 0
+                ? field.state.meta.errors[0]?.message
+                : undefined
+            }
+            disabled={isSubmitting}
+            required
+            autoComplete="new-password"
           />
+        )}
+      />
 
-          <form.Field
-            name="revokeOtherSessions"
-            children={(field) => (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor="revoke-sessions"
-                      className="text-sm font-medium"
-                    >
-                      Sign out other devices
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      This will log you out from all other devices and browsers.
-                    </p>
-                  </div>
-                  <Switch
-                    id="revoke-sessions"
-                    checked={field.state.value}
-                    onCheckedChange={(checked) => field.handleChange(checked)}
-                    disabled={isSubmitting}
-                  />
-                </div>
+      <form.Field
+        name="revokeOtherSessions"
+        children={(field) => (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="revoke-sessions"
+                  className="text-sm font-medium"
+                >
+                  Sign out other devices
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  This will log you out from all other devices and browsers.
+                </p>
+              </div>
+              <Switch
+                id="revoke-sessions"
+                checked={field.state.value}
+                onCheckedChange={(checked) => field.handleChange(checked)}
+                disabled={isSubmitting}
+              />
+            </div>
 
-                {field.state.value && (
-                  <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      You will be logged out from all other devices. Any unsaved
-                      changes on those devices will be lost.
-                    </p>
-                  </div>
-                )}
+            {field.state.value && (
+              <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  You will be logged out from all other devices. Any unsaved
+                  changes on those devices will be lost.
+                </p>
               </div>
             )}
-          />
-
-          <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Changing Password...
-                </>
-              ) : (
-                "Change Password"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      />
+
+      <div className="flex gap-3 pt-2">
+        <Button type="submit" disabled={isSubmitting} className="flex-1">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Changing Password...
+            </>
+          ) : (
+            "Change Password"
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleReset}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

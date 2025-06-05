@@ -18,3 +18,20 @@ export function useRevokeSessionMutation() {
     },
   });
 }
+
+export function useRevokeOtherSessionsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await authClient.revokeOtherSessions();
+      await ApiService.triggerClientSessionRefresh();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+    onError: (error) => {
+      console.error("Failed to revoke other sessions:", error);
+    },
+  });
+}

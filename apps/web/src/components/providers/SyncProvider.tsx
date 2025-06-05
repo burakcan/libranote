@@ -17,6 +17,7 @@ interface SyncContextType {
 }
 
 const defaultStatus: SyncStatus = {
+  isSynced: false,
   isIdle: true,
   isSyncing: false,
   hasError: false,

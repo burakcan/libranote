@@ -25,6 +25,7 @@ export interface SyncOperation {
 }
 
 export interface SyncStatus {
+  isSynced: boolean;
   isIdle: boolean;
   isSyncing: boolean;
   hasError: boolean;
@@ -44,6 +45,7 @@ export class SyncStatusManager extends EventTarget {
   private errors: Error[] = [];
   private timeouts = new Map<string, NodeJS.Timeout>();
   private lastSyncTime?: number;
+  private isSynced: boolean = false;
 
   constructor() {
     super();
@@ -129,6 +131,14 @@ export class SyncStatusManager extends EventTarget {
   }
 
   /**
+   * Set the synced status (initial sync)
+   */
+  setIsSynced(): void {
+    this.isSynced = true;
+    this.notifyListeners();
+  }
+
+  /**
    * Get current sync status
    */
   getStatus(): SyncStatus {
@@ -137,6 +147,7 @@ export class SyncStatusManager extends EventTarget {
     );
 
     return {
+      isSynced: this.isSynced,
       isIdle: runningOperations.length === 0,
       isSyncing: runningOperations.length > 0,
       hasError: this.errors.length > 0,

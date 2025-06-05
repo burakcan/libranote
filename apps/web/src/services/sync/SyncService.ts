@@ -20,7 +20,7 @@ import {
 } from "./RealtimeService";
 import { SettingsSyncService } from "./SettingsSyncService";
 import { SyncStatusManager, SyncStatus } from "./SyncStatusManager";
-import { Route } from "@/routes/(authenticated)/notes.$noteId";
+import { Route } from "@/routes/(authenticated)/notes/$noteId";
 import {
   ICollectionRepository,
   INoteRepository,
@@ -289,6 +289,7 @@ export class SyncService extends EventTarget {
       this.realtimeService.connect();
 
       this.statusManager.completeOperation(operationId);
+      this.statusManager.setIsSynced();
     } catch (error) {
       const appError = ErrorService.handle(error);
       console.error("SyncService: Error syncing", appError);
