@@ -125,13 +125,6 @@ export class TransactionService {
 
           await tx.table<ClientUserSetting>("settings").put(localSetting);
         }
-
-        // Delete settings that are no longer in the remote data
-        await tx
-          .table<ClientUserSetting>("settings")
-          .where("key")
-          .noneOf(remoteSettings.map((setting) => setting.key))
-          .delete();
       });
     }, "Failed to sync remote settings to local");
   }

@@ -14,7 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { useAccountsListQuery } from "@/hooks/useAccountsListQuery";
+import { useAccountsListQuery } from "@/hooks/useAccounts";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { deleteAccountSchema } from "@/lib/auth-schemas";
 import { authClient } from "@/lib/authClient";

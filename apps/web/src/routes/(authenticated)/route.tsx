@@ -17,6 +17,7 @@ import { searchService } from "@/services/SearchService";
 export const Route = createFileRoute("/(authenticated)")({
   validateSearch: z.object({
     invitation: z.string().optional(),
+    social_callback: z.boolean().optional(),
   }),
 
   beforeLoad: async ({ location, context }) => {

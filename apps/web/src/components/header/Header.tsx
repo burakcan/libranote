@@ -1,5 +1,6 @@
 import { Loader2, LogOut, Notebook, Settings, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,11 +13,28 @@ import { SettingsModal } from "@/components/settings/Settings";
 import { useLogout } from "@/hooks/useLogout";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { SyncStatus } from "./SyncStatus";
+import { Route as AuthenticatedRoute } from "@/routes/(authenticated)/route";
 
 export function Header() {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const searchParams = AuthenticatedRoute.useSearch();
+  const navigate = AuthenticatedRoute.useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(
+    searchParams.social_callback ?? false
+  );
   const { data: session } = useSessionQuery();
   const { mutate: logout, isPending } = useLogout();
+
+  useEffect(() => {
+    if (searchParams.social_callback) {
+      navigate({
+        search: {
+          social_callback: undefined,
+        },
+      });
+
+      toast.success("Account connected successfully!");
+    }
+  }, [searchParams.social_callback, navigate]);
 
   return (
     <header className="h-14 px-4 flex-shrink-0 border-b border-sidebar-border/70 bg-sidebar">

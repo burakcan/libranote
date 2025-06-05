@@ -1,5 +1,5 @@
 import Avatar from "boring-avatars";
-import { Github, Key, Loader2, Mail } from "lucide-react";
+import { Key, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SettingsSection } from "@/components/settings/SettingsSection";
-import { useAccountsListQuery } from "@/hooks/useAccountsListQuery";
+import { useAccountsListQuery } from "@/hooks/useAccounts";
 import { useSessionQuery } from "@/hooks/useSessionQuery";
 import { useStore } from "@/hooks/useStore";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
@@ -19,6 +19,7 @@ import {
 } from "@/services/ExportService";
 import { authClient } from "@/lib/authClient";
 import { getUserColors } from "@/lib/utils";
+import { ConnectedAccounts } from "../ConnectedAccounts";
 import { DeleteAccountDialog } from "../DeleteAccountDialog";
 
 export function AccountSettings() {
@@ -199,35 +200,7 @@ export function AccountSettings() {
       </SettingsSection>
 
       <SettingsSection title="Connected Accounts">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 border rounded-md">
-            <div className="flex items-center gap-3">
-              <Github className="h-5 w-5" />
-              <div>
-                <p className="font-medium">GitHub</p>
-                <p className="text-sm text-muted-foreground">johndoe</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">
-              Disconnect
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between p-3 border rounded-md">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5" />
-              <div>
-                <p className="font-medium">Google</p>
-                <p className="text-sm text-muted-foreground">
-                  john.doe@gmail.com
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">
-              Disconnect
-            </Button>
-          </div>
-        </div>
+        <ConnectedAccounts />
       </SettingsSection>
 
       <SettingsSection title="Export Data">

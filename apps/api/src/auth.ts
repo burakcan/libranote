@@ -83,6 +83,11 @@ export const auth = betterAuth({
       },
     },
   },
+  account: {
+    accountLinking: {
+      allowDifferentEmails: true,
+    },
+  },
   trustedOrigins: env.AUTH_TRUSTED_ORIGINS.split(","),
   hooks: {
     after: createAuthMiddleware(async (ctx) => {

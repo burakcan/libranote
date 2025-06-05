@@ -8,7 +8,13 @@ import { ClientUserSetting } from "@/types/Settings";
 
 const initialSettingsState: InitialStoreState["settings"] = {
   initialDataLoaded: false,
-  data: [],
+  data: [
+    {
+      key: "sync.syncSettingsEnabled",
+      value: true,
+      updatedAt: new Date(),
+    },
+  ],
 };
 
 export const createSettingsSlice: StateCreator<
@@ -105,10 +111,6 @@ export const createSettingsSlice: StateCreator<
             draft.settings.data.push(localSetting);
           }
         }
-
-        draft.settings.data = draft.settings.data.filter((s) =>
-          remoteSettings.some((r) => r.key === s.key)
-        );
       });
 
       await TransactionService.syncRemoteSettingsToLocal(remoteSettings);

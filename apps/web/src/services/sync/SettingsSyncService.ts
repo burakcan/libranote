@@ -1,5 +1,6 @@
 import { UseBoundStore, StoreApi } from "zustand";
 import { ApiService } from "@/services/ApiService";
+import { DEFAULT_SETTINGS } from "@/lib/defaultSettings";
 import { ErrorService, SyncError } from "@/lib/errors";
 import { Store } from "@/lib/store";
 import { ActionQueueItem } from "@/types/ActionQueue";
@@ -15,9 +16,29 @@ export class SettingsSyncService extends EventTarget {
     super();
   }
 
+  private mergeSettings(
+    base: ClientUserSetting[],
+    overrides: ClientUserSetting[]
+  ): ClientUserSetting[] {
+    return base.map((baseSetting) => {
+      const override = overrides.find((s) => s.key === baseSetting.key);
+
+      if (!override) {
+        return baseSetting;
+      }
+
+      return override;
+    });
+  }
+
   async loadLocalSettingsToStore(): Promise<void> {
     const localSettings = await this.settingRepository.getAll();
-    this.store.getState().settings.setSettingsData(localSettings);
+    const mergedSettings = this.mergeSettings(
+      Object.values(DEFAULT_SETTINGS),
+      localSettings
+    );
+
+    this.store.getState().settings.setSettingsData(mergedSettings);
     this.store.getState().settings.setInitialDataLoaded(true);
 
     console.debug(
