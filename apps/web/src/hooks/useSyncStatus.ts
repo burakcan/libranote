@@ -12,6 +12,7 @@ import { useSyncContext } from "./useSyncContext";
 export function useSyncStatus() {
   const { syncService } = useSyncContext();
   const [status, setStatus] = useState<SyncStatus>({
+    isSynced: false,
     isIdle: true,
     isSyncing: false,
     hasError: false,

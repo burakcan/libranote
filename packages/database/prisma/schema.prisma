@@ -29,6 +29,7 @@ model User {
   UserSetting           UserSetting[]
   onboardingFinished    Boolean                @default(false)
   collectionInvitations CollectionInvitation[]
+  isAnonymous           Boolean                @default(false)
 
   @@map("user")
 }

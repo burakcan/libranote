@@ -196,7 +196,14 @@ export class SyncService extends EventTarget {
   }
 
   watchOnlineStatus() {
-    this.networkService.addEventListener(ONLINE_EVENT, () => {
+    this.networkService.addEventListener(ONLINE_EVENT, async () => {
+      // Process any pending queue items (offline changes)
+      await this.executeWithStatusTracking(
+        () => this.queueService.processQueue(),
+        "queue-processing",
+        "Processing queue"
+      );
+
       this.syncAll();
       this.realtimeService.connect();
     });

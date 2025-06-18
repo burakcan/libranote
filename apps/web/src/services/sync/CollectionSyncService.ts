@@ -56,6 +56,9 @@ export class CollectionSyncService extends EventTarget {
       case "UPDATE_COLLECTION":
         await this.processUpdateCollection(item.relatedEntityId);
         break;
+      case "UPDATE_COLLECTION_MEMBERSHIP":
+        await this.processUpdateMembership(item.relatedEntityId);
+        break;
       case "DELETE_COLLECTION":
         await this.processDeleteCollection(item.relatedEntityId);
         break;
@@ -105,6 +108,36 @@ export class CollectionSyncService extends EventTarget {
     }
 
     const remoteCollection = await ApiService.updateCollection(localCollection);
+
+    // Use store to update with remote collection
+    await this.store
+      .getState()
+      .collections.remoteUpdatedCollection(remoteCollection);
+
+    return remoteCollection;
+  }
+
+  private async processUpdateMembership(
+    collectionId: string
+  ): Promise<ServerCollection | undefined> {
+    const localCollection =
+      await this.collectionRepository.getById(collectionId);
+
+    if (!localCollection) {
+      console.error(
+        `CollectionSyncService: Collection ${collectionId} not found`
+      );
+      return;
+    }
+
+    const membership = {
+      color: localCollection.members[0]?.color || null,
+    };
+
+    const remoteCollection = await ApiService.updateMyCollectionMembership(
+      collectionId,
+      membership
+    );
 
     // Use store to update with remote collection
     await this.store

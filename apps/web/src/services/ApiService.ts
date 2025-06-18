@@ -78,6 +78,28 @@ export class ApiService {
     return data.collection;
   }
 
+  static async updateMyCollectionMembership(
+    collectionId: string,
+    membership: {
+      color?: string | null;
+      // Future membership properties:
+      // notifications?: boolean;
+      // displayPreferences?: {...};
+    }
+  ): Promise<ServerCollection> {
+    const response = await this.fetch(
+      `/api/collections/${collectionId}/membership`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ membership }),
+      }
+    );
+
+    const data: { collection: ServerCollection } = await response.json();
+
+    return data.collection;
+  }
+
   static async deleteCollection(collectionId: string): Promise<void> {
     await this.fetch(`/api/collections/${collectionId}`, {
       method: "DELETE",

@@ -67,6 +67,13 @@ export type CollectionsSliceActions = {
   updateCollection: (
     update: Partial<ClientCollection> & { id: ClientCollection["id"] }
   ) => Promise<void>;
+  updateMyMembership: (
+    collectionId: string,
+    membershipUpdate: {
+      color?: string | null;
+      // Future membership properties can be added here
+    }
+  ) => Promise<void>;
   swapCollection: (
     localId: ClientCollection["id"],
     remoteCollection: ServerCollection

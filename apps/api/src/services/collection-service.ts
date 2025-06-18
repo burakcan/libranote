@@ -184,25 +184,14 @@ export class CollectionService {
   }
 
   /**
-   * Update a collection
+   * Update a collection (collection-level properties only)
    */
   static async updateCollection(
     userId: string,
     collectionId: string,
-    updateData: Pick<Collection, "title" | "updatedAt"> & {
-      members?: (Pick<CollectionMember, "id" | "color"> & { id: string })[];
-    },
+    updateData: Pick<Collection, "title" | "updatedAt">,
     clientId: string,
   ) {
-    if (updateData.members) {
-      await prisma.collectionMember.update({
-        where: { collectionId_userId: { collectionId, userId } },
-        data: {
-          color: updateData.members[0]?.color,
-        },
-      });
-    }
-
     // Update collection
     const updatedCollection = await prisma.collection.update({
       where: {
@@ -223,6 +212,45 @@ export class CollectionService {
     };
 
     SSEService.broadcastSSEToCollectionMembers(updatedCollection.id, event, userId, clientId);
+
+    return updatedCollection;
+  }
+
+  /**
+   * Update the current user's membership in a collection (member-level properties only)
+   */
+  static async updateMyMembership(
+    userId: string,
+    collectionId: string,
+    memberData: Partial<Pick<CollectionMember, "color">>, // TODO: Extend Pick<> as new membership fields are added to CollectionMember
+    clientId: string,
+  ) {
+    // Update the user's membership
+    await prisma.collectionMember.update({
+      where: { collectionId_userId: { collectionId, userId } },
+      data: memberData,
+    });
+
+    // Get the updated collection to send in the SSE event
+    const updatedCollection = await prisma.collection.findUnique({
+      where: {
+        id: collectionId,
+        ...CollectionPermissions.whereCanView(userId),
+      },
+      include: collectionDefaultInclude(userId),
+    });
+
+    if (!updatedCollection) {
+      throw new NotFoundError("Collection not found");
+    }
+
+    // Broadcast only to the user who made the change (member-level updates are personal)
+    const event: SSECollectionUpdatedEvent = {
+      type: "COLLECTION_UPDATED",
+      collection: updatedCollection,
+    };
+
+    SSEService.broadcastSSEToUser(userId, event, clientId);
 
     return updatedCollection;
   }

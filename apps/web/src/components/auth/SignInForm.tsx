@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import { FaGithub, FaGoogle } from "react-icons/fa";
+import { FaGithub, FaGoogle, FaUser } from "react-icons/fa";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +116,20 @@ export function SignInForm() {
     }
   };
 
+  const handleSignInAnonymous = async () => {
+    const response = await authClient.signIn.anonymous();
+
+    if (response.error) {
+      toast.error("Failed to sign in", {
+        description: response.error.message,
+      });
+    } else {
+      toast.success("Signed in anonymously!");
+
+      invalidateSessionQuery(queryClient);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="text-center">
@@ -125,6 +139,15 @@ export function SignInForm() {
       <CardContent>
         <div className="grid gap-6">
           <div className="flex flex-col gap-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={() => handleSignInAnonymous()}
+            >
+              <FaUser />
+              Sign in Anonymously
+            </Button>
             <Button
               variant="outline"
               className="w-full"

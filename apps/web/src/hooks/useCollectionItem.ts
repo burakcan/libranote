@@ -46,6 +46,7 @@ export function useCollectionItem(collection: CollectionType) {
     deleteCollection,
     setRenamingCollection,
     updateCollection,
+    updateMyMembership,
     leaveCollection,
   } = useStore(
     useShallow((state) => ({
@@ -57,6 +58,7 @@ export function useCollectionItem(collection: CollectionType) {
       setActiveCollectionId: state.collections.setActiveCollectionId,
       deleteCollection: state.collections.deleteCollection,
       updateCollection: state.collections.updateCollection,
+      updateMyMembership: state.collections.updateMyMembership,
       leaveCollection: state.collections.leaveCollection,
     }))
   );
@@ -98,15 +100,7 @@ export function useCollectionItem(collection: CollectionType) {
   const handleColorChange = (color: string | null) => {
     if (allOrUncategorizedCollection) return;
 
-    updateCollection({
-      ...collection,
-      members: [
-        {
-          ...collection.members[0],
-          color,
-        },
-      ],
-    });
+    updateMyMembership(collection.id, { color });
   };
 
   const handleSelectCollection = (

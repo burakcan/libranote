@@ -16,18 +16,23 @@ export const createCollectionSchema = z.object({
 
 // Update collection request schema
 export const updateCollectionSchema = z.object({
-  collection: z
+  collection: z.object({
+    title: z.string().min(1, "Title is required"),
+    updatedAt: z.string().datetime(),
+  }),
+});
+
+// Update membership request schema
+export const updateMembershipSchema = z.object({
+  membership: z
     .object({
-      title: z.string().min(1, "Title is required"),
-      updatedAt: z.string().datetime(),
-      members: z.array(
-        z.object({
-          id: z.string(),
-          color: z.string().optional().nullable(),
-        }),
-      ),
+      color: z.string().optional().nullable(),
+      // Future membership properties can be added here:
+      // notifications: z.boolean().optional(),
+      // displayPreferences: z.object({...}).optional(),
+      // etc.
     })
-    .optional(),
+    .partial(), // Make all properties optional for flexibility
 });
 
 // Collection params schema (for routes with :id)

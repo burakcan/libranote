@@ -6,6 +6,7 @@ import {
   getCollection,
   createCollection,
   updateCollection,
+  updateMyMembership,
   deleteCollection,
   getMembers,
   inviteToCollection,
@@ -22,6 +23,7 @@ import { validate } from "../middleware/validate.js";
 import {
   createCollectionSchema,
   updateCollectionSchema,
+  updateMembershipSchema,
   collectionParamsSchema,
   collectionMemberParamsSchema,
   inviteToCollectionSchema,
@@ -46,6 +48,13 @@ router.put(
   validate(collectionParamsSchema, "params"),
   validate(updateCollectionSchema),
   updateCollection,
+);
+
+router.put(
+  "/:id/membership",
+  validate(collectionParamsSchema, "params"),
+  validate(updateMembershipSchema),
+  updateMyMembership,
 );
 
 router.delete("/:id", validate(collectionParamsSchema, "params"), deleteCollection);

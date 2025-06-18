@@ -212,6 +212,62 @@ export const createCollectionsSlice: StateCreator<
       }
     },
 
+    updateMyMembership: async (
+      collectionId: string,
+      membershipUpdate: {
+        color?: string | null;
+        // Future membership properties can be added here
+      }
+    ) => {
+      const state = get();
+      const index = state.collections.data.findIndex(
+        (c) => c.id === collectionId
+      );
+      const collection = state.collections.data[index];
+
+      if (index === -1) {
+        console.error(`Collection ${collectionId} not found`);
+        return;
+      }
+
+      const pendingRelatedActionIndex = state.actionQueue.items.findIndex(
+        (action) =>
+          action.type === "UPDATE_COLLECTION_MEMBERSHIP" &&
+          action.status === "pending" &&
+          action.relatedEntityId === collection.id
+      );
+
+      const updatedCollection = {
+        ...collection,
+        members: collection.members.map((member) => ({
+          ...member,
+          ...membershipUpdate, // Apply all membership updates
+        })),
+        updatedAt: new Date(),
+      };
+
+      if (index !== -1) {
+        P(set, (draft) => {
+          draft.collections.data[index] = updatedCollection;
+        });
+      }
+
+      await CollectionRepository.update(collectionId, {
+        members: updatedCollection.members,
+      });
+
+      // If there is a pending membership update action, we don't need to add another one
+      if (pendingRelatedActionIndex === -1) {
+        await state.actionQueue.addActionToQueue({
+          id: nanoid(3),
+          type: "UPDATE_COLLECTION_MEMBERSHIP",
+          status: "pending",
+          createdAt: new Date(),
+          relatedEntityId: collection.id,
+        });
+      }
+    },
+
     swapCollection: async (localId, remoteCollection) => {
       const state = get();
       const localIndex = state.collections.data.findIndex(

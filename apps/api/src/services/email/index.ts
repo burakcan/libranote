@@ -3,7 +3,6 @@ export { emailTemplates } from "./templates.js";
 export type { EmailOptions } from "./email-service.js";
 export type {
   EmailTemplate,
-  EmailVerificationData,
   PasswordResetData,
   InvitationData,
   EmailOTPData,

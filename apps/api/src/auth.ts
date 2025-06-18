@@ -1,7 +1,7 @@
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAuthMiddleware } from "better-auth/api";
-import { jwt, oAuthProxy } from "better-auth/plugins";
+import { jwt, oAuthProxy, anonymous } from "better-auth/plugins";
 import { emailOTP } from "better-auth/plugins";
 import { prisma } from "./db/prisma.js";
 import { env } from "./env.js";
@@ -114,6 +114,12 @@ export const auth = betterAuth({
   },
   plugins: [
     oAuthProxy(),
+    anonymous({
+      emailDomainName: "anonymous.libranote.com",
+      generateName: () => {
+        return `Anonymous ${nanoid(5)}`;
+      },
+    }),
     jwt({
       jwt: {
         // 5 minutes

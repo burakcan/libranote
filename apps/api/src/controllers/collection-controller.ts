@@ -53,16 +53,10 @@ export async function createCollection(
 }
 
 /**
- * Update a collection
+ * Update a collection (collection-level properties only)
  */
 export async function updateCollection(
-  req: Request<{ id: string }, {}, { collection: Pick<Collection, "title" | "updatedAt"> }> & {
-    body: {
-      collection: Pick<Collection, "title" | "updatedAt"> & {
-        members?: (Pick<CollectionMember, "id" | "color"> & { id: string })[];
-      };
-    };
-  },
+  req: Request<{ id: string }, {}, { collection: Pick<Collection, "title" | "updatedAt"> }>,
   res: Response,
   next: NextFunction,
 ) {
@@ -77,6 +71,34 @@ export async function updateCollection(
       userId,
       id,
       collection,
+      clientId,
+    );
+
+    res.status(200).json({ collection: updatedCollection });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update the current user's membership in a collection (member-level properties only)
+ */
+export async function updateMyMembership(
+  req: Request<{ id: string }, {}, { membership: Partial<Pick<CollectionMember, "color">> }>, // TODO: Extend Pick<> as new membership fields are added
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { userId } = req;
+    const { id } = req.params;
+
+    const { membership } = req.body;
+    const clientId = (req.headers["x-client-id"] as string) || "";
+
+    const updatedCollection = await CollectionService.updateMyMembership(
+      userId,
+      id,
+      membership,
       clientId,
     );
 

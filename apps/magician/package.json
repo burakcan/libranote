@@ -7,14 +7,18 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc",
-    "start": "node --env-file=.env dist/index.js",
+    "start": "tsx watch --env-file=.env src/index.ts",
     "check-types": "tsc --noEmit",
     "clean": "rimraf dist",
     "lint": "tsc --noEmit && eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build"
   },
-  "keywords": ["hocuspocus", "collaboration", "websocket"],
+  "keywords": [
+    "hocuspocus",
+    "collaboration",
+    "websocket"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {

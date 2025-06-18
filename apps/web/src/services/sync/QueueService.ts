@@ -138,6 +138,7 @@ export class QueueService extends EventTarget {
         break;
       case "CREATE_COLLECTION":
       case "UPDATE_COLLECTION":
+      case "UPDATE_COLLECTION_MEMBERSHIP":
       case "DELETE_COLLECTION":
       case "LEAVE_COLLECTION":
         await this.collectionSyncService.processQueueItem(item);
